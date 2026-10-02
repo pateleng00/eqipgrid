@@ -1,0 +1,15 @@
+{
+  "Rules": [
+    {
+      "ID": "EquipGridTmpAutoPurge2Days",
+      "Status": "Enabled",
+      "Filter": {},
+      "Expiration": {
+        "Days": 2
+      },
+      "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+      }
+    }
+  ]
+}

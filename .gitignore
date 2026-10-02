@@ -1,0 +1,47 @@
+# EquipGrid Monorepo Root .gitignore
+
+# Separate repositories
+equipgrid-website/
+
+# OS and Editor files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment & Local Secrets
+.env
+.env.local
+*.local
+
+# Java / Spring Boot / Gradle (equipgrid-power)
+.gradle/
+build/
+bin/
+out/
+!gradle/wrapper/gradle-wrapper.jar
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+# Node / Vite / React (equipgrid-station)
+node_modules/
+dist/
+dist-ssr/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

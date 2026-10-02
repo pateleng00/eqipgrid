@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: equipgrid-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: equipgrid_dev
+      POSTGRES_USER: equipgrid_user
+      POSTGRES_PASSWORD: equipgrid_secure_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - equipgrid-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U equipgrid_user -d equipgrid_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: equipgrid-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - equipgrid-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: equipgrid-localstack
+    restart: unless-stopped
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=ap-south-1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./scripts/localstack-init.sh:/etc/localstack/init/ready.d/init-s3.sh:ro
+      - localstack_data:/var/lib/localstack
+    networks:
+      - equipgrid-network
+
+volumes:
+  postgres_data:
+    name: equipgrid_postgres_data
+  redis_data:
+    name: equipgrid_redis_data
+  localstack_data:
+    name: equipgrid_localstack_data
+
+networks:
+  equipgrid-network:
+    name: equipgrid-network
+    driver: bridge
