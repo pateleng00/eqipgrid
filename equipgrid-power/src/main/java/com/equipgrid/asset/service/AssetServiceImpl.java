@@ -172,4 +172,98 @@ public class AssetServiceImpl implements IAssetService {
             default           -> "jpg";
         };
     }
+
+    @Override
+    public List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId) {
+        List<Asset> all = assetQueryRepository.fetchAssets(category, null);
+        all.forEach(this::populateMedia);
+
+        // Group by distinct machine model name
+        Map<String, List<Asset>> grouped = all.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        a -> a.getName() != null ? a.getName().trim() : a.getAssetTag(),
+                        java.util.LinkedHashMap::new,
+                        java.util.stream.Collectors.toList()
+                ));
+
+        List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> result = new java.util.ArrayList<>();
+
+        for (Map.Entry<String, List<Asset>> entry : grouped.entrySet()) {
+            List<Asset> units = entry.getValue();
+            if (units.isEmpty()) continue;
+
+            // If hubId is filtered, check if any unit belongs to this hub
+            if (hubId != null) {
+                boolean hasHub = units.stream().anyMatch(u -> u.getHub() != null && hubId.equals(u.getHub().getId()));
+                if (!hasHub) continue;
+            }
+
+            Asset rep = units.stream()
+                    .filter(u -> u.getStatus() == AssetStatus.AVAILABLE)
+                    .findFirst()
+                    .orElse(units.get(0));
+
+            int totalUnits = units.size();
+            int availableUnits = (int) units.stream().filter(u -> u.getStatus() == AssetStatus.AVAILABLE).count();
+
+            List<String> hubNames = units.stream()
+                    .map(Asset::getHub)
+                    .filter(java.util.Objects::nonNull)
+                    .map(com.equipgrid.location.entity.Hub::getName)
+                    .distinct()
+                    .toList();
+
+            List<Long> hubIds = units.stream()
+                    .map(Asset::getHub)
+                    .filter(java.util.Objects::nonNull)
+                    .map(com.equipgrid.location.entity.Hub::getId)
+                    .distinct()
+                    .toList();
+
+            String demoVideo = null;
+            if (rep.getMediaItems() != null) {
+                demoVideo = rep.getMediaItems().stream()
+                        .filter(m -> "VIDEO".equalsIgnoreCase(m.getMediaType()))
+                        .map(com.equipgrid.asset.entity.AssetMedia::getUrl)
+                        .findFirst()
+                        .orElse(null);
+            }
+
+            result.add(com.equipgrid.asset.dto.response.WebsiteMachineModelResponse.builder()
+                    .id(rep.getId())
+                    .assetTag(rep.getAssetTag())
+                    .name(rep.getName())
+                    .hindiName(getHindiName(rep.getName()))
+                    .category(rep.getCategory())
+                    .modelName(rep.getModelName())
+                    .dailyRate(rep.getDailyRate())
+                    .depositAmount(rep.getDepositAmount())
+                    .imageUrl(rep.getImageUrl())
+                    .demoVideoUrl(demoVideo)
+                    .mediaItems(rep.getMediaItems())
+                    .totalUnits(totalUnits)
+                    .availableUnits(availableUnits)
+                    .primaryHub(rep.getHub())
+                    .availableHubNames(hubNames)
+                    .availableHubIds(hubIds)
+                    .build());
+        }
+
+        return result;
+    }
+
+    private String getHindiName(String name) {
+        if (name == null) return "";
+        String upper = name.toUpperCase();
+        if (upper.contains("MIX")) return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
+        if (upper.contains("VIBRAT")) return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
+        if (upper.contains("COMPACT") || upper.contains("RAMMER")) return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
+        if (upper.contains("JACKHAMMER") || upper.contains("BREAKER")) return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
+        if (upper.contains("PUMP") || upper.contains("TRASH")) return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
+        if (upper.contains("GEN") || upper.contains("POWER")) return "बिजली जनरेटर (Portable Power Generator)";
+        if (upper.contains("WEED") || upper.contains("ROTARY")) return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
+        if (upper.contains("REAP") || upper.contains("HARVEST")) return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
+        if (upper.contains("AUGER") || upper.contains("HOLE")) return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
+        return name;
+    }
 }

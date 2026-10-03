@@ -36,6 +36,15 @@ public class AssetController {
         return ResponseEntity.ok(ApiResponse.buildSuccess(assets));
     }
 
+    @GetMapping("/website-catalog")
+    @Operation(summary = "Get distinct machine models for website catalog with inventory counts and hubs")
+    public ResponseEntity<ApiResponse<List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse>>> getWebsiteCatalog(
+            @RequestParam(required = false) AssetCategory category,
+            @RequestParam(required = false) Long hubId) {
+        List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> catalog = assetService.getWebsiteCatalog(category, hubId);
+        return ResponseEntity.ok(ApiResponse.buildSuccess(catalog));
+    }
+
     @GetMapping("/{id}")
     @Operation(summary = "Get asset details by ID")
     public ResponseEntity<ApiResponse<Asset>> getAsset(@PathVariable Long id) {

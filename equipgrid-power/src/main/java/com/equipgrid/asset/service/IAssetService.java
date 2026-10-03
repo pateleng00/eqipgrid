@@ -24,4 +24,9 @@ public interface IAssetService {
      * Replaces any existing S3-managed image.
      */
     Asset uploadImage(Long id, MultipartFile file, String performedBy);
+
+    /**
+     * Get distinct machine models grouped for the customer website catalog.
+     */
+    List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId);
 }
