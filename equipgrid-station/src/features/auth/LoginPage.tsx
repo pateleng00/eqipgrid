@@ -287,55 +287,6 @@ export const LoginPage: React.FC = () => {
                     required
                   />
                 </div>
-
-                {/* Quick Role Fillers */}
-                <div className="pt-2">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1.5">
-                    Quick Preset Access:
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailInput('admin@equipgrid.in');
-                        setPasswordInput('admin123');
-                      }}
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 transition-all cursor-pointer"
-                    >
-                      👑 Root (Super Admin)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailInput('admin.ops@equipgrid.in');
-                        setPasswordInput('admin123');
-                      }}
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-indigo-500/40 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 transition-all cursor-pointer"
-                    >
-                      🛡️ Admin (Operations)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailInput('manager.hardoi@equipgrid.in');
-                        setPasswordInput('admin123');
-                      }}
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-all cursor-pointer"
-                    >
-                      🏢 Manager (Hardoi Yard)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailInput('booking.desk@equipgrid.in');
-                        setPasswordInput('admin123');
-                      }}
-                      className="px-2 py-1 rounded-lg text-[10px] font-bold border border-cyan-500/40 bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 transition-all cursor-pointer"
-                    >
-                      ⌨️ Operator (Desk)
-                    </button>
-                  </div>
-                </div>
               </div>
 
               {/* Password Input */}

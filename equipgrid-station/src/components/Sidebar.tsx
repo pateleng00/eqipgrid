@@ -12,7 +12,6 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
-  Layers,
   Lock,
   Eye,
   UserCheck,
@@ -346,72 +345,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           ))}
         </nav>
       </div>
-
-      {/* Footer Info Box */}
-      {!isCollapsed ? (
-        <div
-          className={cn(
-            'rounded-xl border p-3 text-[11px] space-y-1.5 transition-colors mt-3',
-            isDaylight
-              ? 'border-slate-200 bg-slate-50 text-slate-900'
-              : 'border-slate-800/80 bg-slate-900/40 text-slate-400'
-          )}
-        >
-          <div
-            className={cn(
-              'flex items-center gap-1.5 font-black',
-              isDaylight ? 'text-slate-950' : 'text-slate-300'
-            )}
-          >
-            <Layers
-              className={cn(
-                'h-3.5 w-3.5',
-                isDaylight ? 'text-amber-700' : 'text-slate-400'
-              )}
-            />
-            <span>EquipGrid Enterprise</span>
-          </div>
-          <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono pt-0.5">
-            <span className="truncate max-w-[120px]">
-              {currentUser?.roleTitle || 'Operator'}
-            </span>
-            <span
-              className={cn(
-                'font-bold uppercase text-[9px] px-1 rounded border',
-                isGuest
-                  ? isDaylight
-                    ? 'border-amber-400 text-amber-700 bg-amber-50'
-                    : 'border-amber-600/50 text-amber-400 bg-amber-900/20'
-                  : isDaylight
-                    ? 'border-slate-300 text-slate-700'
-                    : 'border-slate-700/60'
-              )}
-            >
-              {isGuest ? 'GUEST' : currentUser?.role || 'user'}
-            </span>
-          </div>
-          {isGuest && (
-            <p
-              className={cn(
-                'text-[10px] pt-0.5 leading-snug',
-                isDaylight ? 'text-amber-700' : 'text-amber-500/70'
-              )}
-            >
-              Sign in for full station access.
-            </p>
-          )}
-        </div>
-      ) : (
-        <div
-          className={cn(
-            'flex justify-center py-2',
-            isDaylight ? 'text-amber-700' : 'text-slate-400'
-          )}
-          title="EquipGrid Enterprise"
-        >
-          <Layers className="h-4 w-4" />
-        </div>
-      )}
     </aside>
   );
 };
