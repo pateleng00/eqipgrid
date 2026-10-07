@@ -19,7 +19,11 @@ public enum WhatsAppState {
     TRACKING_ORDER((short) 8),
     REQUESTING_RETURN((short) 9),
     SELECTING_HUB((short) 10),
-    SELECTING_DELIVERY_DESTINATION((short) 11);
+    SELECTING_DELIVERY_DESTINATION((short) 11),
+    /** Processing an incoming voice note via Gemini STT + intent parsing */
+    PROCESSING_VOICE((short) 12),
+    /** Step-by-step WhatsApp damage checklist during return pickup */
+    DAMAGE_CHECKLIST_ACTIVE((short) 13);
 
     @JsonValue
     private final Short value;

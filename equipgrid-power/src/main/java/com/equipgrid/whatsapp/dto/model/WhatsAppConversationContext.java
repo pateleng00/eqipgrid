@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @NoArgsConstructor
@@ -44,4 +45,26 @@ public class WhatsAppConversationContext {
     private String previewImageUrl;
     private String demoVideoUrl;
     private List<String> mediaUrls;
+
+    // ─── Voice Note Processing ──────────────────────────────────────────
+    /** Raw transcribed text from Gemini / upstream STT for the latest voice note */
+    private String lastVoiceTranscript;
+    /** Detected language from voice ("hi" = Hindi, "en" = English, etc.) */
+    private String detectedLanguage;
+    /** True if the user's last message was a voice note */
+    private Boolean voiceNoteReceived;
+    /** Number of consecutive voice note processing retries */
+    private Integer voiceRetryCount;
+
+    // ─── Damage Checklist (Return Inspection) ───────────────────────────
+    /** Current checklist item index being evaluated (0-based) */
+    private Integer checklistCurrentItemIndex;
+    /** Map of checklist item key -> customer photo URL (S3 key or media URL) */
+    private Map<String, String> checklistItemPhotos;
+    /** Map of checklist item key -> customer-confirmed status ("OK" | "DAMAGED" | "MISSING") */
+    private Map<String, String> checklistItemStatuses;
+    /** True if the damage checklist flow is fully completed */
+    private Boolean checklistCompleted;
+    /** Customer-supplied textual damage description */
+    private String customerDamageDescription;
 }

@@ -28,6 +28,7 @@ import com.equipgrid.payment.enums.PaymentMode;
 import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.service.IPaymentService;
 import com.equipgrid.whatsapp.dto.model.UpiPaymentDetails;
+import com.equipgrid.whatsapp.dto.model.VoiceBookingIntent;
 import com.equipgrid.whatsapp.dto.model.WhatsAppConversationContext;
 import com.equipgrid.whatsapp.dto.request.WhatsAppInboundRequest;
 import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
@@ -47,7 +48,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -74,6 +77,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private final IUpiQrGeneratorService upiQrGeneratorService;
     private final StorageService storageService;
     private final ObjectMapper objectMapper;
+    private final VoiceNoteProcessingService voiceNoteProcessingService;
+    private final ChallanDocumentService challanDocumentService;
 
     @Override
     @Transactional
@@ -83,7 +88,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String messageText = request.getMessage() != null ? request.getMessage().trim() : "";
         String senderName = request.getUserName() != null ? request.getUserName().trim() : "Farmer";
 
-        log.info("[WhatsApp Bot] Processing message from phone: {} (raw: {}), text: '{}'", normalizedPhone, rawPhone, messageText);
+        log.info("[WhatsApp Bot] Processing message from phone: {} (raw: {}), mediaType: '{}', text: '{}'",
+                normalizedPhone, rawPhone, request.getMediaType(), messageText);
 
         // 1. Get or create Customer identified by mobile phone
         Customer customer = getOrCreateCustomer(normalizedPhone, senderName);
@@ -92,6 +98,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         WhatsAppConversation conversation = getOrCreateConversation(normalizedPhone);
         conversation.setLastMessageReceived(messageText);
         conversation.setLastInteractionAt(LocalDateTime.now());
+
+        // ─── Voice Note Intercept ─────────────────────────────────────────────
+        // Detect if incoming message is an audio/voice note and process it first.
+        // Pre-transcribed text (from BSP like Gupshup) takes priority over raw audio URL.
+        boolean isVoiceNote = isVoiceMessage(request);
+        if (isVoiceNote) {
+            WhatsAppConversationContext context = parseContext(conversation.getContextData());
+            if (context.getCustomerName() == null) context.setCustomerName(customer.getFullName());
+            WhatsAppMessageResponse voiceResponse = handleVoiceNoteMessage(request, conversation, customer, context);
+            if (voiceResponse != null) {
+                conversation.setContextData(serializeContext(context));
+                conversationRepository.save(conversation);
+                return voiceResponse;
+            }
+            // If voice handling produced null (intent was handled inline), fall through to state machine
+            // with the transcribed text having been injected into messageText
+            messageText = context.getLastVoiceTranscript() != null ? context.getLastVoiceTranscript() : messageText;
+        }
 
         // Check for universal reset/menu keywords
         if (isMenuKeyword(messageText)) {
@@ -123,6 +147,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             case AWAITING_PAYMENT -> response = handlePaymentFlow(messageText, conversation, customer, context);
             case TRACKING_ORDER -> response = handleTracking(conversation, customer);
             case REQUESTING_RETURN -> response = handleReturnRequest(messageText, conversation, customer, context);
+            case DAMAGE_CHECKLIST_ACTIVE -> response = handleDamageChecklistStep(request, messageText, conversation, customer, context);
+            case PROCESSING_VOICE -> response = handleMainMenuSelection(messageText, conversation, customer, context);
             default -> response = resetAndShowMainMenu(conversation, customer);
         }
 
@@ -1427,19 +1453,21 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         String message = String.format("""
                 🔄 *Request Equipment Return & Security Deposit Refund*
+                *(मशीन वापसी व जमानत राशि वापस पाएं)*
                 ━━━━━━━━━━━━━━━━━━━━━━
                 🔖 Booking: *%s*
                 🚜 Equipment: *%s* (`%s`)
                 💰 Security Deposit Held: *₹%,.2f*
                 
-                📋 *Simplified Return Inspection Checklist:*
-                1. Ensure fuel level matches outward handover
-                2. Drum / blades cleaned of concrete / mud
-                3. Standard accessories (hoses, cables) ready for handover
+                📋 *WhatsApp Return Inspection Process:*
+                └ 1. Confirm return pickup below
+                └ 2. Our bot will guide you through a *quick 8-point damage checklist* 📋
+                └ 3. Photo uploads supported for any damage evidence 📷
+                └ 4. Instant deposit refund via UPI within 2 hours 💳
                 
-                🚚 Our recovery vehicle will arrive at your farm to inspect the machine and trigger your instant UPI deposit refund.
+                🚚 Our recovery vehicle will be dispatched to your site.
                 
-                👉 Reply *YES RETURN* (या *WAPAS*) to confirm pickup request.
+                👉 Reply *YES* (या *HAAN*) to begin the return & damage inspection process.
                 Or reply *MENU* to cancel.
                 """,
                 activeOnRent.getBookingNumber(),
@@ -1453,50 +1481,27 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .message(message)
                 .state(WhatsAppState.REQUESTING_RETURN)
                 .bookingNumber(activeOnRent.getBookingNumber())
-                .suggestedOptions(List.of("YES RETURN (हाँ वापसी करें)", "MENU"))
+                .suggestedOptions(List.of("YES (हाँ वापसी करें)", "MENU"))
                 .build();
     }
 
     private WhatsAppMessageResponse handleReturnRequest(String input, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
         String trimmed = input.toUpperCase().trim();
 
-        if (trimmed.contains("YES") || trimmed.contains("RETURN") || trimmed.contains("WAPAS") || trimmed.equals("1")) {
+        if (trimmed.contains("YES") || trimmed.contains("RETURN") || trimmed.contains("WAPAS") ||
+                trimmed.contains("HAAN") || trimmed.equals("1")) {
             Long bookingId = context.getActiveBookingId();
             if (bookingId == null) {
                 return resetAndShowMainMenu(conv, customer);
             }
 
-            bookingService.updateStatus(bookingId, BookingStatus.RETURN_REQUESTED, "Return pickup requested via WhatsApp by customer", "WHATSAPP_BOT");
-
             Booking booking = bookingQueryRepository.fetchById(bookingId).orElse(null);
-            BigDecimal deposit = booking != null ? booking.getDepositAmount() : BigDecimal.ZERO;
+            if (booking == null) {
+                return resetAndShowMainMenu(conv, customer);
+            }
 
-            conv.setState(WhatsAppState.MAIN_MENU);
-            conv.setContextData(null);
-
-            String text = String.format("""
-                    ✅ *Equipment Return Scheduled!*
-                    ━━━━━━━━━━━━━━━━━━━━━━
-                    🔖 Booking: *%s*
-                    Status: *RETURN PICKUP INITIATED*
-                    
-                    🚚 Our recovery logistics vehicle has been scheduled to inspect and pick up the machine from your farm.
-                    
-                    💳 *Instant Security Deposit Refund:*
-                    Your refundable security deposit of *₹%,.2f* will be transferred back to your UPI account within 2 hours of yard inspection.
-                    
-                    Thank you for choosing EquipGrid! 🌾
-                    """,
-                    booking != null ? booking.getBookingNumber() : "",
-                    deposit
-            );
-
-            return WhatsAppMessageResponse.builder()
-                    .to(conv.getPhoneNumber())
-                    .message(text)
-                    .state(WhatsAppState.MAIN_MENU)
-                    .suggestedOptions(List.of("1. Rent More Machinery", "MENU"))
-                    .build();
+            // Route to interactive damage checklist instead of direct return
+            return startDamageChecklist(conv, customer, context, booking);
         } else {
             return resetAndShowMainMenu(conv, customer);
         }
@@ -1524,6 +1529,479 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .state(WhatsAppState.MAIN_MENU)
                 .suggestedOptions(List.of("MENU"))
                 .build();
+    }
+
+    // ─── Voice Note Handler ────────────────────────────────────────────────────
+
+    /**
+     * Processes an incoming WhatsApp voice note message.
+     * <ol>
+     *   <li>Uses Gemini to transcribe audio + parse booking intent</li>
+     *   <li>If transcription succeeds, routes intent directly into the booking flow</li>
+     *   <li>If transcription fails, sends a friendly retry prompt in Hindi + English</li>
+     * </ol>
+     *
+     * @return A WhatsAppMessageResponse, or {@code null} to fall through to text state machine
+     */
+    private WhatsAppMessageResponse handleVoiceNoteMessage(
+            WhatsAppInboundRequest request,
+            WhatsAppConversation conv,
+            Customer customer,
+            WhatsAppConversationContext context) {
+
+        String senderName = customer.getFullName();
+        log.info("[VoiceBot] Received voice note from {} | mediaUrl: {} | preTranscribed: '{}'",
+                senderName, request.getMediaUrl(), request.getTranscribedText());
+
+        context.setVoiceNoteReceived(true);
+        int retries = context.getVoiceRetryCount() != null ? context.getVoiceRetryCount() : 0;
+
+        VoiceBookingIntent intent;
+
+        // 1. If BSP already transcribed the audio, use that
+        if (request.getTranscribedText() != null && !request.getTranscribedText().isBlank()) {
+            intent = voiceNoteProcessingService.parseTranscriptIntent(request.getTranscribedText());
+            log.info("[VoiceBot] Using pre-transcribed text: '{}'", request.getTranscribedText());
+        } else if (request.getMediaUrl() != null && !request.getMediaUrl().isBlank()) {
+            // 2. Send audio URL to Gemini for transcription
+            intent = voiceNoteProcessingService.processVoiceNote(
+                    request.getMediaUrl(), request.getMimeType(), senderName);
+        } else {
+            // 3. No audio data — prompt for text or voice note with URL
+            log.warn("[VoiceBot] No mediaUrl or transcribedText in voice message from {}", senderName);
+            return buildVoiceRetryPrompt(conv, customer, "ऑडियो नहीं मिली (Audio not received)", retries);
+        }
+
+        if (!intent.isTranscriptionSucceeded() || intent.getTranscript().isBlank()) {
+            log.warn("[VoiceBot] Transcription failed for {}: {}", senderName, intent.getFallbackReason());
+            context.setVoiceRetryCount(retries + 1);
+            if (retries >= 2) {
+                // After 3 failed attempts, reset to main menu with text instructions
+                return resetAndShowMainMenu(conv, customer);
+            }
+            return buildVoiceRetryPrompt(conv, customer, intent.getFallbackReason(), retries);
+        }
+
+        // ✅ Transcription succeeded
+        log.info("[VoiceBot] Transcript: '{}' | Intent: {} | Category: {} | Days: {}",
+                intent.getTranscript(), intent.getIntent(), intent.getAssetCategory(), intent.getRentalDays());
+
+        context.setLastVoiceTranscript(intent.getTranscript());
+        context.setDetectedLanguage(intent.getDetectedLanguage());
+        context.setVoiceRetryCount(0);
+
+        // Apply what was understood to the context
+        applyVoiceIntentToContext(intent, context);
+
+        String lang = intent.getDetectedLanguage() != null ? intent.getDetectedLanguage() : "hi";
+        String transcriptDisplay = intent.getTranscript();
+        String understood = buildVoiceUnderstoodSummary(intent, lang);
+
+        // Route directly based on intent
+        String intentCode = intent.getIntent() != null ? intent.getIntent().toUpperCase() : "UNKNOWN";
+        switch (intentCode) {
+            case "BROWSE_RENT" -> {
+                String ack = String.format("""
+                        🎤 *आवाज़ सन्देश प्राप्त हुआ!* (Voice Note Received)
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        📝 आपने कहा: _%s_
+                        
+                        %s
+                        
+                        ✅ समझ गए! अभी मशीन बुकिंग शुरू कर रहे हैं...
+                        _(Understood! Starting equipment booking...)_
+                        """, transcriptDisplay, understood);
+
+                // Emit acknowledgment first, then route to appropriate state
+                conv.setState(WhatsAppState.MAIN_MENU);
+                if (context.getAssetCategory() != null && !context.getAssetCategory().isBlank()) {
+                    if (context.getRentalDays() != null) {
+                        // Both category and days known — go straight to machine listing
+                        WhatsAppMessageResponse ackResp = WhatsAppMessageResponse.builder()
+                                .to(conv.getPhoneNumber())
+                                .message(ack)
+                                .state(WhatsAppState.SELECTING_ASSET)
+                                .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️"))
+                                .build();
+                        // Route to machine listing (caller will save context)
+                        return displayAvailableMachinery(conv, context);
+                    } else {
+                        return ackResponseThenState(conv, customer, context, ack,
+                                promptRentalDates(conv, context));
+                    }
+                } else {
+                    return ackResponseThenState(conv, customer, context, ack,
+                            promptCategorySelection(conv, context));
+                }
+            }
+            case "TRACK_ORDER" -> {
+                String ack = String.format("""
+                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                        📝 _%s_
+                        
+                        📍 आपकी बुकिंग की स्थिति देख रहे हैं...
+                        _(Checking your order status...)_
+                        """, transcriptDisplay);
+                return ackResponseThenState(conv, customer, context, ack, handleTracking(conv, customer));
+            }
+            case "PAY" -> {
+                String ack = String.format("""
+                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                        📝 _%s_
+                        
+                        💳 UPI QR कोड तैयार कर रहे हैं...
+                        _(Generating UPI QR code...)_
+                        """, transcriptDisplay);
+                return ackResponseThenState(conv, customer, context, ack,
+                        initiatePaymentOption(conv, customer, context));
+            }
+            case "RETURN" -> {
+                String ack = String.format("""
+                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                        📝 _%s_
+                        
+                        🔄 मशीन वापसी प्रक्रिया शुरू कर रहे हैं...
+                        _(Initiating machine return...)_
+                        """, transcriptDisplay);
+                return ackResponseThenState(conv, customer, context, ack,
+                        initiateReturnOption(conv, customer, context));
+            }
+            case "HELP" -> {
+                return showHelplineResponse(conv);
+            }
+            default -> {
+                // UNKNOWN intent — show transcript and ask what they want
+                String langHint = "hi".equalsIgnoreCase(lang) ? "हिंदी" : "Regional language";
+                String msg = String.format("""
+                        🎤 *आवाज़ सन्देश सुना गया!* (Voice Note Heard)
+                        
+                        📝 आपने कहा:
+                        _%s_
+                        
+                        मैं पूरी तरह समझ नहीं पाया। कृपया नीचे से विकल्प चुनें:
+                        _(Could not fully understand. Please pick an option:)_
+                        
+                        *1* 🚜 मशीन बुक करें (Book Equipment)
+                        *2* 💳 UPI से पेमेंट करें (Pay via UPI)
+                        *3* 📍 ऑर्डर ट्रैक करें (Track Order)
+                        *4* 🔄 मशीन वापस करें (Return Machine)
+                        *5* 📞 सहायता (Help)
+                        
+                        _या सीधे टाइप करके बताएं_ / _Or type your message_
+                        """, transcriptDisplay);
+                conv.setState(WhatsAppState.MAIN_MENU);
+                return WhatsAppMessageResponse.builder()
+                        .to(conv.getPhoneNumber())
+                        .message(msg)
+                        .state(WhatsAppState.MAIN_MENU)
+                        .suggestedOptions(List.of("1. Book Machine", "2. Pay", "3. Track", "4. Return", "5. Help"))
+                        .build();
+            }
+        }
+    }
+
+    private WhatsAppMessageResponse buildVoiceRetryPrompt(WhatsAppConversation conv, Customer customer,
+                                                            String reason, int retryCount) {
+        conv.setState(WhatsAppState.MAIN_MENU);
+        String msg = """
+                🎤 *आवाज़ सन्देश नहीं समझ आया* (Could not process voice note)
+                ━━━━━━━━━━━━━━━━━━━━━━
+                
+                🙏 कृपया निम्नलिखित में से कोई एक करें:
+                _(Please try one of the following:)_
+                
+                🎤 *दोबारा आवाज़ भेजें* — थोड़ा धीरे और साफ बोलें
+                   _(Send voice note again — speak clearly and slowly)_
+                
+                ✍️ *टाइप करके बताएं* — जैसे: "concrete mixer 3 din ke liye chahiye"
+                   _(Type your request — e.g: "mujhe 2 din ka reaper chahiye")_
+                
+                📋 *MENU* — मुख्य मेनू देखें
+                
+                *1* 🚜 मशीन देखें व बुक करें
+                *4* 📍 ऑर्डर ट्रैक करें
+                *6* 📞 हेल्पलाइन
+                """;
+        return WhatsAppMessageResponse.builder()
+                .to(conv.getPhoneNumber())
+                .message(msg)
+                .state(WhatsAppState.MAIN_MENU)
+                .suggestedOptions(List.of("1. Book Machine", "4. Track", "6. Help", "MENU"))
+                .build();
+    }
+
+    private String buildVoiceUnderstoodSummary(VoiceBookingIntent intent, String lang) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("🤖 *समझा (Understood):*\n");
+        if (intent.getAssetCategory() != null && !intent.getAssetCategory().isBlank()) {
+            sb.append("AGRICULTURE".equals(intent.getAssetCategory())
+                    ? "🌾 श्रेणी: कृषि उपकरण (Agriculture)\n"
+                    : "🏗️ श्रेणी: निर्माण उपकरण (Construction)\n");
+        }
+        if (intent.getMachineNameHint() != null && !intent.getMachineNameHint().isBlank()) {
+            sb.append("🚜 मशीन: ").append(intent.getMachineNameHint()).append("\n");
+        }
+        if (intent.getRentalDays() != null && intent.getRentalDays() > 0) {
+            sb.append("📅 ").append(intent.getRentalDays()).append(" दिन (Days)\n");
+        }
+        if (intent.getHubNameHint() != null && !intent.getHubNameHint().isBlank()) {
+            sb.append("📍 हब: ").append(intent.getHubNameHint()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private void applyVoiceIntentToContext(VoiceBookingIntent intent, WhatsAppConversationContext context) {
+        if (intent.getAssetCategory() != null && !intent.getAssetCategory().isBlank()) {
+            context.setAssetCategory(intent.getAssetCategory());
+            context.setSelectedCategory(intent.getAssetCategory());
+        }
+        if (intent.getRentalDays() != null && intent.getRentalDays() > 0) {
+            int days = intent.getRentalDays();
+            context.setRentalDays(days);
+            LocalDate start = LocalDate.now().plusDays(1);
+            context.setStartDate(start);
+            context.setEndDate(start.plusDays(days - 1));
+        }
+        if (intent.getHubNameHint() != null && !intent.getHubNameHint().isBlank()) {
+            // Try to match hub name from hint
+            String hint = intent.getHubNameHint().toLowerCase();
+            hubRepository.findByActiveTrueOrderByNameAsc().stream()
+                    .filter(h -> h.getName().toLowerCase().contains(hint) ||
+                            (h.getCity() != null && h.getCity().getName().toLowerCase().contains(hint)))
+                    .findFirst()
+                    .ifPresent(h -> {
+                        context.setSelectedHubId(h.getId());
+                        context.setSelectedHubName(h.getName());
+                        if (h.getCity() != null) context.setSelectedCityName(h.getCity().getName());
+                    });
+        }
+        if (intent.getDeliveryType() != null && !intent.getDeliveryType().isBlank()) {
+            context.setDeliveryDestinationType(intent.getDeliveryType());
+        }
+    }
+
+    /** Returns a combined acknowledgment + next-step response */
+    private WhatsAppMessageResponse ackResponseThenState(WhatsAppConversation conv, Customer customer,
+                                                          WhatsAppConversationContext context,
+                                                          String ackText, WhatsAppMessageResponse nextStep) {
+        // In a real BSP integration, you'd send ackText first then nextStep.
+        // Here we merge them so the bot returns a single rich message.
+        String combined = ackText + "\n\n" + nextStep.getMessage();
+        return WhatsAppMessageResponse.builder()
+                .to(conv.getPhoneNumber())
+                .message(combined)
+                .state(nextStep.getState())
+                .suggestedOptions(nextStep.getSuggestedOptions())
+                .upiPayment(nextStep.getUpiPayment())
+                .bookingNumber(nextStep.getBookingNumber())
+                .previewImageUrl(nextStep.getPreviewImageUrl())
+                .demoVideoUrl(nextStep.getDemoVideoUrl())
+                .mediaUrls(nextStep.getMediaUrls())
+                .build();
+    }
+
+    // ─── Damage Checklist Handler ──────────────────────────────────────────────
+
+    /**
+     * Handles a single step of the interactive damage checklist.
+     * The checklist is a sequential WhatsApp conversation:
+     *   - Bot shows one checklist item at a time
+     *   - Customer replies OK / DAMAGED / MISSING / sends a photo
+     *   - After all items, generates a completion summary
+     */
+    private WhatsAppMessageResponse handleDamageChecklistStep(
+            WhatsAppInboundRequest request,
+            String input,
+            WhatsAppConversation conv,
+            Customer customer,
+            WhatsAppConversationContext context) {
+
+        Long bookingId = context.getActiveBookingId();
+        Booking booking = bookingId != null
+                ? bookingQueryRepository.fetchById(bookingId).orElse(null)
+                : null;
+
+        if (booking == null) {
+            log.warn("[DamageChecklist] No active booking found for checklist step from {}", conv.getPhoneNumber());
+            return resetAndShowMainMenu(conv, customer);
+        }
+
+        String category = booking.getAsset().getCategory() != null
+                ? booking.getAsset().getCategory().name() : "CONSTRUCTION";
+        List<ChallanDocumentService.ChecklistItem> items = challanDocumentService.getDamageChecklist(category);
+
+        // Initialize state maps if not present
+        if (context.getChecklistItemStatuses() == null) context.setChecklistItemStatuses(new HashMap<>());
+        if (context.getChecklistItemPhotos() == null) context.setChecklistItemPhotos(new HashMap<>());
+        int currentIdx = context.getChecklistCurrentItemIndex() != null ? context.getChecklistCurrentItemIndex() : 0;
+
+        // Check if customer sent a photo for the current item
+        boolean photoReceived = isImageMessage(request);
+        if (photoReceived && currentIdx < items.size()) {
+            ChallanDocumentService.ChecklistItem currentItem = items.get(currentIdx);
+            String photoUrl = request.getMediaUrl() != null ? request.getMediaUrl() : "[photo-received]"
+                    ;
+            context.getChecklistItemPhotos().put(currentItem.key(), photoUrl);
+            context.getChecklistItemStatuses().put(currentItem.key(), "DAMAGED");
+            log.info("[DamageChecklist] Photo received for item {} from {}", currentItem.key(), conv.getPhoneNumber());
+            // Advance to next item
+            currentIdx++;
+            context.setChecklistCurrentItemIndex(currentIdx);
+            return serveNextChecklistItem(items, currentIdx, booking, conv, context);
+        }
+
+        // Process text reply
+        String upper = input.toUpperCase().trim();
+        if (currentIdx < items.size()) {
+            ChallanDocumentService.ChecklistItem currentItem = items.get(currentIdx);
+            String status;
+            if (upper.equals("OK") || upper.equals("THEEK") || upper.equals("THIK") || upper.equals("SAHI")) {
+                status = "OK";
+            } else if (upper.equals("DAMAGED") || upper.contains("DAMAGE") || upper.contains("TOOTA")
+                    || upper.contains("KHARAB") || upper.contains("TUTA")) {
+                status = "DAMAGED";
+            } else if (upper.equals("MISSING") || upper.contains("MISS") || upper.contains("NAHI")
+                    || upper.contains("GAYA") || upper.contains("GAYAB")) {
+                status = "MISSING";
+            } else if (upper.equals("SKIP")) {
+                status = "OK"; // Treat skip as OK
+            } else {
+                // Unrecognized — re-prompt the same item
+                return WhatsAppMessageResponse.builder()
+                        .to(conv.getPhoneNumber())
+                        .message("⚠️ Reply *OK*, *DAMAGED*, *MISSING*, or send a 📷 photo.\n\n"
+                                + challanDocumentService.buildChecklistItemPrompt(
+                                currentItem, currentIdx, items.size(),
+                                booking.getAsset().getName(), booking.getBookingNumber()))
+                        .state(WhatsAppState.DAMAGE_CHECKLIST_ACTIVE)
+                        .suggestedOptions(List.of("OK ✅", "DAMAGED ❌", "MISSING ⚠️", "SKIP"))
+                        .build();
+            }
+
+            context.getChecklistItemStatuses().put(currentItem.key(), status);
+            currentIdx++;
+            context.setChecklistCurrentItemIndex(currentIdx);
+        }
+
+        return serveNextChecklistItem(items, currentIdx, booking, conv, context);
+    }
+
+    private WhatsAppMessageResponse serveNextChecklistItem(
+            List<ChallanDocumentService.ChecklistItem> items,
+            int nextIdx,
+            Booking booking,
+            WhatsAppConversation conv,
+            WhatsAppConversationContext context) {
+
+        if (nextIdx < items.size()) {
+            // Still items remaining — show next one
+            ChallanDocumentService.ChecklistItem item = items.get(nextIdx);
+            String prompt = challanDocumentService.buildChecklistItemPrompt(
+                    item, nextIdx, items.size(),
+                    booking.getAsset().getName(), booking.getBookingNumber());
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(prompt)
+                    .state(WhatsAppState.DAMAGE_CHECKLIST_ACTIVE)
+                    .suggestedOptions(List.of("OK ✅", "DAMAGED ❌", "MISSING ⚠️", "Send Photo 📷"))
+                    .build();
+        } else {
+            // All items done — generate completion summary
+            context.setChecklistCompleted(true);
+            conv.setState(WhatsAppState.MAIN_MENU);
+            String summary = challanDocumentService.buildChecklistCompletionSummary(
+                    booking, items,
+                    context.getChecklistItemStatuses(),
+                    context.getChecklistItemPhotos());
+
+            // Also update booking status to RETURN_REQUESTED
+            bookingService.updateStatus(booking.getId(), BookingStatus.RETURN_REQUESTED,
+                    "WhatsApp damage checklist completed by customer", "WHATSAPP_BOT");
+
+            log.info("[DamageChecklist] Checklist complete for booking {} from {}",
+                    booking.getBookingNumber(), conv.getPhoneNumber());
+
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(summary)
+                    .state(WhatsAppState.MAIN_MENU)
+                    .bookingNumber(booking.getBookingNumber())
+                    .suggestedOptions(List.of("1. Rent Again", "MENU"))
+                    .build();
+        }
+    }
+
+    /**
+     * Starts the interactive damage checklist for a return flow.
+     * Called from {@code initiateReturnOption} when a booking is on-rent.
+     */
+    private WhatsAppMessageResponse startDamageChecklist(
+            WhatsAppConversation conv,
+            Customer customer,
+            WhatsAppConversationContext context,
+            Booking booking) {
+
+        String category = booking.getAsset().getCategory() != null
+                ? booking.getAsset().getCategory().name() : "CONSTRUCTION";
+        List<ChallanDocumentService.ChecklistItem> items = challanDocumentService.getDamageChecklist(category);
+
+        context.setActiveBookingId(booking.getId());
+        context.setActiveBookingNumber(booking.getBookingNumber());
+        context.setChecklistCurrentItemIndex(0);
+        context.setChecklistItemStatuses(new HashMap<>());
+        context.setChecklistItemPhotos(new HashMap<>());
+        context.setChecklistCompleted(false);
+        conv.setState(WhatsAppState.DAMAGE_CHECKLIST_ACTIVE);
+
+        String intro = String.format("""
+                🔄 *Equipment Return — Damage Checklist*
+                *(मशीन वापसी — क्षति जाँच सूची)*
+                ━━━━━━━━━━━━━━━━━━━━━━
+                🚜 Machine: *%s* (`%s`)
+                📋 Booking: *%s*
+                💰 Security Deposit: *₹%,.0f*
+                
+                अब मैं आपसे मशीन के %d बिंदुओं की जाँच करूँगा।
+                _(I will now check %d inspection points with you.)_
+                
+                👉 प्रत्येक प्रश्न के लिए उत्तर दें:
+                ✅ *OK* — ठीक है
+                ❌ *DAMAGED* — क्षतिग्रस्त है  
+                ⚠️ *MISSING* — गायब है
+                📷 क्षति की *फोटो भेजें*
+                
+                चलिए शुरू करते हैं! 👇
+                """,
+                booking.getAsset().getName(), booking.getAsset().getAssetTag(),
+                booking.getBookingNumber(),
+                booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO,
+                items.size(), items.size());
+
+        String firstItemPrompt = challanDocumentService.buildChecklistItemPrompt(
+                items.get(0), 0, items.size(),
+                booking.getAsset().getName(), booking.getBookingNumber());
+
+        return WhatsAppMessageResponse.builder()
+                .to(conv.getPhoneNumber())
+                .message(intro + "\n\n" + firstItemPrompt)
+                .state(WhatsAppState.DAMAGE_CHECKLIST_ACTIVE)
+                .bookingNumber(booking.getBookingNumber())
+                .suggestedOptions(List.of("OK ✅", "DAMAGED ❌", "MISSING ⚠️", "Send Photo 📷"))
+                .build();
+    }
+
+    // ─── Helper: detect voice/audio messages ──────────────────────────────────
+
+    private boolean isVoiceMessage(WhatsAppInboundRequest request) {
+        if (request.getMediaType() == null) return false;
+        String mt = request.getMediaType().toLowerCase();
+        return mt.equals("audio") || mt.equals("voice") || mt.startsWith("audio/");
+    }
+
+    private boolean isImageMessage(WhatsAppInboundRequest request) {
+        if (request.getMediaType() == null) return false;
+        String mt = request.getMediaType().toLowerCase();
+        return mt.equals("image") || mt.startsWith("image/");
     }
 
     // ==================== HELPER METHODS ====================

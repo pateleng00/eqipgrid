@@ -9,6 +9,7 @@ import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
 import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
 import com.equipgrid.whatsapp.service.IWhatsAppBotService;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
+import com.equipgrid.whatsapp.service.WhatsAppNotificationServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -96,6 +97,15 @@ public class WhatsAppWebhookController {
     @PostMapping("/notify/settlement/{bookingId}")
     public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> notifyReturnSettlement(@PathVariable Long bookingId) {
         WhatsAppMessageResponse response = whatsAppNotificationService.notifyReturnSettlement(bookingId);
+        return ResponseEntity.ok(ApiResponse.buildSuccess(response));
+    }
+
+    @Operation(summary = "Notify Return Damage Checklist Ready",
+            description = "Proactively notifies customer that their WhatsApp damage checklist is ready — sent when recovery vehicle is dispatched")
+    @PostMapping("/notify/checklist/{bookingId}")
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> notifyDamageChecklistReady(@PathVariable Long bookingId) {
+        WhatsAppMessageResponse response = ((WhatsAppNotificationServiceImpl) whatsAppNotificationService)
+                .notifyDamageChecklistReady(bookingId);
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
     }
 

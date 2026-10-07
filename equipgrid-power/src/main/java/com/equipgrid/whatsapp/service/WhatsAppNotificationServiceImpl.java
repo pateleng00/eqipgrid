@@ -25,6 +25,7 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
     private final DispatchQueryRepository dispatchQueryRepository;
     private final ReturnInspectionQueryRepository returnInspectionQueryRepository;
     private final IUpiQrGeneratorService upiQrGeneratorService;
+    private final ChallanDocumentService challanDocumentService;
 
     @Override
     public WhatsAppMessageResponse sendNotification(WhatsAppNotificationRequest request) {
@@ -148,44 +149,78 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         DispatchRecord dispatch = dispatchQueryRepository.fetchByBookingId(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Dispatch record not found for booking: " + bookingId));
 
-        String message = String.format("""
-                🚚 *Machinery Dispatched from Yard!* 🚜
+        // Generate full digital delivery challan text
+        String challanText = challanDocumentService.buildOutwardChallanWhatsAppText(booking, dispatch);
+
+        // Build the dispatch alert header
+        String alertHeader = String.format("""
+                🚚 *मशीन भेजी गई है!* (Machine Dispatched) 🚜
                 ━━━━━━━━━━━━━━━━━━━━━━
-                Dear %s,
-                Your rented machine is dispatched from our yard and is en route to your site!
+                Dear *%s*,
+                Your machine has left our yard and is en route!
                 
-                📄 Challan No: *%s*
-                🔖 Booking Ref: *%s*
-                🚜 Equipment: *%s* (`%s`)
-                👨‍✈️ Driver / Transporter: *%s*
-                ⛽ Outgoing Fuel: *%s*
-                ⏱ Meter Reading: *%.1f hrs*
-                📍 Site Destination: *%s*
+                📍 Track delivery: Reply *4* or *TRACK*
                 
-                ✅ Pre-dispatch 28-point inspection & accessories verified.
-                Handover Delivery Challan (DC) is active.
+                ━━━━━━━━━━━━━━━━━━━━━━
+                """,
+                booking.getCustomer().getFullName());
+
+        // Combine alert + full digital challan document
+        String fullMessage = alertHeader + "\n" + challanText;
+
+        log.info("Sent dispatch notification with digital challan via WhatsApp to phone: {}", booking.getCustomer().getPhone());
+
+        return WhatsAppMessageResponse.builder()
+                .to(booking.getCustomer().getPhone())
+                .message(fullMessage)
+                .bookingNumber(booking.getBookingNumber())
+                .suggestedOptions(List.of("GOT IT ✅", "TRACK 📍", "MENU"))
+                .build();
+    }
+
+    /**
+     * Proactively notifies a customer that their return damage checklist is ready
+     * (e.g. triggered by yard when recovery vehicle is en route).
+     */
+    public WhatsAppMessageResponse notifyDamageChecklistReady(Long bookingId) {
+        Booking booking = bookingQueryRepository.fetchById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+
+        String message = String.format("""
+                📋 *Return Damage Checklist Ready!*
+                *(वापसी क्षति जाँच सूची तैयार है)*
+                ━━━━━━━━━━━━━━━━━━━━━━
+                Dear *%s*,
+                Our recovery vehicle is on its way to your site to pick up:
                 
-                Please ensure the unloading site and operator are ready.
-                Reply *TRACK* or *3* anytime to check live delivery trip status.
+                🚜 Machine: *%s* (`%s`)
+                📋 Booking: *%s*
+                💰 Deposit: *₹%,.0f*
+                
+                ✅ *Before our team arrives, please:*
+                1. Reply *5* or *RETURN* to start your WhatsApp damage checklist
+                2. Walk around the machine and answer 8 quick questions
+                3. Send photos of any damage if needed
+                
+                This ensures your *instant UPI deposit refund* is processed
+                within *2 hours* of our yard team completing the inspection!
+                
+                👉 Reply *5* or *RETURN* to start checklist now.
                 """,
                 booking.getCustomer().getFullName(),
-                dispatch.getChallanNumber(),
-                booking.getBookingNumber(),
                 booking.getAsset().getName(),
                 booking.getAsset().getAssetTag(),
-                dispatch.getDriverName() != null ? dispatch.getDriverName() : "EquipGrid Logistics",
-                dispatch.getFuelLevel() != null ? dispatch.getFuelLevel() : "100%",
-                dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut() : 0.0,
-                booking.getDeliveryAddress()
+                booking.getBookingNumber(),
+                booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO
         );
 
-        log.info("Sent dispatch notification via WhatsApp to phone: {}", booking.getCustomer().getPhone());
+        log.info("Sent damage checklist ready notification to phone: {}", booking.getCustomer().getPhone());
 
         return WhatsAppMessageResponse.builder()
                 .to(booking.getCustomer().getPhone())
                 .message(message)
                 .bookingNumber(booking.getBookingNumber())
-                .suggestedOptions(List.of("TRACK", "MENU"))
+                .suggestedOptions(List.of("5. Start Checklist 📋", "MENU"))
                 .build();
     }
 
