@@ -72,6 +72,16 @@ export const UserManagementView: React.FC = () => {
     active: true,
   });
 
+  const normalizeRole = (role: any): StaffRole => {
+    if (role === 8 || role === '8' || role === 'ROOT') return 'ROOT';
+    if (role === 7 || role === '7' || role === 'ADMIN' || role === 1 || role === '1' || role === 'SUPER_ADMIN') return 'ADMIN';
+    if (role === 6 || role === '6' || role === 'MANAGER') return 'MANAGER';
+    if (role === 2 || role === '2' || role === 'OPERATOR') return 'OPERATOR';
+    if (role === 3 || role === '3' || role === 'TECHNICIAN') return 'TECHNICIAN';
+    if (role === 4 || role === '4' || role === 'DRIVER') return 'DRIVER';
+    return (String(role || 'OPERATOR').toUpperCase() as StaffRole);
+  };
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -81,7 +91,11 @@ export const UserManagementView: React.FC = () => {
         ),
         api.getHubs(),
       ]);
-      setUsers(fetchedUsers);
+      const normalizedUsers = (fetchedUsers || []).map((u) => ({
+        ...u,
+        role: normalizeRole(u.role),
+      }));
+      setUsers(normalizedUsers);
       setHubs(fetchedHubs);
     } catch (err) {
       console.error('Failed to load users or hubs:', err);
@@ -305,52 +319,102 @@ export const UserManagementView: React.FC = () => {
     }
   };
 
-  const getRoleBadge = (role: StaffRole) => {
+  const getRoleBadge = (rawRole: any) => {
+    const role = normalizeRole(rawRole);
     switch (role) {
       case 'ROOT':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wide bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm shadow-amber-500/10">
-            <Crown className="w-3.5 h-3.5 text-amber-400" />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-sm'
+                : 'bg-gradient-to-r from-amber-500/20 via-purple-500/20 to-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm shadow-amber-500/10'
+            )}
+          >
+            <Crown className={cn('w-3.5 h-3.5', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
             Root Super Admin
           </span>
         );
       case 'ADMIN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
-            <Shield className="w-3.5 h-3.5 text-indigo-400" />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-indigo-100 text-indigo-900 border-indigo-300 shadow-sm'
+                : 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30'
+            )}
+          >
+            <Shield className={cn('w-3.5 h-3.5', isDaylight ? 'text-indigo-700' : 'text-indigo-400')} />
             Operations Admin
           </span>
         );
       case 'MANAGER':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-            <Building2 className="w-3.5 h-3.5 text-emerald-400" />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-emerald-100 text-emerald-900 border-emerald-300 shadow-sm'
+                : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+            )}
+          >
+            <Building2 className={cn('w-3.5 h-3.5', isDaylight ? 'text-emerald-700' : 'text-emerald-400')} />
             Yard Manager
           </span>
         );
       case 'OPERATOR':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-            <KeyRound className="w-3.5 h-3.5 text-cyan-400" />
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-sky-100 text-sky-900 border-sky-300 shadow-sm'
+                : 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+            )}
+          >
+            <KeyRound className={cn('w-3.5 h-3.5', isDaylight ? 'text-sky-700' : 'text-cyan-400')} />
             Desk Operator
           </span>
         );
       case 'TECHNICIAN':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-orange-500/15 text-orange-400 border border-orange-500/30">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-orange-100 text-orange-900 border-orange-300 shadow-sm'
+                : 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+            )}
+          >
             Yard Technician
           </span>
         );
       case 'DRIVER':
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-violet-500/15 text-violet-400 border border-violet-500/30">
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-purple-100 text-purple-900 border-purple-300 shadow-sm'
+                : 'bg-violet-500/15 text-violet-400 border-violet-500/30'
+            )}
+          >
             Logistics Driver
           </span>
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide bg-slate-500/15 text-slate-400 border border-slate-500/30">
-            {role}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wide border',
+              isDaylight
+                ? 'bg-slate-100 text-slate-800 border-slate-300 shadow-sm'
+                : 'bg-slate-500/15 text-slate-400 border-slate-500/30'
+            )}
+          >
+            {String(rawRole)}
           </span>
         );
     }
@@ -362,19 +426,25 @@ export const UserManagementView: React.FC = () => {
       <div
         className={cn(
           'p-4 rounded-xl border flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all',
-          isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800'
+          isDaylight ? 'bg-white border-slate-200 shadow-sm text-slate-900' : 'bg-slate-900/60 border-slate-800 text-white'
         )}
       >
         <div>
           <div className="flex items-center gap-2.5">
             <div
               className={cn(
-                'p-2 rounded-lg',
+                'p-2 rounded-lg border',
                 isRoot
-                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                  ? isDaylight
+                    ? 'bg-amber-100 text-amber-700 border-amber-300'
+                    : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                   : isAdmin
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  ? isDaylight
+                    ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                    : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
+                  : isDaylight
+                  ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
+                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
               )}
             >
               {isRoot ? (
@@ -386,13 +456,18 @@ export const UserManagementView: React.FC = () => {
               )}
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
+              <h1 className={cn('text-xl font-black tracking-tight flex items-center gap-2', isDaylight ? 'text-slate-900' : 'text-white')}>
                 Staff & User Access Control
-                <span className="text-xs font-mono font-normal px-2 py-0.5 rounded border border-slate-700 bg-slate-800/50 text-slate-300">
+                <span
+                  className={cn(
+                    'text-xs font-mono font-medium px-2 py-0.5 rounded border',
+                    isDaylight ? 'border-slate-300 bg-slate-100 text-slate-700' : 'border-slate-700 bg-slate-800/50 text-slate-300'
+                  )}
+                >
                   RBAC Matrix Active
                 </span>
               </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
                 {isRoot &&
                   'Root Authority: Full command over all roles, admins, managers, hubs & machines.'}
                 {isAdmin &&
@@ -408,9 +483,9 @@ export const UserManagementView: React.FC = () => {
           <button
             onClick={loadData}
             className={cn(
-              'px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all',
+              'px-3 py-2 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer',
               isDaylight
-                ? 'border-slate-300 hover:bg-slate-100 text-slate-700'
+                ? 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm'
                 : 'border-slate-800 hover:bg-slate-800 text-slate-300'
             )}
             title="Refresh user list"
@@ -436,61 +511,61 @@ export const UserManagementView: React.FC = () => {
         <div
           className={cn(
             'p-3 rounded-xl border flex flex-col',
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'
+            isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/50 border-slate-800'
           )}
         >
-          <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wider">
+          <span className={cn('text-[11px] font-semibold uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
             Total Staff
           </span>
-          <span className="text-2xl font-black mt-1">{stats.total}</span>
+          <span className={cn('text-2xl font-black mt-1', isDaylight ? 'text-slate-900' : 'text-white')}>{stats.total}</span>
         </div>
 
         <div
           className={cn(
             'p-3 rounded-xl border flex flex-col',
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'
+            isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/50 border-slate-800'
           )}
         >
-          <span className="text-[11px] text-amber-500 font-semibold uppercase tracking-wider flex items-center gap-1">
+          <span className={cn('text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1', isDaylight ? 'text-amber-700' : 'text-amber-500')}>
             <Crown className="w-3 h-3" /> Root Super
           </span>
-          <span className="text-2xl font-black mt-1 text-amber-400">{stats.roots}</span>
+          <span className={cn('text-2xl font-black mt-1', isDaylight ? 'text-amber-700' : 'text-amber-400')}>{stats.roots}</span>
         </div>
 
         <div
           className={cn(
             'p-3 rounded-xl border flex flex-col',
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'
+            isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/50 border-slate-800'
           )}
         >
-          <span className="text-[11px] text-indigo-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+          <span className={cn('text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1', isDaylight ? 'text-indigo-700' : 'text-indigo-400')}>
             <Shield className="w-3 h-3" /> Admins
           </span>
-          <span className="text-2xl font-black mt-1 text-indigo-400">{stats.admins}</span>
+          <span className={cn('text-2xl font-black mt-1', isDaylight ? 'text-indigo-700' : 'text-indigo-400')}>{stats.admins}</span>
         </div>
 
         <div
           className={cn(
             'p-3 rounded-xl border flex flex-col',
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'
+            isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/50 border-slate-800'
           )}
         >
-          <span className="text-[11px] text-emerald-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+          <span className={cn('text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1', isDaylight ? 'text-emerald-700' : 'text-emerald-400')}>
             <Building2 className="w-3 h-3" /> Hub Managers
           </span>
-          <span className="text-2xl font-black mt-1 text-emerald-400">{stats.managers}</span>
+          <span className={cn('text-2xl font-black mt-1', isDaylight ? 'text-emerald-700' : 'text-emerald-400')}>{stats.managers}</span>
         </div>
 
         <div
           className={cn(
             'p-3 rounded-xl border flex flex-col col-span-2 sm:col-span-1',
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/50 border-slate-800'
+            isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/50 border-slate-800'
           )}
         >
-          <span className="text-[11px] text-cyan-400 font-semibold uppercase tracking-wider flex items-center gap-1">
+          <span className={cn('text-[11px] font-semibold uppercase tracking-wider flex items-center gap-1', isDaylight ? 'text-sky-700' : 'text-cyan-400')}>
             <KeyRound className="w-3 h-3" /> Yard Staff
           </span>
-          <span className="text-2xl font-black mt-1 text-cyan-400">{stats.operators}</span>
+          <span className={cn('text-2xl font-black mt-1', isDaylight ? 'text-sky-700' : 'text-cyan-400')}>{stats.operators}</span>
         </div>
       </div>
 
@@ -498,7 +573,7 @@ export const UserManagementView: React.FC = () => {
       <div
         className={cn(
           'p-3 rounded-xl border flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0',
-          isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-slate-800'
+          isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/40 border-slate-800'
         )}
       >
         <div className="relative w-full sm:w-80">
@@ -511,7 +586,7 @@ export const UserManagementView: React.FC = () => {
             className={cn(
               'w-full pl-9 pr-3 py-1.5 rounded-lg border text-xs outline-none transition-all',
               isDaylight
-                ? 'border-slate-300 bg-white text-slate-950 focus:border-emerald-500'
+                ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
                 : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
             )}
           />
@@ -519,7 +594,7 @@ export const UserManagementView: React.FC = () => {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Role Filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className={cn('flex items-center gap-1.5 text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
             <Filter className="w-3.5 h-3.5" />
             <select
               value={roleFilter}
@@ -527,7 +602,7 @@ export const UserManagementView: React.FC = () => {
               className={cn(
                 'px-2.5 py-1.5 rounded-lg border text-xs outline-none',
                 isDaylight
-                  ? 'border-slate-300 bg-white text-slate-950'
+                  ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
                   : 'border-slate-800 bg-slate-950 text-white'
               )}
             >
@@ -542,7 +617,7 @@ export const UserManagementView: React.FC = () => {
           </div>
 
           {/* Hub Filter */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className={cn('flex items-center gap-1.5 text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
             <MapPin className="w-3.5 h-3.5" />
             <select
               value={hubFilter}
@@ -550,9 +625,9 @@ export const UserManagementView: React.FC = () => {
               onChange={(e) => setHubFilter(e.target.value)}
               className={cn(
                 'px-2.5 py-1.5 rounded-lg border text-xs outline-none',
-                isManager ? 'opacity-70 cursor-not-allowed bg-slate-800/40' : '',
+                isManager ? (isDaylight ? 'opacity-70 cursor-not-allowed bg-slate-100' : 'opacity-70 cursor-not-allowed bg-slate-800/40') : '',
                 isDaylight
-                  ? 'border-slate-300 bg-white text-slate-950'
+                  ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
                   : 'border-slate-800 bg-slate-950 text-white'
               )}
             >
@@ -572,7 +647,7 @@ export const UserManagementView: React.FC = () => {
       <div
         className={cn(
           'flex-1 border rounded-xl overflow-hidden flex flex-col min-h-0',
-          isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-slate-800'
+          isDaylight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900/40 border-slate-800'
         )}
       >
         <div className="flex-1 overflow-auto">
@@ -581,7 +656,7 @@ export const UserManagementView: React.FC = () => {
               className={cn(
                 'sticky top-0 z-10 border-b font-bold uppercase text-[10px] tracking-wider',
                 isDaylight
-                  ? 'bg-slate-100/90 text-slate-600 border-slate-200'
+                  ? 'bg-slate-50 text-slate-700 border-slate-200'
                   : 'bg-slate-950/90 text-slate-400 border-slate-800'
               )}
             >
@@ -594,7 +669,7 @@ export const UserManagementView: React.FC = () => {
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/40">
+            <tbody className={cn('divide-y', isDaylight ? 'divide-slate-200' : 'divide-slate-800/40')}>
               {filteredUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-12 text-slate-400">
@@ -613,7 +688,7 @@ export const UserManagementView: React.FC = () => {
                       key={user.id}
                       className={cn(
                         'transition-colors',
-                        isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'
+                        isDaylight ? 'hover:bg-slate-50/80' : 'hover:bg-slate-800/30'
                       )}
                     >
                       {/* Name & Email */}
@@ -621,28 +696,47 @@ export const UserManagementView: React.FC = () => {
                         <div className="flex items-center gap-3">
                           <div
                             className={cn(
-                              'w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase shrink-0',
+                              'w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs uppercase shrink-0 border',
                               user.role === 'ROOT'
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                ? isDaylight
+                                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                                 : user.role === 'ADMIN'
-                                ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/40'
+                                ? isDaylight
+                                  ? 'bg-indigo-100 text-indigo-900 border-indigo-300'
+                                  : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
                                 : user.role === 'MANAGER'
-                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                : 'bg-slate-700 text-slate-200'
+                                ? isDaylight
+                                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                                : user.role === 'OPERATOR'
+                                ? isDaylight
+                                  ? 'bg-sky-100 text-sky-900 border-sky-300'
+                                  : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                : isDaylight
+                                ? 'bg-slate-100 text-slate-700 border-slate-300'
+                                : 'bg-slate-800 text-slate-300 border-slate-700'
                             )}
                           >
                             {user.fullName ? user.fullName.substring(0, 2) : 'ST'}
                           </div>
                           <div>
-                            <div className="font-bold flex items-center gap-1.5">
+                            <div className={cn('font-bold flex items-center gap-1.5', isDaylight ? 'text-slate-900' : 'text-white')}>
                               {user.fullName}
                               {user.email === currentUser?.email && (
-                                <span className="text-[10px] font-semibold text-emerald-400 bg-emerald-500/10 px-1 rounded border border-emerald-500/30">
+                                <span
+                                  className={cn(
+                                    'text-[10px] font-semibold px-1 rounded border',
+                                    isDaylight
+                                      ? 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                                      : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                                  )}
+                                >
                                   You
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-400 flex items-center gap-1 font-mono">
+                            <div className={cn('text-[11px] flex items-center gap-1 font-mono', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
                               <Mail className="w-3 h-3 opacity-60" />
                               {user.email || user.username}
                             </div>
@@ -656,40 +750,61 @@ export const UserManagementView: React.FC = () => {
                       {/* Assigned Hub */}
                       <td className="px-4 py-3">
                         {user.hubName ? (
-                          <div className="flex items-center gap-1.5 font-medium">
-                            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <div className={cn('flex items-center gap-1.5 font-medium', isDaylight ? 'text-slate-800' : 'text-white')}>
+                            <MapPin className={cn('w-3.5 h-3.5 shrink-0', isDaylight ? 'text-emerald-600' : 'text-emerald-400')} />
                             <span>{user.hubName}</span>
                             {user.hubCode && (
-                              <span className="text-[10px] font-mono text-slate-400 bg-slate-800 px-1 rounded border border-slate-700">
+                              <span
+                                className={cn(
+                                  'text-[10px] font-mono px-1.5 py-0.5 rounded border',
+                                  isDaylight
+                                    ? 'bg-slate-100 text-slate-700 border-slate-300'
+                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                )}
+                              >
                                 {user.hubCode}
                               </span>
                             )}
                           </div>
                         ) : (
-                          <span className="text-slate-400 italic">Central HQ / Global</span>
+                          <span className={cn('italic', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Central HQ / Global</span>
                         )}
                       </td>
 
                       {/* Phone */}
-                      <td className="px-4 py-3 font-mono text-slate-300">
+                      <td className={cn('px-4 py-3 font-mono', isDaylight ? 'text-slate-800' : 'text-slate-300')}>
                         {user.phone ? (
                           <span className="flex items-center gap-1">
                             <Phone className="w-3 h-3 text-slate-500" />
                             {user.phone}
                           </span>
                         ) : (
-                          <span className="text-slate-500">—</span>
+                          <span className={isDaylight ? 'text-slate-400' : 'text-slate-500'}>—</span>
                         )}
                       </td>
 
                       {/* Status */}
                       <td className="px-4 py-3">
                         {user.active ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border',
+                              isDaylight
+                                ? 'text-emerald-800 bg-emerald-50 border-emerald-300'
+                                : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+                            )}
+                          >
                             <CheckCircle2 className="w-3 h-3" /> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/30">
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border',
+                              isDaylight
+                                ? 'text-rose-800 bg-rose-50 border-rose-300'
+                                : 'text-rose-400 bg-rose-500/10 border-rose-500/30'
+                            )}
+                          >
                             <XCircle className="w-3 h-3" /> Deactivated
                           </span>
                         )}
@@ -702,10 +817,10 @@ export const UserManagementView: React.FC = () => {
                             <button
                               onClick={() => handleOpenEditModal(user)}
                               className={cn(
-                                'p-1.5 rounded-lg border text-slate-400 hover:text-white transition-all cursor-pointer',
+                                'p-1.5 rounded-lg border transition-all cursor-pointer',
                                 isDaylight
-                                  ? 'border-slate-300 hover:bg-slate-200'
-                                  : 'border-slate-800 hover:bg-slate-800'
+                                  ? 'border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-sm'
+                                  : 'border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white'
                               )}
                               title="Edit user details"
                             >
@@ -714,7 +829,10 @@ export const UserManagementView: React.FC = () => {
                           ) : (
                             <button
                               disabled
-                              className="p-1.5 rounded-lg border border-transparent text-slate-600 opacity-40 cursor-not-allowed"
+                              className={cn(
+                                'p-1.5 rounded-lg border border-transparent opacity-40 cursor-not-allowed',
+                                isDaylight ? 'text-slate-400' : 'text-slate-600'
+                              )}
                               title="Cannot edit higher or peer privilege account"
                             >
                               <Lock className="w-3.5 h-3.5" />
@@ -724,7 +842,12 @@ export const UserManagementView: React.FC = () => {
                           {deletable ? (
                             <button
                               onClick={() => setDeleteTarget(user)}
-                              className="p-1.5 rounded-lg border border-rose-900/40 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                              className={cn(
+                                'p-1.5 rounded-lg border transition-all cursor-pointer',
+                                isDaylight
+                                  ? 'border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 shadow-sm'
+                                  : 'border-rose-900/40 text-rose-400 hover:bg-rose-500/10'
+                              )}
                               title="Delete staff account"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
@@ -733,7 +856,10 @@ export const UserManagementView: React.FC = () => {
                             <span title={deleteReason}>
                               <button
                                 disabled
-                                className="p-1.5 rounded-lg border border-transparent text-slate-600 opacity-40 cursor-not-allowed"
+                                className={cn(
+                                  'p-1.5 rounded-lg border border-transparent opacity-40 cursor-not-allowed',
+                                  isDaylight ? 'text-slate-400' : 'text-slate-600'
+                                )}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -752,23 +878,33 @@ export const UserManagementView: React.FC = () => {
 
       {/* ── Add / Edit User Modal ── */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+        <div
+          className={cn(
+            'fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm',
+            isDaylight ? 'bg-slate-900/40' : 'bg-slate-950/80'
+          )}
+        >
           <div
             className={cn(
               'w-full max-w-lg rounded-2xl border p-6 shadow-2xl flex flex-col space-y-4 transition-all',
-              isDaylight ? 'bg-white border-slate-300 text-slate-950' : 'bg-slate-900 border-slate-800 text-white'
+              isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
             )}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className={cn('flex items-center justify-between pb-3 border-b', isDaylight ? 'border-slate-200' : 'border-slate-800')}>
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                <div
+                  className={cn(
+                    'p-2 rounded-lg border',
+                    isDaylight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  )}
+                >
                   <UserPlus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold">
+                  <h3 className={cn('text-base font-bold', isDaylight ? 'text-slate-900' : 'text-white')}>
                     {editingUser ? 'Edit Staff Member' : 'Create New Staff Member'}
                   </h3>
-                  <p className="text-xs text-slate-400">
+                  <p className={cn('text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
                     Configure account credentials and role authorization
                   </p>
                 </div>
@@ -776,7 +912,12 @@ export const UserManagementView: React.FC = () => {
             </div>
 
             {modalError && (
-              <div className="p-3 rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs flex items-center gap-2">
+              <div
+                className={cn(
+                  'p-3 rounded-lg border text-xs flex items-center gap-2',
+                  isDaylight ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-rose-500/30 bg-rose-500/10 text-rose-400'
+                )}
+              >
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{modalError}</span>
               </div>
@@ -785,7 +926,7 @@ export const UserManagementView: React.FC = () => {
             <form onSubmit={handleSaveUser} className="space-y-3.5 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="block font-semibold mb-1 text-slate-300">
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Full Name <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -795,16 +936,16 @@ export const UserManagementView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                     placeholder="e.g. Vikramaditya Rao"
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-1 text-slate-300">
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Email Address <span className="text-rose-400">*</span>
                   </label>
                   <input
@@ -814,32 +955,32 @@ export const UserManagementView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="e.g. vikram@equipgrid.in"
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   />
                 </div>
 
                 <div>
-                  <label className="block font-semibold mb-1 text-slate-300">Phone Number</label>
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>Phone Number</label>
                   <input
                     type="text"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     placeholder="+919876543210"
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <label className="block font-semibold mb-1 text-slate-300">
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     {editingUser ? 'Change Password (Leave blank to keep unchanged)' : 'Account Password *'}
                   </label>
                   <input
@@ -849,9 +990,9 @@ export const UserManagementView: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     placeholder={editingUser ? '••••••••' : 'Enter temporary password'}
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600 focus:ring-1 focus:ring-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   />
@@ -859,7 +1000,7 @@ export const UserManagementView: React.FC = () => {
 
                 {/* Role Selector Scoped by RBAC */}
                 <div>
-                  <label className="block font-semibold mb-1 text-slate-300">
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Access Role <span className="text-rose-400">*</span>
                   </label>
                   <select
@@ -867,9 +1008,9 @@ export const UserManagementView: React.FC = () => {
                     disabled={isManager} // Managers can only create Operators
                     onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffRole })}
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   >
@@ -884,7 +1025,7 @@ export const UserManagementView: React.FC = () => {
 
                 {/* Hub Selector Scoped by RBAC */}
                 <div>
-                  <label className="block font-semibold mb-1 text-slate-300">
+                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Assigned Hub Yard {formData.role === 'MANAGER' && <span className="text-rose-400">*</span>}
                   </label>
                   <select
@@ -892,10 +1033,10 @@ export const UserManagementView: React.FC = () => {
                     disabled={isManager} // Managers are permanently locked to their assigned hub
                     onChange={(e) => setFormData({ ...formData, hubId: e.target.value })}
                     className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none',
-                      isManager ? 'opacity-70 bg-slate-800/40' : '',
+                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
+                      isManager ? (isDaylight ? 'opacity-70 bg-slate-100 cursor-not-allowed' : 'opacity-70 bg-slate-800/40 cursor-not-allowed') : '',
                       isDaylight
-                        ? 'border-slate-300 bg-white text-slate-950'
+                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
                         : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
                     )}
                   >
@@ -915,27 +1056,35 @@ export const UserManagementView: React.FC = () => {
                       id="userActive"
                       checked={formData.active}
                       onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-                      className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-0"
+                      className={cn(
+                        'rounded focus:ring-0',
+                        isDaylight ? 'border-slate-300 bg-white text-emerald-600' : 'border-slate-700 bg-slate-950 text-emerald-500'
+                      )}
                     />
-                    <label htmlFor="userActive" className="text-xs text-slate-300 cursor-pointer">
+                    <label htmlFor="userActive" className={cn('text-xs cursor-pointer', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                       Account is Active and authorized to log in
                     </label>
                   </div>
                 )}
               </div>
 
-              <div className="flex items-center justify-end gap-2.5 pt-4 border-t border-slate-800">
+              <div className={cn('flex items-center justify-end gap-2.5 pt-4 border-t', isDaylight ? 'border-slate-200' : 'border-slate-800')}>
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-lg border border-slate-800 hover:bg-slate-800 text-slate-400 font-semibold cursor-pointer"
+                  className={cn(
+                    'px-4 py-2 rounded-lg border font-semibold cursor-pointer text-xs transition-all',
+                    isDaylight
+                      ? 'border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-sm'
+                      : 'border-slate-800 hover:bg-slate-800 text-slate-400'
+                  )}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50"
+                  className="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold cursor-pointer disabled:opacity-50 text-xs shadow-md shadow-emerald-900/20"
                 >
                   {isSubmitting ? 'Saving...' : editingUser ? 'Update Staff Member' : 'Create Staff Member'}
                 </button>

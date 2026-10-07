@@ -24,6 +24,7 @@ import {
   ReturnInspection,
   State,
   UserAccount,
+  StaffRole,
   CreateUserPayload,
   UpdateUserPayload,
 } from '../types';
@@ -1503,13 +1504,27 @@ export class ApiStore {
   // USER MANAGEMENT & RBAC APIS
   // ─────────────────────────────────────────────────────────────────────────
 
+  private normalizeStaffRole(role: any): StaffRole {
+    if (role === 8 || role === '8' || role === 'ROOT') return 'ROOT';
+    if (role === 7 || role === '7' || role === 'ADMIN' || role === 1 || role === '1' || role === 'SUPER_ADMIN') return 'ADMIN';
+    if (role === 6 || role === '6' || role === 'MANAGER') return 'MANAGER';
+    if (role === 2 || role === '2' || role === 'OPERATOR') return 'OPERATOR';
+    if (role === 3 || role === '3' || role === 'TECHNICIAN') return 'TECHNICIAN';
+    if (role === 4 || role === '4' || role === 'DRIVER') return 'DRIVER';
+    return (String(role || 'OPERATOR').toUpperCase() as StaffRole);
+  }
+
   async getUsers(hubId?: number, role?: string): Promise<UserAccount[]> {
     try {
       const params = new URLSearchParams();
       if (hubId) params.append('hubId', String(hubId));
       if (role) params.append('role', role);
       const qs = params.toString() ? `?${params.toString()}` : '';
-      return await request<UserAccount[]>(`/users${qs}`);
+      const list = await request<UserAccount[]>(`/users${qs}`);
+      return list.map((u) => ({
+        ...u,
+        role: this.normalizeStaffRole(u.role),
+      }));
     } catch (err) {
       console.warn('Backend /users request fallback:', err);
       // Fallback list of users
@@ -1576,7 +1591,10 @@ export class ApiStore {
       body: JSON.stringify(payload),
     });
     this.notify();
-    return res;
+    return {
+      ...res,
+      role: this.normalizeStaffRole(res.role),
+    };
   }
 
   async updateUser(id: number, payload: UpdateUserPayload): Promise<UserAccount> {
@@ -1585,7 +1603,10 @@ export class ApiStore {
       body: JSON.stringify(payload),
     });
     this.notify();
-    return res;
+    return {
+      ...res,
+      role: this.normalizeStaffRole(res.role),
+    };
   }
 
   async deleteUser(id: number): Promise<void> {
