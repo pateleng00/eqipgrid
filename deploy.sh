@@ -66,7 +66,7 @@ deploy_backend() {
 }
 
 deploy_all() {
-    print_header "Deploying Full Monolith (Database + Backend + Frontend)"
+    print_header "Deploying Monolith (Backend + Frontend connecting to AWS RDS)"
     git_pull_updates
     echo "🔨 Building all containers..."
     docker compose -f "$COMPOSE_FILE" build
