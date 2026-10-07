@@ -12,11 +12,12 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { RentalConfiguration } from '../../types';
+import { RentalConfiguration, AssetCategory } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { formatINR } from '../../lib/utils';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 
 export const RentalConfigView: React.FC = () => {
   const { isDaylight } = useTheme();
@@ -25,6 +26,8 @@ export const RentalConfigView: React.FC = () => {
   const hubs = api.getHubs();
   const cities = api.getCities();
   const states = api.getStates();
+  const types = api.getEquipmentTypes();
+  const models = api.getMachineModels();
   const assets = api.assets;
 
   React.useEffect(() => {
@@ -38,6 +41,8 @@ export const RentalConfigView: React.FC = () => {
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
   const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
   const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
+
+  const [visibleCount, setVisibleCount] = useState<number>(7);
 
   const availableCities = cities.filter((c) =>
     selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)
@@ -60,20 +65,87 @@ export const RentalConfigView: React.FC = () => {
     return true;
   });
 
+  // Reset to initial 7 items when regional filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId]);
+
+  // Infinite scroll slice (default 7 items, loads +7 on scroll)
+  const visibleConfigs = React.useMemo(() => {
+    return filteredConfigs.slice(0, visibleCount);
+  }, [filteredConfigs, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < filteredConfigs.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, filteredConfigs.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, filteredConfigs.length));
+  };
+
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingConfig, setEditingConfig] = useState<RentalConfiguration | null>(null);
   const [configPendingRemoval, setConfigPendingRemoval] = useState<RentalConfiguration | null>(null);
 
-  // Form states
-  const [formHubId, setFormHubId] = useState<number>(hubs[0]?.id || 1);
+  // Form states - Cascading selection: State -> City -> Hub -> Category -> Model -> Machine Name
+  const [formStateId, setFormStateId] = useState<number | ''>('');
+  const [formCityId, setFormCityId] = useState<number | ''>('');
+  const [formHubId, setFormHubId] = useState<number | ''>(hubs[0]?.id || 1);
+  const [formCategory, setFormCategory] = useState<AssetCategory | ''>('CONSTRUCTION');
+  const [formModelId, setFormModelId] = useState<number | ''>('');
   const [formAssetId, setFormAssetId] = useState<number | ''>('');
-  const [formBaseRate, setFormBaseRate] = useState<string>('1200');
-  const [formDeposit, setFormDeposit] = useState<string>('5000');
-  const [formOperatorRate, setFormOperatorRate] = useState<string>('500');
-  const [formFreeKm, setFormFreeKm] = useState<string>('5.0'); // Default 5 KM Free pick & drop
-  const [formRatePerKm, setFormRatePerKm] = useState<string>('10.0'); // Default ₹10/KM
+  const [formBaseRate, setFormBaseRate] = useState<string>('');
+  const [formDeposit, setFormDeposit] = useState<string>('');
+  const [formOperatorRate, setFormOperatorRate] = useState<string>('');
+  const [formFreeKm, setFormFreeKm] = useState<string>('');
+  const [formRatePerKm, setFormRatePerKm] = useState<string>('');
   const [formNotes, setFormNotes] = useState<string>('');
+
+  // Cascaded lists for form
+  const formAvailableCities = React.useMemo(() => {
+    if (!formStateId) return cities;
+    return cities.filter((c) => c.stateId === Number(formStateId));
+  }, [cities, formStateId]);
+
+  const formAvailableHubs = React.useMemo(() => {
+    if (formCityId) {
+      return hubs.filter((h) => h.cityId === Number(formCityId));
+    }
+    if (formStateId) {
+      const cityIds = new Set(formAvailableCities.map((c) => c.id));
+      return hubs.filter((h) => cityIds.has(h.cityId));
+    }
+    return hubs;
+  }, [hubs, formAvailableCities, formCityId, formStateId]);
+
+  const formAvailableModels = React.useMemo(() => {
+    let list = models;
+    if (formCategory) {
+      const categoryTypeIds = new Set(types.filter((t) => t.category === formCategory).map((t) => t.id));
+      list = list.filter((m) => categoryTypeIds.has(m.typeId));
+    }
+    return list;
+  }, [models, types, formCategory]);
+
+  const formAvailableAssets = React.useMemo(() => {
+    let list = assets;
+    if (formHubId) {
+      list = list.filter((a) => a.hubId === Number(formHubId));
+    }
+    if (formCategory) {
+      list = list.filter((a) => a.category === formCategory);
+    }
+    if (formModelId) {
+      list = list.filter((a) => a.modelId === Number(formModelId));
+    }
+    return list;
+  }, [assets, formHubId, formCategory, formModelId]);
 
   // Interactive Live Calculation Test Bench
   const [simDistanceKm, setSimDistanceKm] = useState<number>(7.5);
@@ -82,23 +154,37 @@ export const RentalConfigView: React.FC = () => {
 
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-
-
   const handleOpenAdd = () => {
-    setFormHubId(hubs[0]?.id || 1);
+    const initialHub = hubs[0];
+    const initialCity = cities.find((c) => c.id === initialHub?.cityId);
+    setFormStateId(initialCity?.stateId || states[0]?.id || '');
+    setFormCityId(initialCity?.id || '');
+    setFormHubId(initialHub?.id || 1);
+    setFormCategory('CONSTRUCTION');
+    setFormModelId('');
     setFormAssetId('');
-    setFormBaseRate('1200');
-    setFormDeposit('5000');
+    setFormBaseRate('');
+    setFormDeposit('');
     setFormOperatorRate('500');
     setFormFreeKm('5.0');
     setFormRatePerKm('10.0');
-    setFormNotes('Standard rule: 5 KM free pick & drop, ₹10/KM afterwards');
+    setFormNotes('');
     setShowAddModal(true);
   };
 
   const handleOpenEdit = (c: RentalConfiguration) => {
     setEditingConfig(c);
+    const hub = hubs.find((h) => h.id === c.hubId);
+    const city = cities.find((cty) => cty.id === hub?.cityId);
+    const asset = c.assetId ? assets.find((a) => a.id === c.assetId) : undefined;
+    const model = asset?.modelId ? models.find((m) => m.id === asset.modelId) : (c.typeId ? models.find((m) => m.typeId === c.typeId) : undefined);
+    const category = asset?.category || (c.typeId ? types.find((t) => t.id === c.typeId)?.category : 'CONSTRUCTION');
+
+    setFormStateId(city ? city.stateId : '');
+    setFormCityId(hub ? hub.cityId : '');
     setFormHubId(c.hubId);
+    setFormCategory((category as AssetCategory) || 'CONSTRUCTION');
+    setFormModelId(model?.id || '');
     setFormAssetId(c.assetId || '');
     setFormBaseRate(String(c.baseDailyRate));
     setFormDeposit(String(c.depositAmount));
@@ -110,9 +196,11 @@ export const RentalConfigView: React.FC = () => {
 
   const handleSaveNew = (e: React.FormEvent) => {
     e.preventDefault();
+    const modelObj = formModelId ? models.find((m) => m.id === Number(formModelId)) : undefined;
     const added = api.addRentalConfig({
       hubId: Number(formHubId),
       assetId: formAssetId ? Number(formAssetId) : undefined,
+      typeId: modelObj?.typeId,
       baseDailyRate: parseFloat(formBaseRate) || 1000,
       depositAmount: parseFloat(formDeposit) || 4000,
       operatorDailyRate: parseFloat(formOperatorRate) || 500,
@@ -165,16 +253,16 @@ export const RentalConfigView: React.FC = () => {
   const simTotal = simRent + simOperator + simDeliveryFee + (activeSimConfig?.depositAmount || 0);
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2
-            className={`text-xl font-black flex items-center gap-2 ${
+            className={`text-lg sm:text-xl font-black flex items-center gap-2 ${
               isDaylight ? 'text-slate-950' : 'text-white'
             }`}
           >
-            <SlidersHorizontal className={`h-6 w-6 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
+            <SlidersHorizontal className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
             Rental Configuration
           </h2>
         </div>
@@ -193,28 +281,24 @@ export const RentalConfigView: React.FC = () => {
       </div>
 
       {toastMsg && (
-        <div className="rounded-xl border border-emerald-500/60 bg-emerald-500/10 p-3.5 text-xs text-emerald-800 flex items-center justify-between font-bold">
+        <div className="flex-shrink-0 rounded-xl border border-emerald-500/60 bg-emerald-500/10 p-2.5 text-xs text-emerald-800 flex items-center justify-between font-bold">
           <div className="flex items-center gap-2">
             <CheckCircle className="h-4 w-4 text-emerald-600" />
             <span>{toastMsg}</span>
           </div>
           <button
             onClick={() => setToastMsg(null)}
-            className="text-slate-600 hover:text-slate-950 text-xs px-2"
+            className="text-slate-600 hover:text-slate-950 text-xs px-2 cursor-pointer"
           >
             Dismiss
           </button>
         </div>
       )}
 
-
-
-      {/* Filter by Hub */}
-      {/* Cascading Regional Filters */}
       {/* Cascading Regional Filters */}
       <div
-        className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-end">
@@ -224,7 +308,7 @@ export const RentalConfigView: React.FC = () => {
               setSelectedCityId('ALL');
               setSelectedHubId('ALL');
             }}
-            className={`text-xs font-medium ${
+            className={`text-[11px] font-medium cursor-pointer ${
               isDaylight ? 'text-amber-800 hover:text-amber-950 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -232,7 +316,7 @@ export const RentalConfigView: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
             <SearchSelect
               options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
@@ -272,21 +356,24 @@ export const RentalConfigView: React.FC = () => {
 
       {/* Configurations Table */}
       <div
-        className={`rounded-2xl border overflow-hidden transition-colors ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-1 min-h-0 rounded-2xl border overflow-hidden transition-colors flex flex-col ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
-        <div className={`px-4 py-3 border-b flex items-center justify-between ${isDaylight ? 'border-slate-200' : 'border-slate-800/60'}`}>
+        <div className={`px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0 ${isDaylight ? 'border-slate-200' : 'border-slate-800/60'}`}>
           <div className="flex items-center gap-2">
             <Calculator className={`h-4 w-4 ${isDaylight ? 'text-amber-700' : 'text-purple-400'}`} />
-            <h3 className={`font-black text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+            <h3 className={`font-black text-xs sm:text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
               Rental Rate Policies ({filteredConfigs.length})
             </h3>
           </div>
         </div>
-        <div className="overflow-x-auto">
+        <div
+          onScroll={handleScroll}
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+        >
           <table className="w-full text-left text-xs">
-            <thead className={`border-b text-[11px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-200 bg-slate-100/60 text-slate-600' : 'border-slate-800 bg-slate-950/60 text-slate-400'}`}>
+            <thead className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'}`}>
               <tr>
                 <th className="py-3 px-4">Scope (Machine / Hub)</th>
                 <th className="py-3 px-4">Stationed Yard & City</th>
@@ -299,7 +386,7 @@ export const RentalConfigView: React.FC = () => {
               </tr>
             </thead>
             <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
-              {filteredConfigs.map((c) => (
+              {visibleConfigs.map((c) => (
                 <tr key={c.id} className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
                   <td className="py-3.5 px-4">
                     <div className={`font-bold text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
@@ -342,9 +429,13 @@ export const RentalConfigView: React.FC = () => {
                       <button
                         onClick={() => setConfigPendingRemoval(c)}
                         title="Remove Configuration"
-                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isDaylight ? 'border-rose-300 hover:bg-rose-100 text-rose-700' : 'border-rose-500/50 hover:bg-rose-500/10 text-rose-400'}`}
+                        className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                          isDaylight
+                            ? 'border-rose-300 bg-rose-50/70 hover:bg-rose-100 text-rose-700'
+                            : 'border-rose-500/50 hover:bg-rose-500/10 text-rose-400'
+                        }`}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-3.5 w-3.5 text-rose-600 dark:text-rose-400" />
                       </button>
                     </div>
                   </td>
@@ -353,13 +444,25 @@ export const RentalConfigView: React.FC = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Infinite Scroll Footer */}
+        {filteredConfigs.length > 0 && (
+          <InfiniteScrollFooter
+            loadedCount={visibleConfigs.length}
+            totalCount={filteredConfigs.length}
+            onLoadMore={handleLoadMore}
+            itemName="policies"
+          />
+        )}
       </div>
 
       {/* --- ADD / EDIT RENTAL CONFIG MODAL --- */}
       {(showAddModal || editingConfig) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
-          <div className={`w-full max-w-3xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 shadow-2xl space-y-5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#242424] text-slate-100'}`}>
-            <div className="flex items-center justify-between border-b pb-4 border-slate-700/30">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          <div className={`w-full max-w-5xl max-h-[calc(100vh-2.5rem)] overflow-y-auto rounded-3xl border p-8 sm:p-10 shadow-2xl space-y-6 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
+            <div className={`flex items-center justify-between border-b pb-4 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+            }`}>
               <h3 className="text-base font-black flex items-center gap-2">
                 <SlidersHorizontal className="h-5 w-5 text-amber-500" />
                 <span>{editingConfig ? 'Update Rental Configuration' : 'Create Machine & Hub Rental Configuration'}</span>
@@ -368,63 +471,163 @@ export const RentalConfigView: React.FC = () => {
                 type="button"
                 onClick={() => { setShowAddModal(false); setEditingConfig(null); }}
                 aria-label="Close rental configuration dialog"
-                className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                className={`rounded-lg border p-2 transition-colors cursor-pointer ${
+                  isDaylight
+                    ? 'border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
               >
                 ✕
               </button>
             </div>
 
             <form onSubmit={editingConfig ? handleUpdate : handleSaveNew} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold mb-1">Stationed Hub / Yard</label>
-                  <SearchSelect
-                    options={hubs.map((h) => ({ value: h.id, label: h.name }))}
-                    value={formHubId}
-                    onChange={(val) => val && setFormHubId(Number(val))}
-                    isDisabled={!!editingConfig}
-                    isClearable={false}
-                  />
+              {/* Step 1: Territory Cascade: State -> City -> Hub */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
+                <div className="text-xs font-black flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
+                  <span>Territory Location (State → City → Hub)</span>
                 </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">State *</label>
+                    <SearchSelect
+                      options={states.map((s) => ({ value: s.id, label: s.name, subLabel: s.code }))}
+                      value={formStateId}
+                      onChange={(val) => {
+                        const sid = val ? Number(val) : '';
+                        setFormStateId(sid);
+                        setFormCityId('');
+                        setFormHubId('');
+                        setFormAssetId('');
+                      }}
+                      placeholder="Select State..."
+                      isClearable={false}
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-xs font-bold mb-1">Target Machine (Optional)</label>
-                  <SearchSelect
-                    options={[
-                      { value: '', label: 'Apply to All Hub Fleet Machines' },
-                      ...assets.map((a) => ({ value: a.id, label: `[${a.assetTag}] ${a.name}` })),
-                    ]}
-                    value={formAssetId}
-                    onChange={(val) => setFormAssetId(val ? Number(val) : '')}
-                    isDisabled={!!editingConfig}
-                    isClearable={true}
-                  />
+                  <div>
+                    <label className="block text-xs font-bold mb-1">City *</label>
+                    <SearchSelect
+                      options={formAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined }))}
+                      value={formCityId}
+                      onChange={(val) => {
+                        const cid = val ? Number(val) : '';
+                        setFormCityId(cid);
+                        setFormHubId('');
+                        setFormAssetId('');
+                      }}
+                      placeholder={formStateId ? 'Select City...' : 'Select State First'}
+                      isClearable={false}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Stationed Hub / Yard *</label>
+                    <SearchSelect
+                      options={formAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code }))}
+                      value={formHubId}
+                      onChange={(val) => {
+                        const hid = val ? Number(val) : '';
+                        setFormHubId(hid);
+                        setFormAssetId('');
+                      }}
+                      placeholder="Select Hub..."
+                      isClearable={false}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Step 2: Fleet Cascade: Category -> Model -> Machine Name */}
+              <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
+                <div className="text-xs font-black flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
+                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                  <span>Fleet Classification (Category → Model → Machine Name)</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Category *</label>
+                    <SearchSelect
+                      options={[
+                        { value: 'CONSTRUCTION', label: 'Construction Fleet', subLabel: 'Mixers, Vibrators, Breakers' },
+                        { value: 'AGRICULTURE', label: 'Agriculture Machinery', subLabel: 'Harvesters, Weeders, Tillers' },
+                      ]}
+                      value={formCategory}
+                      onChange={(val) => {
+                        setFormCategory((val as AssetCategory) || 'CONSTRUCTION');
+                        setFormModelId('');
+                        setFormAssetId('');
+                      }}
+                      placeholder="Select Category..."
+                      isClearable={false}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Machine Model *</label>
+                    <SearchSelect
+                      options={formAvailableModels.map((m) => ({
+                        value: m.id,
+                        label: m.name,
+                        subLabel: m.modelNumber,
+                      }))}
+                      value={formModelId}
+                      onChange={(val) => {
+                        setFormModelId(val ? Number(val) : '');
+                        setFormAssetId('');
+                      }}
+                      placeholder="Select Model..."
+                      isClearable={true}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold mb-1">Target Machine Name</label>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: 'Apply to All Matching Machines in Hub' },
+                        ...formAvailableAssets.map((a) => ({
+                          value: a.id,
+                          label: a.name,
+                          subLabel: `Tag: ${a.assetTag} • SN: ${a.serialNumber}`,
+                        })),
+                      ]}
+                      value={formAssetId}
+                      onChange={(val) => setFormAssetId(val ? Number(val) : '')}
+                      placeholder="All Hub Machines / Select Unit"
+                      isClearable={true}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Commercial Rates & Deposits */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Base Daily Rate (₹/day)</label>
+                  <label className="block text-xs font-bold mb-1">Base Daily Rate (₹/day) *</label>
                   <input
                     type="number"
                     min="100"
                     step="50"
+                    placeholder="1200"
                     value={formBaseRate}
                     onChange={(e) => setFormBaseRate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-1">Security Deposit Barrier (₹)</label>
+                  <label className="block text-xs font-bold mb-1">Security Deposit Barrier (₹) *</label>
                   <input
                     type="number"
                     min="500"
                     step="100"
+                    placeholder="5000"
                     value={formDeposit}
                     onChange={(e) => setFormDeposit(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
                     required
                   />
                 </div>
@@ -446,6 +649,7 @@ export const RentalConfigView: React.FC = () => {
                       min="0"
                       max="50"
                       step="0.5"
+                      placeholder="5.0"
                       value={formFreeKm}
                       onChange={(e) => setFormFreeKm(e.target.value)}
                       className="w-full rounded border border-amber-300 bg-white p-2 text-xs font-mono font-bold text-slate-950 focus:outline-none"
@@ -462,6 +666,7 @@ export const RentalConfigView: React.FC = () => {
                       type="number"
                       min="0"
                       step="1"
+                      placeholder="10.0"
                       value={formRatePerKm}
                       onChange={(e) => setFormRatePerKm(e.target.value)}
                       className="w-full rounded border border-amber-300 bg-white p-2 text-xs font-mono font-bold text-slate-950 focus:outline-none"
@@ -472,16 +677,17 @@ export const RentalConfigView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Operator Daily DPR (₹/day)</label>
+                  <label className="block text-xs font-bold mb-1">Operator Daily DPR (₹/day) *</label>
                   <input
                     type="number"
                     min="0"
                     step="50"
+                    placeholder="500"
                     value={formOperatorRate}
                     onChange={(e) => setFormOperatorRate(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
                     required
                   />
                 </div>
@@ -490,10 +696,10 @@ export const RentalConfigView: React.FC = () => {
                   <label className="block text-xs font-bold mb-1">Policy Notes</label>
                   <input
                     type="text"
-                    placeholder="e.g. Special harvester rate..."
+                    placeholder="e.g. Standard rule: 5 KM free pick & drop, ₹10/KM afterwards"
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-950 font-medium focus:outline-none focus:border-amber-600"
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-950 dark:text-white font-medium focus:outline-none focus:border-amber-600"
                   />
                 </div>
               </div>

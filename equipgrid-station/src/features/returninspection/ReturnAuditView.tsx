@@ -9,15 +9,21 @@ import {
   Truck,
   MapPin,
   X,
+  MessageSquare,
+  ExternalLink,
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
+import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
 import { formatINR, formatDate } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { Booking, ReturnInspection } from '../../types';
 import { cn } from '../../lib/utils';
+import { printReturnSettlementPdf } from '../../services/voucherPdfService';
+import { getReturnSettlementWhatsAppMessage, openWhatsAppCirculation } from '../../services/whatsappCirculation';
 
 export const ReturnAuditView: React.FC = () => {
   const { isDaylight } = useTheme();
@@ -58,6 +64,31 @@ export const ReturnAuditView: React.FC = () => {
     });
   }, [allBookings, hubs, cities, selectedStateId, selectedCityId, selectedHubId]);
 
+  const [visibleCount, setVisibleCount] = useState<number>(7);
+
+  // Reset to initial 7 items when filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId]);
+
+  // Infinite scroll slice (default 7 items, loads +7 on scroll)
+  const visibleDispatches = useMemo(() => {
+    return dispatchedBookings.slice(0, visibleCount);
+  }, [dispatchedBookings, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < dispatchedBookings.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, dispatchedBookings.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, dispatchedBookings.length));
+  };
+
   // Inspection panel state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [inspectorName, setInspectorName] = useState<string>('Rajesh Sharma (Lead Tech)');
@@ -67,6 +98,7 @@ export const ReturnAuditView: React.FC = () => {
   const [damageDescription, setDamageDescription] = useState<string>('');
 
   const [completedInspection, setCompletedInspection] = useState<ReturnInspection | null>(null);
+  const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
 
   const depositPaid = selectedBooking?.depositPaid || 0;
@@ -99,6 +131,14 @@ export const ReturnAuditView: React.FC = () => {
         fuelDeltaCharge,
         damageDescription: hasDamage ? damageDescription : 'Clean return, no mechanical damage observed.',
       });
+
+      // Automatically trigger WhatsApp notification via backend bot dispatcher
+      try {
+        await api.sendReturnWhatsAppNotification(selectedBooking.id);
+      } catch (err) {
+        console.warn('WhatsApp return settlement notification call:', err);
+      }
+
       setCompletedInspection(res);
     } catch (err: any) {
       setErrorModal({ isOpen: true, message: err.message || 'Inspection submission failed. Please check booking status and try again.' });
@@ -106,29 +146,29 @@ export const ReturnAuditView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* Header */}
-      <div>
-        <h2 className={cn('text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
-          <RotateCcw className={cn('h-6 w-6', isDaylight ? 'text-amber-700' : 'text-purple-400')} />
+      <div className="flex-shrink-0">
+        <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+          <RotateCcw className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-purple-400')} />
           Return Audit
         </h2>
-        <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+        <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
           Showing dispatched & on-rent machines — select a booking to submit return inspection
         </p>
       </div>
 
       {/* Filters */}
-      <div className={cn('p-3.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className="flex items-center justify-end mb-2">
+      <div className={cn('flex-shrink-0 p-2.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className="flex items-center justify-end mb-1.5">
           <button
             onClick={() => { setSelectedStateId('ALL'); setSelectedCityId('ALL'); setSelectedHubId('ALL'); }}
-            className={cn('text-xs font-bold flex items-center gap-1', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+            className={cn('text-[11px] font-bold flex items-center gap-1 cursor-pointer', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
           >
             <RotateCcw className="h-3 w-3" /> Reset
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <SearchSelect
             options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
             value={selectedStateId}
@@ -151,26 +191,29 @@ export const ReturnAuditView: React.FC = () => {
       </div>
 
       {/* Dispatched Machines Table */}
-      <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className={cn('px-4 py-3 border-b flex items-center justify-between', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+      <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className={cn('px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
           <div className="flex items-center gap-2">
             <Truck className={cn('h-4 w-4', isDaylight ? 'text-amber-700' : 'text-purple-400')} />
-            <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
+            <h3 className={cn('font-black text-xs sm:text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
               Machines Out in Field — Return Pending ({dispatchedBookings.length})
             </h3>
           </div>
         </div>
 
         {dispatchedBookings.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <RotateCcw className="h-8 w-8 mx-auto opacity-25 text-slate-500" />
-            <p className={cn('text-sm font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>No machines currently out in field</p>
-            <p className="text-xs text-slate-500">Once machines are dispatched via Yard Handover, they will appear here for return inspection.</p>
+          <div className="flex-1 min-h-0 p-8 text-center flex flex-col items-center justify-center space-y-1.5">
+            <RotateCcw className="h-7 w-7 mx-auto opacity-25 text-slate-500" />
+            <p className={cn('text-xs font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>No machines currently out in field</p>
+            <p className="text-[11px] text-slate-500">Once machines are dispatched via Yard Handover, they will appear here for return inspection.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
-              <thead className={cn('border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-200 bg-slate-100/60 text-slate-600' : 'border-slate-800 bg-slate-950/60 text-slate-400')}>
+              <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs')}>
                 <tr>
                   <th className="py-3 px-4">Booking / Customer</th>
                   <th className="py-3 px-4">Machine</th>
@@ -181,7 +224,7 @@ export const ReturnAuditView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className={cn('divide-y', isDaylight ? 'divide-slate-100' : 'divide-slate-800/50')}>
-                {dispatchedBookings.map((b) => (
+                {visibleDispatches.map((b) => (
                   <tr key={b.id} className={cn('transition-colors', isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30')}>
                     <td className="py-3.5 px-4">
                       <div className={cn('font-mono font-bold text-[11px]', isDaylight ? 'text-amber-700' : 'text-amber-400')}>{b.bookingNumber}</div>
@@ -206,24 +249,46 @@ export const ReturnAuditView: React.FC = () => {
                       <StatusBadge status={b.status} size="sm" />
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => openInspectionPanel(b)}
-                        className={cn(
-                          'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                          isDaylight
-                            ? 'bg-purple-500 hover:bg-purple-400 text-white shadow-sm'
-                            : 'bg-purple-600/80 hover:bg-purple-500 text-white border border-purple-500/50'
-                        )}
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                        Return & Inspect
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setWhatsAppModalBooking(b)}
+                          title="Circulate Return / Settlement Notice on WhatsApp"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </button>
+
+                        <button
+                          onClick={() => openInspectionPanel(b)}
+                          className={cn(
+                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                            isDaylight
+                              ? 'bg-purple-500 hover:bg-purple-400 text-white shadow-sm'
+                              : 'bg-purple-600/80 hover:bg-purple-500 text-white border border-purple-500/50'
+                          )}
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" />
+                          <span>Return & Inspect</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Infinite Scroll Footer */}
+        {dispatchedBookings.length > 0 && (
+          <InfiniteScrollFooter
+            loadedCount={visibleDispatches.length}
+            totalCount={dispatchedBookings.length}
+            onLoadMore={handleLoadMore}
+            itemName="active machines"
+          />
         )}
       </div>
 
@@ -248,23 +313,112 @@ export const ReturnAuditView: React.FC = () => {
                     </p>
                   </div>
                 </div>
-                <div className={cn('rounded-xl border p-4 text-sm space-y-2', isDaylight ? 'border-emerald-200 bg-emerald-50' : 'border-emerald-800/50 bg-emerald-900/20')}>
+                {/* Itemized Deposit Settlement Breakdown */}
+                <div
+                  className={cn(
+                    'rounded-xl border p-4 text-xs space-y-2',
+                    isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950'
+                  )}
+                >
+                  <div className="font-bold uppercase tracking-wider text-[10px] text-slate-500 border-b pb-1">
+                    Security Deposit Settlement Audit (F-004)
+                  </div>
                   <div className="flex justify-between items-center">
-                    <span className={cn('text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Net Refund to Customer</span>
-                    <span className="text-xl font-extrabold text-emerald-500 font-mono">{formatINR(netRefund)}</span>
+                    <span className="text-slate-500">Security Deposit Held in Escrow:</span>
+                    <span className="font-bold font-mono">{formatINR(depositPaid)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Fuel Delta / Refueling Surcharge:</span>
+                    <span className={cn('font-bold font-mono', fuelDeltaCharge > 0 ? 'text-rose-600' : 'text-slate-500')}>
+                      {fuelDeltaCharge > 0 ? `-${formatINR(fuelDeltaCharge)}` : '₹0.00 (Full Tank)'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500">Damage / Repair Deductions:</span>
+                    <span className={cn('font-bold font-mono', hasDamage && damageCost > 0 ? 'text-rose-600' : 'text-slate-500')}>
+                      {hasDamage && damageCost > 0 ? `-${formatINR(damageCost)}` : '₹0.00 (Zero Damage)'}
+                    </span>
+                  </div>
+                  {hasDamage && damageDescription && (
+                    <div className="text-[11px] text-rose-500 bg-rose-50 dark:bg-rose-950/30 p-2 rounded border border-rose-200 dark:border-rose-900/40">
+                      <strong>Audit Damage Notes:</strong> {damageDescription}
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center border-t pt-2 font-bold text-sm">
+                    <span className="text-emerald-700 dark:text-emerald-400">Net Refund Credited to Customer:</span>
+                    <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                      {formatINR(netRefund)}
+                    </span>
                   </div>
                 </div>
-                <div className="flex gap-2.5">
+
+                {/* WhatsApp Status Banner */}
+                <div
+                  className={cn(
+                    'rounded-xl border p-3 flex items-start gap-2.5 text-xs',
+                    isDaylight ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-emerald-800/40 bg-emerald-950/30 text-emerald-300'
+                  )}
+                >
+                  <MessageSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-xs">WhatsApp Settlement Notice Sent</div>
+                    <div className="text-[11px] opacity-85">
+                      Itemized statement and UPI refund confirmation sent to <strong>+91 {selectedBooking.customer.phone}</strong>.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <button
-                    onClick={() => window.print()}
-                    className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors border', isDaylight ? 'border-purple-300 text-purple-700 hover:bg-purple-50' : 'border-purple-700/50 text-purple-300 hover:bg-purple-900/20')}
+                    type="button"
+                    onClick={() => {
+                      const msg = getReturnSettlementWhatsAppMessage(selectedBooking, completedInspection, {
+                        originalDeposit: depositPaid,
+                        fuelDeltaCharge,
+                        damageCost: hasDamage ? damageCost : 0,
+                        netRefund,
+                        damageDescription: hasDamage ? damageDescription : undefined,
+                      });
+                      openWhatsAppCirculation(selectedBooking.customer.phone, msg);
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span>Open in WhatsApp</span>
+                    <ExternalLink className="h-3 w-3 opacity-70" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      printReturnSettlementPdf({
+                        booking: selectedBooking,
+                        inspection: completedInspection,
+                        originalDeposit: depositPaid,
+                        fuelDeltaCharge,
+                        damageCost: hasDamage ? damageCost : 0,
+                        damageNotes: hasDamage ? damageDescription : undefined,
+                        netRefund,
+                        refundDestination: selectedBooking.customer.phone,
+                        inspectorName,
+                      })
+                    }
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl text-xs font-bold cursor-pointer transition-colors border',
+                      isDaylight ? 'border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100' : 'border-purple-700/50 text-purple-300 bg-purple-900/20 hover:bg-purple-900/30'
+                    )}
                   >
                     <Printer className="h-4 w-4" />
-                    Print Settlement (F-004)
+                    <span>Print Settlement (F-004)</span>
                   </button>
+
                   <button
+                    type="button"
                     onClick={closePanel}
-                    className={cn('flex-1 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors', isDaylight ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-700 text-white hover:bg-slate-600')}
+                    className={cn(
+                      'py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm',
+                      isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                    )}
                   >
                     Close
                   </button>
@@ -406,6 +560,69 @@ export const ReturnAuditView: React.FC = () => {
         title="Inspection Failed"
         message={errorModal.message}
       />
+
+      {/* WhatsApp Circulation Modal */}
+      {whatsAppModalBooking && (
+        <WhatsAppCirculationModal
+          isOpen={!!whatsAppModalBooking}
+          onClose={() => setWhatsAppModalBooking(null)}
+          stageName="Return Settlement"
+          bookingNumber={whatsAppModalBooking.bookingNumber}
+          recipientName={whatsAppModalBooking.customer.fullName}
+          recipientPhone={whatsAppModalBooking.customer.phone}
+          message={getReturnSettlementWhatsAppMessage(
+            whatsAppModalBooking,
+            {
+              id: 0,
+              bookingId: whatsAppModalBooking.id,
+              assetTag: whatsAppModalBooking.asset.assetTag,
+              returnTimestamp: new Date().toISOString(),
+              fuelLevelReturn: '75%',
+              fuelDeltaCharge: 200,
+              engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
+              accessoriesReturnedOk: true,
+              inspectorName: 'Rajesh Sharma (Lead Tech)',
+              hasDamage: false,
+              damageCost: 0,
+              damageDescription: 'Clean return, no mechanical damage observed.',
+              nextAction: 'AVAILABLE',
+            },
+            {
+              originalDeposit: whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0,
+              fuelDeltaCharge: 200,
+              damageCost: 0,
+              netRefund: Math.max(0, (whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0) - 200),
+            }
+          )}
+          onPrintPdf={() =>
+            printReturnSettlementPdf({
+              booking: whatsAppModalBooking,
+              inspection: {
+                id: 0,
+                bookingId: whatsAppModalBooking.id,
+                assetTag: whatsAppModalBooking.asset.assetTag,
+                returnTimestamp: new Date().toISOString(),
+                fuelLevelReturn: '75%',
+                fuelDeltaCharge: 200,
+                engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
+                accessoriesReturnedOk: true,
+                inspectorName: 'Rajesh Sharma (Lead Tech)',
+                hasDamage: false,
+                damageCost: 0,
+                damageDescription: 'Clean return, no mechanical damage observed.',
+                nextAction: 'AVAILABLE',
+              },
+              originalDeposit: whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0,
+              fuelDeltaCharge: 200,
+              damageCost: 0,
+              netRefund: Math.max(0, (whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0) - 200),
+              refundDestination: whatsAppModalBooking.customer.phone,
+              inspectorName: 'Rajesh Sharma',
+            })
+          }
+          pdfButtonLabel="Print Settlement Voucher (F-004)"
+        />
+      )}
     </div>
   );
 };

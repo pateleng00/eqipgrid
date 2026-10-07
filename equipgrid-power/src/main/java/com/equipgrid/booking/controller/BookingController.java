@@ -18,7 +18,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/bookings")
+@RequestMapping("/bookings")
 @Tag(name = "Booking & Quotation", description = "SOP-002 Booking desk, instant quotation and reservation lifecycle")
 public class BookingController {
 

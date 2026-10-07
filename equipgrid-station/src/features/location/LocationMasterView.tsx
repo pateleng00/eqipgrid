@@ -15,6 +15,7 @@ import { api } from '../../services/api';
 import { City, Hub, State } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { SkeletonTable } from '../../components/SkeletonTable';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 
 export const LocationMasterView: React.FC = () => {
   const { isDaylight } = useTheme();
@@ -42,6 +43,8 @@ export const LocationMasterView: React.FC = () => {
   const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
+  const [visibleCount, setVisibleCount] = useState<number>(7);
+
   // Modals for adding new entries
   const [showAddState, setShowAddState] = useState(false);
   const [newStateName, setNewStateName] = useState('');
@@ -50,19 +53,29 @@ export const LocationMasterView: React.FC = () => {
   const [showAddCity, setShowAddCity] = useState(false);
   const [newCityName, setNewCityName] = useState('');
   const [newCityPin, setNewCityPin] = useState('');
-  const [newCityStateId, setNewCityStateId] = useState<number>(states[0]?.id || 1);
+  const [newCityStateId, setNewCityStateId] = useState<number | ''>(states[0]?.id || '');
 
   const [showAddHub, setShowAddHub] = useState(false);
+  const [newHubStateId, setNewHubStateId] = useState<number | ''>(states[0]?.id || '');
+  const [newHubCityId, setNewHubCityId] = useState<number | ''>('');
   const [newHubName, setNewHubName] = useState('');
   const [newHubCode, setNewHubCode] = useState('');
   const [newHubAddress, setNewHubAddress] = useState('');
   const [newHubPhone, setNewHubPhone] = useState('');
   const [newHubRadius, setNewHubRadius] = useState('25');
-  const [newHubCityId, setNewHubCityId] = useState<number>(cities[0]?.id || 1);
+  const [newHubLat, setNewHubLat] = useState('');
+  const [newHubLng, setNewHubLng] = useState('');
+  const [gpsLoading, setGpsLoading] = useState(false);
 
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Dependent cascading options:
+  // Available cities inside Add Hub modal (cascaded by selected newHubStateId)
+  const hubModalAvailableCities = useMemo(() => {
+    if (!newHubStateId) return [];
+    return cities.filter((c) => c.stateId === Number(newHubStateId));
+  }, [cities, newHubStateId]);
+
+  // Dependent cascading options for directory:
   // 1. Available cities depend on selected State
   const availableCities = useMemo(() => {
     if (selectedStateId === 'ALL') return cities;
@@ -126,6 +139,59 @@ export const LocationMasterView: React.FC = () => {
     });
   }, [hubs, cities, selectedStateId, selectedCityId, selectedHubId, searchQuery]);
 
+  // Reset to initial 7 items when location filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId, searchQuery]);
+
+  // Infinite scroll slice (default 7 items, loads +7 on scroll)
+  const visibleHubs = useMemo(() => {
+    return displayedHubs.slice(0, visibleCount);
+  }, [displayedHubs, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < displayedHubs.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, displayedHubs.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, displayedHubs.length));
+  };
+
+  const handleOpenAddState = () => {
+    setNewStateName('');
+    setNewStateCode('');
+    setShowAddState(true);
+  };
+
+  const handleOpenAddCity = () => {
+    setNewCityStateId(states[0]?.id || '');
+    setNewCityName('');
+    setNewCityPin('');
+    setShowAddCity(true);
+  };
+
+  const handleOpenAddHub = () => {
+    const firstState = states[0];
+    const firstStateId = firstState?.id || '';
+    setNewHubStateId(firstStateId);
+    const stateCities = firstStateId ? cities.filter((c) => c.stateId === Number(firstStateId)) : [];
+    setNewHubCityId(stateCities[0]?.id || '');
+    setNewHubName('');
+    setNewHubCode('');
+    setNewHubAddress('');
+    setNewHubPhone('');
+    setNewHubRadius('25');
+    setNewHubLat('');
+    setNewHubLng('');
+    setGpsLoading(false);
+    setShowAddHub(true);
+  };
+
   const handleCreateState = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newStateName.trim() || !newStateCode.trim()) return;
@@ -139,8 +205,8 @@ export const LocationMasterView: React.FC = () => {
 
   const handleCreateCity = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCityName.trim()) return;
-    const added = api.addCity(newCityStateId, newCityName.trim(), newCityPin.trim());
+    if (!newCityStateId || !newCityName.trim()) return;
+    const added = api.addCity(Number(newCityStateId), newCityName.trim(), newCityPin.trim());
     setCities([...api.getCities()]);
     setNewCityName('');
     setNewCityPin('');
@@ -150,45 +216,66 @@ export const LocationMasterView: React.FC = () => {
 
   const handleCreateHub = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newHubName.trim() || !newHubCode.trim() || !newHubAddress.trim()) return;
+    const lat = parseFloat(newHubLat);
+    const lng = parseFloat(newHubLng);
+    if (!newHubStateId || !newHubCityId || !newHubName.trim() || !newHubCode.trim() || !newHubAddress.trim()) return;
+    if (isNaN(lat) || isNaN(lng)) return; // lat/lng mandatory
     const added = api.addHub({
-      cityId: newHubCityId,
+      cityId: Number(newHubCityId),
       name: newHubName.trim(),
-      code: newHubCode.trim(),
+      code: newHubCode.trim().toUpperCase(),
       address: newHubAddress.trim(),
       contactPhone: newHubPhone.trim() || undefined,
       operatingRadiusKm: parseFloat(newHubRadius) || 25,
+      latitude: lat,
+      longitude: lng,
     });
     setHubs([...api.getHubs()]);
     setNewHubName('');
     setNewHubCode('');
     setNewHubAddress('');
     setNewHubPhone('');
+    setNewHubLat('');
+    setNewHubLng('');
     setShowAddHub(false);
-    setSuccessMsg(`Hub Yard '${added.name}' added successfully.`);
+    setSuccessMsg(`Hub Yard '${added.name}' added successfully under city.`);
+  };
+
+  const handleGetGps = () => {
+    if (!navigator.geolocation) return;
+    setGpsLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setNewHubLat(pos.coords.latitude.toFixed(7));
+        setNewHubLng(pos.coords.longitude.toFixed(7));
+        setGpsLoading(false);
+      },
+      () => setGpsLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2
-            className={`text-xl font-black flex items-center gap-2 ${
+            className={`text-lg sm:text-xl font-black flex items-center gap-2 ${
               isDaylight ? 'text-slate-950' : 'text-white'
             }`}
           >
-            <MapPin className={`h-6 w-6 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
+            <MapPin className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
             Location Master
           </h2>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 flex-wrap">
           <button
-            onClick={() => setShowAddState(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
+            onClick={handleOpenAddState}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
               isDaylight
-                ? 'border-slate-400 bg-transparent text-slate-950 hover:bg-slate-200/50 font-bold'
+                ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
                 : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -196,10 +283,10 @@ export const LocationMasterView: React.FC = () => {
             <span>Add State</span>
           </button>
           <button
-            onClick={() => setShowAddCity(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer border ${
+            onClick={handleOpenAddCity}
+            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
               isDaylight
-                ? 'border-slate-400 bg-transparent text-slate-950 hover:bg-slate-200/50 font-bold'
+                ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
                 : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
             }`}
           >
@@ -207,11 +294,11 @@ export const LocationMasterView: React.FC = () => {
             <span>Add City</span>
           </button>
           <button
-            onClick={() => setShowAddHub(true)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-none ${
+            onClick={handleOpenAddHub}
+            className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none ${
               isDaylight
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
             }`}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -237,14 +324,14 @@ export const LocationMasterView: React.FC = () => {
 
       {/* Dependent Cascading Filters: State -> City -> Hub */}
       <div
-        className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-end">
           <button
             onClick={handleResetFilters}
-            className={`text-xs flex items-center gap-1 font-medium ${
+            className={`text-[11px] flex items-center gap-1 font-medium cursor-pointer ${
               isDaylight ? 'text-amber-800 hover:text-amber-950 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -253,7 +340,7 @@ export const LocationMasterView: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {/* State Filter */}
           <div>
             <SearchSelect
@@ -317,9 +404,9 @@ export const LocationMasterView: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search yard, code, address..."
-                className={`w-full rounded-lg border pl-8 pr-3 py-2 text-xs transition-colors focus:outline-none ${
+                className={`w-full rounded-lg border pl-8 pr-3 py-1.5 text-xs transition-colors focus:outline-none ${
                   isDaylight
-                    ? 'border-slate-300 bg-transparent text-slate-950 placeholder-slate-500 focus:border-amber-600'
+                    ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-500 focus:border-amber-600'
                     : 'border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'
                 }`}
               />
@@ -330,14 +417,14 @@ export const LocationMasterView: React.FC = () => {
 
       {/* Hub / Yard Table (With Skeleton Table support) */}
       <div
-        className={`rounded-2xl border overflow-hidden transition-colors ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-1 min-h-0 rounded-2xl border overflow-hidden transition-colors flex flex-col ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
-        <div className="p-4 border-b flex items-center justify-between border-slate-700/20">
+        <div className="px-3.5 py-2 border-b flex items-center justify-between border-slate-700/20 flex-shrink-0">
           <div className="flex items-center gap-2">
             <Building2 className={`h-4 w-4 ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`} />
-            <h3 className="font-black text-sm">
+            <h3 className="font-black text-xs sm:text-sm">
               Registered Hubs & Depots ({displayedHubs.length})
             </h3>
           </div>
@@ -348,21 +435,24 @@ export const LocationMasterView: React.FC = () => {
             <SkeletonTable columns={6} rows={5} />
           </div>
         ) : displayedHubs.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-2">
-            <MapPin className="h-8 w-8 mx-auto opacity-30 text-amber-500" />
-            <div className="text-sm font-bold">No Hubs Found matching current filter</div>
-            <p className="text-xs max-w-sm mx-auto">
+          <div className="flex-1 min-h-0 p-8 text-center text-slate-500 flex flex-col items-center justify-center space-y-1.5">
+            <MapPin className="h-7 w-7 mx-auto opacity-30 text-amber-500" />
+            <div className="text-xs font-bold">No Hubs Found matching current filter</div>
+            <p className="text-[11px] max-w-sm mx-auto">
               Try adjusting the State or City selection, or add a new Hub under this location.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
               <thead
-                className={`border-b text-[11px] font-black uppercase tracking-wider ${
+                className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${
                   isDaylight
-                    ? 'border-slate-300 bg-slate-200/50 text-slate-900'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                    ? 'border-slate-300 bg-slate-100 text-slate-900 shadow-xs'
+                    : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'
                 }`}
               >
                 <tr>
@@ -380,7 +470,7 @@ export const LocationMasterView: React.FC = () => {
                   isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'
                 }`}
               >
-                {displayedHubs.map((hub) => {
+                {visibleHubs.map((hub) => {
                   const city = cities.find((c) => c.id === hub.cityId);
                   const state = states.find((s) => s.id === city?.stateId);
                   const machinesStationed = api.assets.filter((a) => a.hubId === hub.id).length;
@@ -431,65 +521,114 @@ export const LocationMasterView: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* Infinite Scroll Footer */}
+        {displayedHubs.length > 0 && !isLoading && (
+          <InfiniteScrollFooter
+            loadedCount={visibleHubs.length}
+            totalCount={displayedHubs.length}
+            onLoadMore={handleLoadMore}
+            itemName="registered yards"
+          />
+        )}
       </div>
 
-      {/* Add State Modal */}
+      {/* --- ADD STATE MODAL --- */}
       {showAddState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
           <div
-            className={`w-full max-w-xl min-h-[28rem] max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 space-y-5 shadow-2xl transition-all ${
-              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#242424] text-white'
+            className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-3xl border p-7 sm:p-8 space-y-6 shadow-2xl transition-all ${
+              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-3 border-slate-700/20">
-              <h3 className="font-black text-sm">Add New Regional State (Top Level)</h3>
+            <div className={`flex items-start justify-between border-b pb-4 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-800'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500 border border-amber-500/30">
+                  <Navigation className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-base font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                      Add Regional State
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
+                      Level 1: State
+                    </span>
+                  </div>
+                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Top-level administrative territory for machinery deployment and tax jurisdiction.
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddState(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                aria-label="Close state dialog"
+                className={`rounded-xl border p-2 transition-colors cursor-pointer ${
+                  isDaylight
+                    ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={handleCreateState} className="space-y-3">
+
+            <form onSubmit={handleCreateState} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold mb-1">State Name</label>
+                <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  State Full Name *
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Rajasthan, Madhya Pradesh"
+                  placeholder="e.g. Rajasthan, Madhya Pradesh, Uttar Pradesh"
                   value={newStateName}
                   onChange={(e) => setNewStateName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:outline-none"
+                  className={`w-full rounded-xl border p-2.5 text-xs focus:border-amber-500 focus:outline-none ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                  }`}
                   required
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-bold mb-1">State Code (2-3 chars)</label>
+                <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  State Code (2-3 Chars) *
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. RJ, MP"
+                  maxLength={4}
+                  placeholder="e.g. RJ, MP, UP"
                   value={newStateCode}
                   onChange={(e) => setNewStateCode(e.target.value.toUpperCase())}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-mono uppercase focus:outline-none"
+                  className={`w-full rounded-xl border p-2.5 text-xs font-mono uppercase focus:border-amber-500 focus:outline-none ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                  }`}
                   required
                 />
+                <span className="text-[10px] text-slate-500 mt-1 block">
+                  Used as standard prefix across all subordinate hub yard codes (e.g. HUB-{newStateCode || 'UP'}-01).
+                </span>
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddState(false)}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-950"
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
-                    isDaylight
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
-                  }`}
+                  className="px-5 py-2 rounded-xl text-xs font-black cursor-pointer transition-colors bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm flex items-center gap-1.5"
                 >
-                  Save State
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Save State</span>
                 </button>
               </div>
             </form>
@@ -497,76 +636,115 @@ export const LocationMasterView: React.FC = () => {
         </div>
       )}
 
-      {/* Add City Modal */}
+      {/* --- ADD CITY MODAL --- */}
       {showAddCity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
           <div
-            className={`w-full max-w-xl min-h-[30rem] max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 space-y-5 shadow-2xl transition-all ${
-              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#242424] text-white'
+            className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-3xl border p-7 sm:p-8 space-y-6 shadow-2xl transition-all ${
+              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-3 border-slate-700/20">
-              <h3 className="font-black text-sm">Add City under State</h3>
+            <div className={`flex items-start justify-between border-b pb-4 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-800'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-amber-500 border border-amber-500/30">
+                  <Building2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-base font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                      Add City / District
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
+                      Level 2: City
+                    </span>
+                  </div>
+                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Select parent state first, then enter the target urban district.
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddCity(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                aria-label="Close city dialog"
+                className={`rounded-xl border p-2 transition-colors cursor-pointer ${
+                  isDaylight
+                    ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={handleCreateCity} className="space-y-3">
+
+            <form onSubmit={handleCreateCity} className="space-y-4">
               <div>
-                <label className="block text-xs font-bold mb-1">Select Parent State</label>
-                <select
+                <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  Parent State *
+                </label>
+                <SearchSelect
+                  options={states.map((s) => ({ value: s.id, label: s.name, subLabel: s.code }))}
                   value={newCityStateId}
-                  onChange={(e) => setNewCityStateId(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold focus:outline-none"
-                >
-                  {states.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.code})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewCityStateId(val ? Number(val) : '')}
+                  placeholder="Select Parent State *"
+                  isClearable={false}
+                />
               </div>
+
               <div>
-                <label className="block text-xs font-bold mb-1">City Name</label>
+                <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  City / District Name *
+                </label>
                 <input
                   type="text"
-                  placeholder="e.g. Shahjahanpur, Sitapur"
+                  placeholder="e.g. Shahjahanpur, Sitapur, Hardoi"
                   value={newCityName}
                   onChange={(e) => setNewCityName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:outline-none"
+                  className={`w-full rounded-xl border p-2.5 text-xs focus:border-amber-500 focus:outline-none ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                  }`}
                   required
                 />
               </div>
+
               <div>
-                <label className="block text-xs font-bold mb-1">Postal PIN Code</label>
+                <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  Postal PIN Code
+                </label>
                 <input
                   type="text"
                   placeholder="e.g. 242001"
                   value={newCityPin}
                   onChange={(e) => setNewCityPin(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-mono focus:outline-none"
+                  className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                  }`}
                 />
               </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddCity(false)}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-950"
+                  className={`px-4 py-2 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
-                    isDaylight
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+                  disabled={!newCityStateId}
+                  className={`px-5 py-2 rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-1.5 ${
+                    newCityStateId
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   }`}
                 >
-                  Save City
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Save City</span>
                 </button>
               </div>
             </form>
@@ -574,115 +752,297 @@ export const LocationMasterView: React.FC = () => {
         </div>
       )}
 
-      {/* Add Hub Yard Modal */}
+      {/* --- ADD HUB YARD MODAL (BOTH STATE & CITY REQUIRED VIA SEARCHSELECT) --- */}
       {showAddHub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 lg:p-8 overflow-y-auto">
           <div
-            className={`w-full max-w-2xl min-h-[34rem] max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 space-y-5 shadow-2xl transition-all ${
-              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#242424] text-white'
+            className={`w-full max-w-3xl max-h-[calc(100vh-2.5rem)] overflow-y-auto rounded-3xl border p-8 sm:p-10 space-y-6 shadow-2xl transition-all ${
+              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-3 border-slate-700/20">
-              <h3 className="font-black text-sm">Add New Hub Yard under City</h3>
+            <div className={`flex items-start justify-between border-b pb-5 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-800'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-500 border border-amber-500/30">
+                  <Truck className="h-6 w-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <h3 className={`text-lg font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                      Add New Stationed Hub Yard / Depot
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
+                      Level 3: Yard
+                    </span>
+                  </div>
+                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                    Both State and City selection are strictly required before configuring the hub facility.
+                  </p>
+                </div>
+              </div>
               <button
+                type="button"
                 onClick={() => setShowAddHub(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
+                aria-label="Close hub dialog"
+                className={`rounded-xl border p-2.5 transition-colors cursor-pointer ${
+                  isDaylight
+                    ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
               >
                 ✕
               </button>
             </div>
-            <form onSubmit={handleCreateHub} className="space-y-3">
-              <div>
-                <label className="block text-xs font-bold mb-1">Select Parent City</label>
-                <select
-                  value={newHubCityId}
-                  onChange={(e) => setNewHubCityId(Number(e.target.value))}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold focus:outline-none"
-                >
-                  {cities.map((c) => {
-                    const st = states.find((s) => s.id === c.stateId);
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {c.name} ({st?.code || ''})
-                      </option>
-                    );
-                  })}
-                </select>
+
+            <form onSubmit={handleCreateHub} className="space-y-6">
+              {/* Step 1: Parent Territory (Both State & City Required) */}
+              <div className={`p-5 rounded-2xl border ${
+                isDaylight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-slate-800'
+              } space-y-3`}>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-black flex items-center gap-2 text-amber-900 dark:text-amber-400 uppercase tracking-wider">
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
+                    <span>Parent Territory (State & City Required) *</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Parent State *
+                    </label>
+                    <SearchSelect
+                      options={states.map((s) => ({ value: s.id, label: s.name, subLabel: s.code }))}
+                      value={newHubStateId}
+                      onChange={(val) => {
+                        const sid = val ? Number(val) : '';
+                        setNewHubStateId(sid);
+                        setNewHubCityId('');
+                      }}
+                      placeholder="Select Parent State *"
+                      isClearable={false}
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Parent City / District *
+                    </label>
+                    <SearchSelect
+                      options={hubModalAvailableCities.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                        subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
+                      }))}
+                      value={newHubCityId}
+                      onChange={(val) => setNewHubCityId(val ? Number(val) : '')}
+                      placeholder={newHubStateId ? "Select Parent City *" : "Select State First"}
+                      isDisabled={!newHubStateId}
+                      isClearable={false}
+                    />
+                  </div>
+                </div>
+
+                {newHubStateId && newHubCityId && (
+                  <div className="mt-2 pt-2 border-t border-amber-200/60 dark:border-slate-800 flex items-center gap-2 text-xs text-amber-900 dark:text-amber-300 font-medium">
+                    <MapPin className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
+                    <span>
+                      Stationing hub under{' '}
+                      <strong>{cities.find((c) => c.id === Number(newHubCityId))?.name}</strong>,{' '}
+                      <strong>{states.find((s) => s.id === Number(newHubStateId))?.name}</strong>
+                    </span>
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-xs font-bold mb-1">Hub Yard Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Shahjahanpur Highway Depot"
-                  value={newHubName}
-                  onChange={(e) => setNewHubName(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:outline-none"
-                  required
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
+
+              {/* Step 2: Depot Specs & Operating Range */}
+              <div className={`p-5 rounded-2xl border ${
+                isDaylight ? 'bg-slate-50/70 border-slate-200' : 'bg-slate-900/40 border-slate-800'
+              } space-y-4`}>
+                <div className="text-xs font-black flex items-center gap-2 text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  <span className="w-5 h-5 rounded-full bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                  <span>Hub Yard Identification & Facility Info</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Hub Yard Name *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Shahjahanpur Highway Depot"
+                      value={newHubName}
+                      onChange={(e) => setNewHubName(e.target.value)}
+                      className={`w-full rounded-xl border p-2.5 text-xs focus:border-amber-500 focus:outline-none ${
+                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                      }`}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Hub Code *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. HUB-SHJ-01"
+                      value={newHubCode}
+                      onChange={(e) => setNewHubCode(e.target.value.toUpperCase())}
+                      className={`w-full rounded-xl border p-2.5 text-xs font-mono uppercase focus:border-amber-500 focus:outline-none ${
+                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                      }`}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Operating Radius (KM) *
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="150"
+                      value={newHubRadius}
+                      onChange={(e) => setNewHubRadius(e.target.value)}
+                      className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
+                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                      }`}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                      Primary Yard Contact / Phone
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="+91 94500 09988"
+                      value={newHubPhone}
+                      onChange={(e) => setNewHubPhone(e.target.value)}
+                      className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
+                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                      }`}
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-bold mb-1">Hub Code</label>
+                  <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    Yard Street Address / Location Landmark *
+                  </label>
                   <input
                     type="text"
-                    placeholder="e.g. HUB-SHJ-01"
-                    value={newHubCode}
-                    onChange={(e) => setNewHubCode(e.target.value.toUpperCase())}
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs font-mono uppercase focus:outline-none"
+                    placeholder="e.g. Near Toll Plaza, Bareilly-Lucknow Highway, Shahjahanpur"
+                    value={newHubAddress}
+                    onChange={(e) => setNewHubAddress(e.target.value)}
+                    className={`w-full rounded-xl border p-2.5 text-xs focus:border-amber-500 focus:outline-none ${
+                      isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                    }`}
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-bold mb-1">Operating Radius (km)</label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="100"
-                    value={newHubRadius}
-                    onChange={(e) => setNewHubRadius(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs font-mono focus:outline-none"
-                    required
-                  />
+
+                {/* GPS Coordinates — Mandatory */}
+                <div className={`p-4 rounded-xl border-2 ${
+                  isDaylight ? 'border-amber-300 bg-amber-50/60' : 'border-amber-600/40 bg-amber-900/10'
+                } space-y-3`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-amber-500" />
+                      <span className={`text-xs font-black ${isDaylight ? 'text-amber-900' : 'text-amber-400'}`}>
+                        GPS Coordinates *
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-normal">(mandatory for distance calc)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGetGps}
+                      disabled={gpsLoading}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-colors cursor-pointer ${
+                        gpsLoading
+                          ? 'bg-slate-300 text-slate-500 cursor-not-allowed'
+                          : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                      }`}
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      {gpsLoading ? 'Getting GPS…' : 'Use My Location'}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className={`block text-[11px] font-bold mb-1 ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
+                        Latitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.0000001"
+                        min="6"
+                        max="38"
+                        placeholder="e.g. 27.3967000"
+                        value={newHubLat}
+                        onChange={(e) => setNewHubLat(e.target.value)}
+                        className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
+                          isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                        }`}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-[11px] font-bold mb-1 ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
+                        Longitude *
+                      </label>
+                      <input
+                        type="number"
+                        step="0.0000001"
+                        min="68"
+                        max="98"
+                        placeholder="e.g. 80.1266000"
+                        value={newHubLng}
+                        onChange={(e) => setNewHubLng(e.target.value)}
+                        className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
+                          isDaylight ? 'border-slate-300 bg-white text-slate-900 font-bold' : 'border-slate-700 bg-slate-950 text-white'
+                        }`}
+                        required
+                      />
+                    </div>
+                  </div>
+                  {newHubLat && newHubLng && (
+                    <p className="text-[11px] text-amber-700 dark:text-amber-400 font-medium">
+                      📍 {parseFloat(newHubLat).toFixed(5)}°N, {parseFloat(newHubLng).toFixed(5)}°E
+                    </p>
+                  )}
                 </div>
               </div>
-              <div>
-                <label className="block text-xs font-bold mb-1">Yard Address / Location</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Near Toll Plaza, Bareilly-Lucknow Highway"
-                  value={newHubAddress}
-                  onChange={(e) => setNewHubAddress(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs focus:outline-none"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1">Contact Phone</label>
-                <input
-                  type="tel"
-                  placeholder="+919450009988"
-                  value={newHubPhone}
-                  onChange={(e) => setNewHubPhone(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2 text-xs font-mono focus:outline-none"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowAddHub(false)}
-                  className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:text-slate-950"
+                  className={`px-5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
+                    isDaylight ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                  }`}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className={`px-4 py-1.5 text-xs font-medium rounded-lg cursor-pointer transition-colors ${
-                    isDaylight
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+                  disabled={!newHubStateId || !newHubCityId || !newHubLat || !newHubLng}
+                  className={`px-6 py-2.5 rounded-xl text-xs font-black cursor-pointer transition-colors flex items-center gap-2 ${
+                    newHubStateId && newHubCityId && newHubLat && newHubLng
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed'
                   }`}
                 >
-                  Save Hub Yard
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Save Hub Yard</span>
                 </button>
               </div>
             </form>

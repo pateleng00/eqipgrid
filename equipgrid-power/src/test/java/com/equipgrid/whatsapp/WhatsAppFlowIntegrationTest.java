@@ -251,7 +251,7 @@ class WhatsAppFlowIntegrationTest {
         assertEquals(BookingStatus.PENDING_PAYMENT, booking.getStatus());
 
         // 8. Test HTTP endpoint for UPI QR code PNG download / rendering
-        String qrUrl = "http://localhost:" + port + "/api/v1/whatsapp/qr/" + bookingNumber;
+        String qrUrl = "http://localhost:" + port + "/equipgrid/whatsapp/qr/" + bookingNumber;
         ResponseEntity<byte[]> qrResponse = restTemplate.getForEntity(qrUrl, byte[].class);
         assertEquals(HttpStatus.OK, qrResponse.getStatusCode());
         assertEquals(MediaType.IMAGE_PNG, qrResponse.getHeaders().getContentType());

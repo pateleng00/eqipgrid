@@ -7,6 +7,7 @@ import {
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { formatINR } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
@@ -41,6 +42,31 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
   const currentSlide = hasGallery ? slides[activeIdx] : null;
   const isVideoTab = currentSlide === 'video';
 
+  const pauseVideo = () => {
+    videoRef.current?.pause();
+    setIsPlaying(false);
+  };
+
+  const playVideoInPlace = () => {
+    if (!video) return;
+    const vidIdx = slides.indexOf('video');
+    if (vidIdx !== -1) {
+      setActiveIdx(vidIdx);
+    }
+    setIsPlaying(true);
+    setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current.play().catch(() => {});
+          }
+        });
+      }
+    }, 50);
+  };
+
   const prev = (e: React.MouseEvent) => {
     e.stopPropagation();
     pauseVideo();
@@ -52,20 +78,20 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
     setActiveIdx(i => (i + 1) % slides.length);
   };
 
-  const pauseVideo = () => {
-    videoRef.current?.pause();
-    setIsPlaying(false);
-  };
-
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!videoRef.current) return;
-    if (isPlaying) {
+    if (videoRef.current.paused) {
+      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
+        if (videoRef.current) {
+          videoRef.current.muted = true;
+          setIsMuted(true);
+          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+        }
+      });
+    } else {
       videoRef.current.pause();
       setIsPlaying(false);
-    } else {
-      videoRef.current.play();
-      setIsPlaying(true);
     }
   };
 
@@ -81,7 +107,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
     : (currentSlide as AssetMedia | null)?.url ?? asset.imageUrl;
 
   return (
-    <div className="relative w-full aspect-[4/3] bg-slate-950 overflow-hidden group">
+    <div className={`relative w-full h-40 sm:h-44 overflow-hidden group ${isDaylight ? 'bg-slate-100' : 'bg-slate-950'}`}>
 
       {/* Image Layer */}
       {!isVideoTab && (
@@ -92,8 +118,13 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
           className="w-full h-full object-cover transition-opacity duration-300 cursor-pointer"
           title="Click to view full screen photos and video"
           onError={(e) => {
-            (e.target as HTMLImageElement).src =
-              'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+            const img = e.target as HTMLImageElement;
+            if (img.src && img.src.includes('?')) {
+              img.src = img.src.split('?')[0];
+            } else {
+              img.src =
+                'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+            }
           }}
         />
       )}
@@ -104,30 +135,48 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
           <video
             ref={videoRef}
             src={video.url}
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover cursor-pointer"
             muted={isMuted}
             loop
             playsInline
+            autoPlay
+            onPlay={() => setIsPlaying(true)}
+            onPause={() => setIsPlaying(false)}
             onEnded={() => setIsPlaying(false)}
+            onClick={togglePlay}
+            onError={(e) => {
+              const vid = e.target as HTMLVideoElement;
+              if (vid.src && vid.src.includes('?')) {
+                vid.src = vid.src.split('?')[0];
+              }
+            }}
           />
           {/* Play/Pause overlay */}
-          <button
-            onClick={togglePlay}
-            className="absolute inset-0 flex items-center justify-center bg-black/30 hover:bg-black/10 transition-colors group/play"
-          >
-            {!isPlaying && (
-              <div className="w-14 h-14 rounded-full bg-amber-500 text-black flex items-center justify-center shadow-2xl group-hover/play:scale-110 transition-transform">
-                <Play className="h-7 w-7 fill-current ml-1" />
+          {!isPlaying && (
+            <button
+              onClick={togglePlay}
+              className="absolute inset-0 flex items-center justify-center bg-black/40 hover:bg-black/20 transition-colors z-10 cursor-pointer"
+            >
+              <div className="w-12 h-12 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center shadow-2xl hover:scale-110 transition-transform">
+                <Play className="h-6 w-6 fill-current ml-0.5" />
               </div>
-            )}
-          </button>
+            </button>
+          )}
 
           {/* Video Controls Bar */}
-          <div className="absolute bottom-0 left-0 right-0 p-2.5 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-2.5 z-20">
-            <button onClick={togglePlay} className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors">
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex items-center gap-2 z-20">
+            <button
+              onClick={togglePlay}
+              className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
+              title={isPlaying ? 'Pause' : 'Play'}
+            >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
             </button>
-            <button onClick={toggleMute} className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors">
+            <button
+              onClick={toggleMute}
+              className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
+              title={isMuted ? 'Unmute' : 'Mute'}
+            >
               {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </button>
             {video.durationSeconds && (
@@ -139,22 +188,34 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
         </div>
       )}
 
-      {/* Gradient overlay for readability */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10 pointer-events-none" />
+      {/* Subtle overlay */}
+      <div className={`absolute inset-0 pointer-events-none ${
+        isDaylight
+          ? 'bg-gradient-to-t from-slate-950/25 via-transparent to-transparent'
+          : 'bg-gradient-to-t from-black/60 via-transparent to-black/10'
+      }`} />
 
       {/* Navigation Arrows */}
       {slides.length > 1 && (
         <>
           <button
             onClick={prev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm z-20 cursor-pointer shadow-lg"
+            className={`absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all opacity-80 group-hover:opacity-100 backdrop-blur-md z-20 cursor-pointer shadow-md ${
+              isDaylight
+                ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300 hover:scale-105'
+                : 'bg-black/70 hover:bg-black/90 text-white border border-white/20 hover:scale-105'
+            }`}
             title="Previous media"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
           <button
             onClick={next}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100 backdrop-blur-sm z-20 cursor-pointer shadow-lg"
+            className={`absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center transition-all opacity-80 group-hover:opacity-100 backdrop-blur-md z-20 cursor-pointer shadow-md ${
+              isDaylight
+                ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300 hover:scale-105'
+                : 'bg-black/70 hover:bg-black/90 text-white border border-white/20 hover:scale-105'
+            }`}
             title="Next media"
           >
             <ChevronRight className="h-4 w-4" />
@@ -164,24 +225,36 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
 
       {/* Dot Indicators */}
       {slides.length > 1 && (
-        <div className="absolute bottom-9 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-20">
           {slides.map((s, i) => {
             const isVid = s === 'video';
             const isActive = i === activeIdx;
             return (
               <button
                 key={i}
-                onClick={(e) => { e.stopPropagation(); pauseVideo(); setActiveIdx(i); }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isVid) {
+                    playVideoInPlace();
+                  } else {
+                    pauseVideo();
+                    setActiveIdx(i);
+                  }
+                }}
                 className={`transition-all rounded-full flex items-center justify-center cursor-pointer ${
                   isActive
                     ? isVid
                       ? 'w-7 h-3 bg-amber-400 text-[8px] text-slate-950 font-black px-1 shadow-md'
                       : 'w-4 h-1.5 bg-amber-400 shadow-md'
                     : isVid
-                      ? 'w-3 h-3 bg-amber-400/40 hover:bg-amber-400 border border-amber-300/80 text-white'
-                      : 'w-1.5 h-1.5 bg-white/60 hover:bg-white'
+                      ? isDaylight
+                        ? 'w-3 h-3 bg-amber-100 hover:bg-amber-300 border border-amber-400 text-amber-900'
+                        : 'w-3 h-3 bg-amber-400/40 hover:bg-amber-400 border border-amber-300/80 text-white'
+                      : isDaylight
+                        ? 'w-1.5 h-1.5 bg-slate-400/90 hover:bg-slate-700'
+                        : 'w-1.5 h-1.5 bg-white/60 hover:bg-white'
                 }`}
-                title={isVid ? 'Showcase Video' : `Photo ${i + 1}`}
+                title={isVid ? 'Play Video Demo' : `Photo ${i + 1}`}
               >
                 {isVid && <Play className="h-2 w-2 fill-current" />}
               </button>
@@ -194,16 +267,35 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
       {hasGallery && (
         <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
           {images.length > 0 && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-sm text-[10px] text-white font-medium">
-              <Images className="h-3 w-3" />
+            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm border ${
+              isDaylight
+                ? 'bg-white/95 text-slate-800 border-slate-300 shadow-slate-200'
+                : 'bg-black/70 text-white border-white/20'
+            }`}>
+              <Images className={`h-3 w-3 ${isDaylight ? 'text-indigo-600' : 'text-slate-300'}`} />
               {images.length}
             </span>
           )}
           {video && (
-            <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 backdrop-blur-sm text-[10px] text-slate-950 font-black shadow-sm">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                playVideoInPlace();
+              }}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black backdrop-blur-md shadow-sm border transition-all cursor-pointer ${
+                isDaylight
+                  ? isVideoTab && isPlaying
+                    ? 'bg-amber-500 text-slate-950 border-amber-600 ring-2 ring-amber-400/50'
+                    : 'bg-amber-100 hover:bg-amber-200 text-amber-950 border-amber-300'
+                  : isVideoTab && isPlaying
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 ring-2 ring-amber-400/50'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400'
+              }`}
+              title="Click to play 10s video demo in place"
+            >
               <Video className="h-3 w-3 fill-current" />
               {video.durationSeconds ? `${video.durationSeconds}s` : 'Video'}
-            </span>
+            </button>
           )}
         </div>
       )}
@@ -211,9 +303,14 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
       {/* Expand Icon */}
       <button
         onClick={(e) => { e.stopPropagation(); onExpand(); }}
-        className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/50 hover:bg-black/80 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all backdrop-blur-sm"
+        className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center opacity-90 group-hover:opacity-100 transition-all backdrop-blur-md z-20 cursor-pointer shadow-md ${
+          isDaylight
+            ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300'
+            : 'bg-black/70 hover:bg-black/90 text-white border border-white/20'
+        }`}
+        title="Click to view full screen photos and video"
       >
-        <Maximize2 className="h-3 w-3" />
+        <Maximize2 className="h-3.5 w-3.5" />
       </button>
     </div>
   );
@@ -251,9 +348,33 @@ const LightboxModal: React.FC<{ asset: Asset; onClose: () => void }> = ({ asset,
       <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
         {/* Main Media */}
         <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video">
-          {!isVideoTab && <img src={currentUrl!} alt={asset.name} className="w-full h-full object-contain" />}
+          {!isVideoTab && (
+            <img
+              src={currentUrl!}
+              alt={asset.name}
+              className="w-full h-full object-contain"
+              onError={(e) => {
+                const img = e.target as HTMLImageElement;
+                if (img.src && img.src.includes('?')) {
+                  img.src = img.src.split('?')[0];
+                }
+              }}
+            />
+          )}
           {isVideoTab && video && (
-            <video ref={videoRef} src={video.url} className="w-full h-full object-contain" controls autoPlay />
+            <video
+              ref={videoRef}
+              src={video.url}
+              className="w-full h-full object-contain"
+              controls
+              autoPlay
+              onError={(e) => {
+                const vid = e.target as HTMLVideoElement;
+                if (vid.src && vid.src.includes('?')) {
+                  vid.src = vid.src.split('?')[0];
+                }
+              }}
+            />
           )}
 
           {slides.length > 1 && (
@@ -369,9 +490,14 @@ const MachineCard: React.FC<{
           {asset.operatorRequired && (
             <div className="flex items-center gap-1.5 col-span-2">
               <UserCheck className="h-3 w-3 shrink-0 text-amber-500" />
-              <span className="text-amber-600 dark:text-amber-400 font-semibold">Operator Mandatory</span>
+              <span className={isDaylight ? 'text-amber-800 font-bold' : 'text-amber-400 font-semibold'}>Operator Mandatory</span>
             </div>
           )}
+          {/* Shift Allowance (In short) */}
+          <div className="flex items-center gap-1.5 col-span-2 text-[11px] font-semibold rounded-lg px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
+            <Clock className="h-3 w-3 shrink-0 text-amber-500" />
+            <span>Std: 8 hrs/day (+1h buffer) • Extra hrs extra</span>
+          </div>
         </div>
 
         {/* Pricing */}
@@ -443,6 +569,8 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const [statusFilter,    setStatusFilter]    = useState<string>('ALL');
   const [searchQuery,     setSearchQuery]     = useState('');
 
+  const [visibleCount, setVisibleCount] = useState<number>(7);
+
   const availableCities = useMemo(() => {
     if (selectedStateId === 'ALL') return cities;
     return cities.filter(c => c.stateId === Number(selectedStateId));
@@ -480,6 +608,29 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
     });
   }, [assetsList, hubs, cities, selectedStateId, selectedCityId, selectedHubId, selectedCategory, statusFilter, searchQuery]);
 
+  // Reset to initial 7 items when filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId, selectedCategory, statusFilter, searchQuery]);
+
+  // Infinite scroll slice (default 7, loads +7 on scroll)
+  const visibleAssets = useMemo(() => {
+    return filteredAssets.slice(0, visibleCount);
+  }, [filteredAssets, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < filteredAssets.length) {
+        setVisibleCount(prev => Math.min(prev + 7, filteredAssets.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount(prev => Math.min(prev + 7, filteredAssets.length));
+  };
+
   const handleMachineAdded = (newAsset: Asset) => {
     setAssetsList([...api.assets]);
     showFeedback('success', 'Machine Added', `"${newAsset.name}" registered in fleet.`);
@@ -489,15 +640,15 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const statsOnRent    = filteredAssets.filter(a => a.status === 'ON_RENT').length;
 
   return (
-    <div className="space-y-5">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className={`text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-            <Truck className={`h-6 w-6 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
+          <h2 className={`text-lg sm:text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+            <Truck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
             Fleet &amp; Machinery
           </h2>
-          <p className={`text-xs mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
+          <p className={`text-[11px] mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
             {filteredAssets.length} machines · {statsAvailable} available · {statsOnRent} on rent
           </p>
         </div>
@@ -508,7 +659,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
+                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
                   viewMode === mode
                     ? isDaylight ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-700 text-white'
                     : isDaylight ? 'text-slate-500' : 'text-slate-500'
@@ -522,7 +673,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
           {!isGuest && (
             <button
               onClick={() => setIsAddModalOpen(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 isDaylight
                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -536,14 +687,14 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
       </div>
 
       {/* Filters */}
-      <div className={`p-3.5 rounded-xl border ${isDaylight ? 'border-slate-300 bg-slate-50/60' : 'border-slate-800 bg-slate-900/40'}`}>
-        <div className="flex items-center justify-between mb-2.5">
+      <div className={`flex-shrink-0 p-2.5 rounded-xl border ${isDaylight ? 'border-slate-300 bg-slate-50/60' : 'border-slate-800 bg-slate-900/40'}`}>
+        <div className="flex items-center justify-between mb-1.5">
           <span className={`text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'text-slate-400' : 'text-slate-500'}`}>Filters</span>
-          <button onClick={handleResetFilters} className={`text-xs flex items-center gap-1 font-bold ${isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200'}`}>
+          <button onClick={handleResetFilters} className={`text-[11px] flex items-center gap-1 font-bold ${isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200'}`}>
             <RotateCcw className="h-3 w-3" /> Reset
           </button>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map(s => ({ value: String(s.id), label: s.name }))]} value={selectedStateId} onChange={v => handleStateChange(v || 'ALL')} placeholder="All States" isClearable={false} />
           <SearchSelect options={[{ value: 'ALL', label: 'All Cities' }, ...availableCities.map(c => ({ value: String(c.id), label: c.name }))]} value={selectedCityId} onChange={v => handleCityChange(v || 'ALL')} placeholder="All Cities" isClearable={false} />
           <SearchSelect options={[{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map(h => ({ value: String(h.id), label: h.name }))]} value={selectedHubId} onChange={v => setSelectedHubId(String(v || 'ALL'))} placeholder="All Hubs" isClearable={false} />
@@ -552,7 +703,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search…"
-              className={`w-full rounded-lg border pl-8 pr-2.5 py-2 text-xs focus:outline-none transition-colors ${isDaylight ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'}`}
+              className={`w-full rounded-lg border pl-8 pr-2.5 py-1.5 text-xs focus:outline-none transition-colors ${isDaylight ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'}`}
             />
           </div>
         </div>
@@ -560,29 +711,49 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
 
       {/* Content */}
       {filteredAssets.length === 0 ? (
-        <div className={`rounded-2xl border p-16 text-center ${isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/30'}`}>
-          <Truck className="h-10 w-10 mx-auto opacity-20 mb-3" />
+        <div className={`flex-1 min-h-0 rounded-2xl border p-12 text-center flex flex-col items-center justify-center ${isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/30'}`}>
+          <Truck className="h-10 w-10 mx-auto opacity-20 mb-2" />
           <p className="font-bold text-sm text-slate-500">No machinery matches your filters</p>
-          <button onClick={handleResetFilters} className="mt-3 text-xs text-amber-600 hover:text-amber-500 font-semibold">Clear filters</button>
+          <button onClick={handleResetFilters} className="mt-2 text-xs text-amber-600 hover:text-amber-500 font-semibold">Clear filters</button>
         </div>
       ) : viewMode === 'grid' ? (
-        /* Grid View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-          {filteredAssets.map(asset => (
-            <MachineCard
-              key={asset.id}
-              asset={asset}
-              onBook={() => onSelectForBooking(asset)}
-              onExpand={() => setLightboxAsset(asset)}
-            />
-          ))}
+        /* Grid View — scrolls within section dynamically */
+        <div
+          className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${
+            isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40'
+          }`}
+        >
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 p-3 overflow-y-auto"
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5">
+              {visibleAssets.map(asset => (
+                <MachineCard
+                  key={asset.id}
+                  asset={asset}
+                  onBook={() => onSelectForBooking(asset)}
+                  onExpand={() => setLightboxAsset(asset)}
+                />
+              ))}
+            </div>
+          </div>
+          <InfiniteScrollFooter
+            loadedCount={visibleAssets.length}
+            totalCount={filteredAssets.length}
+            onLoadMore={handleLoadMore}
+            itemName="machinery units"
+          />
         </div>
       ) : (
-        /* List View — compact table */
-        <div className={`rounded-2xl border overflow-hidden ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900'}`}>
-          <div className="overflow-x-auto">
+        /* List View — compact table scrolling dynamically within section */
+        <div className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900'}`}>
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
-              <thead className={`border-b text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-200 bg-slate-50 text-slate-500' : 'border-slate-800 bg-slate-950/60 text-slate-500'}`}>
+              <thead className={`sticky top-0 z-10 border-b text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-800 bg-slate-950 text-slate-300'}`}>
                 <tr>
                   <th className="py-3 px-4">Machine</th>
                   <th className="py-3 px-4">Model</th>
@@ -593,7 +764,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                 </tr>
               </thead>
               <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
-                {filteredAssets.map(asset => {
+                {visibleAssets.map(asset => {
                   const isAvail = asset.status === 'AVAILABLE';
                   const thumb = asset.mediaItems?.find(m => m.mediaType === 'IMAGE')?.url ?? asset.imageUrl;
                   const hasVideo = asset.mediaItems?.some(m => m.mediaType === 'VIDEO');
@@ -602,7 +773,20 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <div className="relative h-12 w-16 rounded-lg overflow-hidden bg-slate-900 shrink-0 cursor-pointer" onClick={() => setLightboxAsset(asset)}>
-                            <img src={thumb} alt={asset.name} className="h-full w-full object-cover" onError={e => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800'; }} />
+                            <img
+                              src={thumb}
+                              alt={asset.name}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                if (img.src && img.src.includes('?')) {
+                                  img.src = img.src.split('?')[0];
+                                } else {
+                                  img.src =
+                                    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+                                }
+                              }}
+                            />
                             {hasVideo && <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center"><Play className="h-2 w-2 text-white" /></div>}
                             {(asset.mediaItems?.filter(m => m.mediaType === 'IMAGE').length ?? 0) > 1 && (
                               <div className="absolute top-0.5 right-0.5 bg-black/70 rounded px-1 text-[8px] text-white font-bold">
@@ -627,6 +811,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       <td className="py-3 px-4">
                         <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{formatINR(asset.dailyRate)}<span className="text-[10px] font-normal text-slate-500">/day</span></div>
                         <div className={`text-[11px] ${isDaylight ? 'text-amber-700 font-semibold' : 'text-slate-400'}`}>Dep: {formatINR(asset.depositAmount)}</div>
+                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Std: 8h/day (+1h buffer) • Extra billed</div>
                       </td>
                       <td className="py-3 px-4"><StatusBadge status={asset.status} size="sm" /></td>
                       <td className="py-3 px-4 text-right">
@@ -640,6 +825,14 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               </tbody>
             </table>
           </div>
+
+          {/* Infinite Scroll Footer */}
+          <InfiniteScrollFooter
+            loadedCount={visibleAssets.length}
+            totalCount={filteredAssets.length}
+            onLoadMore={handleLoadMore}
+            itemName="machinery units"
+          />
         </div>
       )}
 

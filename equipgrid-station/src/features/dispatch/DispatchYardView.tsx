@@ -9,18 +9,25 @@ import {
   Truck,
   MapPin,
   Calendar,
-  X,
   RotateCcw,
   Clock,
+  MessageSquare,
+  ExternalLink,
+  X,
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { CollectPaymentModal } from '../../components/CollectPaymentModal';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
+import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
 import { formatINR, formatDate } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { Booking, DispatchRecord } from '../../types';
 import { cn } from '../../lib/utils';
+import { printDispatchChallanPdf } from '../../services/voucherPdfService';
+import { getDispatchWhatsAppMessage, openWhatsAppCirculation } from '../../services/whatsappCirculation';
 
 interface DispatchYardViewProps {
   onNavigateToPayment: () => void;
@@ -42,6 +49,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
   const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
   const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
 
+  const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
+  const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
+
   const availableCities = useMemo(() =>
     cities.filter((c) => selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)),
     [cities, selectedStateId]
@@ -55,12 +65,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
     return hubs;
   }, [hubs, selectedCityId, selectedStateId, availableCities]);
 
-  // Pending handover queue: today's bookings not yet dispatched
+  // Pending handover queue: active bookings covering today's date
   const pendingHandovers = useMemo(() => {
     return allBookings.filter((b) => {
       if (!PENDING_STATUSES.has(b.status)) return false;
-      // Match start date to today (allow same-day or overdue)
-      if (b.startDate > TODAY) return false; // future — not yet due
+      // Active for today: must start on or before today and end on or after today
+      if (b.startDate > TODAY || b.endDate < TODAY) return false;
       const hub = hubs.find((h) => h.id === b.asset.hubId);
       const city = cities.find((c) => c.id === hub?.cityId);
       if (selectedStateId !== 'ALL' && city?.stateId !== Number(selectedStateId)) return false;
@@ -69,6 +79,31 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       return true;
     });
   }, [allBookings, hubs, cities, selectedStateId, selectedCityId, selectedHubId]);
+
+  const [visibleCount, setVisibleCount] = useState<number>(7);
+
+  // Reset to initial 7 items when filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId]);
+
+  // Infinite scroll slice (default 7 items, loads +7 on scroll)
+  const visibleHandovers = useMemo(() => {
+    return pendingHandovers.slice(0, visibleCount);
+  }, [pendingHandovers, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < pendingHandovers.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, pendingHandovers.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, pendingHandovers.length));
+  };
 
   // Handover form state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
@@ -128,6 +163,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
         engineHoursOut,
         conditionNotes,
       });
+
+      // Automatically trigger WhatsApp notification via backend bot dispatcher
+      try {
+        await api.sendDispatchWhatsAppNotification(selectedBooking.id);
+      } catch (err) {
+        console.warn('WhatsApp dispatch notification call:', err);
+      }
+
       setIssuedChallan(challan);
     } catch (err: any) {
       setErrorModal({ isOpen: true, title: 'Dispatch Failed', message: err.message || 'Dispatch could not be executed. Please check booking status.', variant: 'error' });
@@ -138,35 +181,35 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
   const isOverdue = (b: Booking) => b.startDate < TODAY;
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* Header */}
-      <div>
-        <h2 className={cn('text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
-          <Send className={cn('h-6 w-6', isDaylight ? 'text-amber-700' : 'text-slate-400')} />
+      <div className="flex-shrink-0">
+        <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+          <Send className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-slate-400')} />
           Yard Dispatch & Handover
         </h2>
-        <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+        <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
           Showing today's pending handovers — select a booking to execute yard dispatch
         </p>
       </div>
 
       {/* Filters */}
-      <div className={cn('p-3.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className="flex items-center justify-between mb-2">
+      <div className={cn('flex-shrink-0 p-2.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
-            <Calendar className={cn('h-3.5 w-3.5', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
-            <span className={cn('text-xs font-bold', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+            <Calendar className={cn('h-3 w-3', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
+            <span className={cn('text-[11px] font-bold', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
               Today: {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
             </span>
           </div>
           <button
             onClick={() => { setSelectedStateId('ALL'); setSelectedCityId('ALL'); setSelectedHubId('ALL'); }}
-            className={cn('text-xs font-bold flex items-center gap-1', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+            className={cn('text-[11px] font-bold flex items-center gap-1 cursor-pointer', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
           >
             <RotateCcw className="h-3 w-3" /> Reset
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <SearchSelect
             options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
             value={selectedStateId}
@@ -189,11 +232,11 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       </div>
 
       {/* Pending Handover Queue Table */}
-      <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className={cn('px-4 py-3 border-b flex items-center justify-between', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+      <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className={cn('px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
           <div className="flex items-center gap-2">
             <Truck className={cn('h-4 w-4', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
-            <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
+            <h3 className={cn('font-black text-xs sm:text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
               Pending Handovers — Today ({pendingHandovers.length})
             </h3>
           </div>
@@ -206,19 +249,22 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
         </div>
 
         {pendingHandovers.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <CheckCircle2 className="h-8 w-8 mx-auto opacity-25 text-emerald-500" />
-            <p className={cn('text-sm font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+          <div className="flex-1 min-h-0 p-8 text-center flex flex-col items-center justify-center space-y-1.5">
+            <CheckCircle2 className="h-7 w-7 mx-auto opacity-25 text-emerald-500" />
+            <p className={cn('text-xs font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
               All handovers complete for today
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-[11px] text-slate-500">
               No bookings with pending dispatch for today's date. New bookings created for today will appear here.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
-              <thead className={cn('border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-200 bg-slate-100/60 text-slate-600' : 'border-slate-800 bg-slate-950/60 text-slate-400')}>
+              <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs')}>
                 <tr>
                   <th className="py-3 px-4">Booking / Customer</th>
                   <th className="py-3 px-4">Machine</th>
@@ -230,7 +276,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 </tr>
               </thead>
               <tbody className={cn('divide-y', isDaylight ? 'divide-slate-100' : 'divide-slate-800/50')}>
-                {pendingHandovers.map((b) => {
+                {visibleHandovers.map((b) => {
                   const overdue = isOverdue(b);
                   const paid = (b.advancePaid || 0) + (b.depositPaid || 0);
                   const required = (b.depositAmount || 0) + (b.baseRent || 0);
@@ -305,18 +351,40 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
 
                       {/* Action */}
                       <td className="py-3.5 px-4 text-right">
-                        <button
-                          onClick={() => openHandoverPanel(b)}
-                          className={cn(
-                            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
-                            isDaylight
-                              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                              : 'bg-amber-600/80 hover:bg-amber-500 text-slate-950 border border-amber-500/50'
-                          )}
-                        >
-                          <Send className="h-3.5 w-3.5" />
-                          Handover
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setWhatsAppModalBooking(b)}
+                            title="Circulate Dispatch Update on WhatsApp"
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (!paymentOk) {
+                                setPaymentModalBooking(b);
+                              } else {
+                                openHandoverPanel(b);
+                              }
+                            }}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer',
+                              paymentOk
+                                ? isDaylight
+                                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                                  : 'bg-amber-600/80 hover:bg-amber-500 text-slate-950 border border-amber-500/50'
+                                : isDaylight
+                                ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm'
+                                : 'bg-rose-700 hover:bg-rose-600 text-white'
+                            )}
+                          >
+                            {!paymentOk ? <ShieldAlert className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
+                            <span>{paymentOk ? 'Handover' : 'Collect & Handover'}</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -324,6 +392,16 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Infinite Scroll Footer */}
+        {pendingHandovers.length > 0 && (
+          <InfiniteScrollFooter
+            loadedCount={visibleHandovers.length}
+            totalCount={pendingHandovers.length}
+            onLoadMore={handleLoadMore}
+            itemName="pending handovers"
+          />
         )}
       </div>
 
@@ -366,17 +444,55 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     <div className={cn('font-mono font-bold mt-0.5', isDaylight ? 'text-slate-900' : 'text-slate-300')}>{issuedChallan.engineHoursOut} hrs</div>
                   </div>
                 </div>
-                <div className="flex gap-2.5">
+                {/* WhatsApp status banner */}
+                <div
+                  className={cn(
+                    'rounded-xl border p-3 flex items-start gap-2.5 text-xs',
+                    isDaylight ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-emerald-800/40 bg-emerald-950/30 text-emerald-300'
+                  )}
+                >
+                  <MessageSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-xs">WhatsApp Dispatch Alert Dispatched</div>
+                    <div className="text-[11px] opacity-85">
+                      Challan handover details & live trip tracking prompt sent to <strong>+91 {selectedBooking.customer.phone}</strong>.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                   <button
-                    onClick={() => window.print()}
-                    className={cn('flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors border', isDaylight ? 'border-amber-300 text-amber-700 hover:bg-amber-50' : 'border-amber-700/50 text-amber-400 hover:bg-amber-900/20')}
+                    type="button"
+                    onClick={() => {
+                      const msg = getDispatchWhatsAppMessage(selectedBooking, issuedChallan);
+                      openWhatsAppCirculation(selectedBooking.customer.phone, msg);
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-colors cursor-pointer shadow-sm"
                   >
-                    <Printer className="h-4 w-4" />
-                    Print Handover Challan
+                    <MessageSquare className="h-3.5 w-3.5" />
+                    <span>Open in WhatsApp</span>
+                    <ExternalLink className="h-3 w-3 opacity-70" />
                   </button>
+
                   <button
+                    type="button"
+                    onClick={() => printDispatchChallanPdf({ booking: selectedBooking, challan: issuedChallan })}
+                    className={cn(
+                      'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border font-bold text-xs transition-colors cursor-pointer',
+                      isDaylight ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100' : 'border-amber-700/50 text-amber-300 bg-amber-900/20 hover:bg-amber-900/30'
+                    )}
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Print Challan (DC)</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={closePanel}
-                    className={cn('flex-1 py-2.5 rounded-lg text-xs font-bold cursor-pointer transition-colors', isDaylight ? 'bg-slate-900 text-white hover:bg-slate-800' : 'bg-slate-700 text-white hover:bg-slate-600')}
+                    className={cn(
+                      'py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm',
+                      isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                    )}
                   >
                     Done
                   </button>
@@ -426,13 +542,22 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                       </div>
                     </div>
                     {!isZeroCreditPassed && (
-                      <button
-                        type="button"
-                        onClick={() => { closePanel(); onNavigateToPayment(); }}
-                        className="text-[11px] font-bold text-rose-500 hover:underline cursor-pointer"
-                      >
-                        Go to Payments →
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentModalBooking(selectedBooking)}
+                          className="text-[11px] font-black px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-sm transition-all"
+                        >
+                          ⚡ Collect Rental & Deposit Now →
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { closePanel(); onNavigateToPayment(); }}
+                          className="text-[11px] font-bold text-slate-500 hover:underline cursor-pointer"
+                        >
+                          Ledger
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -543,6 +668,63 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
         title={errorModal.title}
         message={errorModal.message}
       />
+
+      {/* Collect Rental & Security Deposit Modal */}
+      {paymentModalBooking && (
+        <CollectPaymentModal
+          isOpen={!!paymentModalBooking}
+          booking={paymentModalBooking}
+          onClose={() => setPaymentModalBooking(null)}
+          onPaymentCollected={(updatedBooking) => {
+            setPaymentModalBooking(null);
+            openHandoverPanel(updatedBooking);
+          }}
+        />
+      )}
+
+      {/* WhatsApp Circulation Modal */}
+      {whatsAppModalBooking && (
+        <WhatsAppCirculationModal
+          isOpen={!!whatsAppModalBooking}
+          onClose={() => setWhatsAppModalBooking(null)}
+          stageName="Yard Dispatch Handover"
+          bookingNumber={whatsAppModalBooking.bookingNumber}
+          recipientName={whatsAppModalBooking.customer.fullName}
+          recipientPhone={whatsAppModalBooking.customer.phone}
+          message={getDispatchWhatsAppMessage(whatsAppModalBooking, {
+            id: 0,
+            bookingId: whatsAppModalBooking.id,
+            assetTag: whatsAppModalBooking.asset.assetTag,
+            challanNumber: `DC-${new Date().getFullYear()}-DISP`,
+            fuelLevel: '100% (Full Tank)',
+            engineHoursOut: whatsAppModalBooking.asset.engineHours || 14.5,
+            accessoriesVerified: true,
+            conditionNotes: 'All mechanical systems operational. Dispatched to farm site.',
+            driverName: 'Suraj Logistics (E-Rickshaw 3W)',
+            customerSignatureConfirmed: true,
+            dispatchTimestamp: new Date().toISOString(),
+          })}
+          onPrintPdf={() =>
+            printDispatchChallanPdf({
+              booking: whatsAppModalBooking,
+              challan: {
+                id: 0,
+                bookingId: whatsAppModalBooking.id,
+                assetTag: whatsAppModalBooking.asset.assetTag,
+                challanNumber: `DC-${new Date().getFullYear()}-DISP`,
+                fuelLevel: '100% (Full Tank)',
+                engineHoursOut: whatsAppModalBooking.asset.engineHours || 14.5,
+                accessoriesVerified: true,
+                conditionNotes: 'All mechanical systems operational.',
+                driverName: 'Suraj Logistics (E-Rickshaw 3W)',
+                customerSignatureConfirmed: true,
+                dispatchTimestamp: new Date().toISOString(),
+              },
+            })
+          }
+          pdfButtonLabel="Print Challan (DC) PDF"
+        />
+      )}
     </div>
   );
 };

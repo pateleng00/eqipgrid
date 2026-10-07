@@ -11,9 +11,12 @@ import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.repository.BookingRepository;
+import com.equipgrid.asset.repository.AssetQueryRepository;
+import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.service.ICustomerService;
+import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -31,10 +34,13 @@ public class BookingServiceImpl implements IBookingService {
     private static final AtomicLong SEQUENCE = new AtomicLong(100);
     private final BookingRepository bookingRepository;
     private final BookingQueryRepository bookingQueryRepository;
+    private final AssetRepository assetRepository;
+    private final AssetQueryRepository assetQueryRepository;
     private final IAssetService assetService;
     private final ICustomerService customerService;
     private final PricingEngine pricingEngine;
     private final IAuditService auditService;
+    private final IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
     public List<Booking> getAllBookings(BookingStatus status) {
@@ -93,13 +99,56 @@ public class BookingServiceImpl implements IBookingService {
         Customer customer = customerService.getCustomerById(request.getCustomerId());
         Asset asset = assetService.getAssetById(request.getAssetId());
 
-        if (asset.getStatus() == AssetStatus.MAINTENANCE || asset.getStatus() == AssetStatus.RETIRED || asset.getStatus() == AssetStatus.DAMAGED) {
-            throw new Exceptions.BusinessRuleViolationException("Asset " + asset.getAssetTag() + " is currently unavailable due to " + asset.getStatus());
+        Long typeId = asset.getType() != null ? asset.getType().getId() : null;
+        Long hubId = asset.getHub() != null ? asset.getHub().getId() : null;
+        String assetName = asset.getName();
+
+        // 1. Fetch all operational machines of this type/model in the fleet
+        List<Asset> fleetUnits = assetQueryRepository.fetchOperationalMachinesByType(typeId, assetName, hubId);
+        if (fleetUnits.isEmpty()) {
+            fleetUnits = List.of(asset);
         }
 
-        long conflicts = bookingQueryRepository.countConflictingBookings(asset.getId(), request.getStartDate(), request.getEndDate());
-        if (conflicts > 0) {
-            throw new Exceptions.BusinessRuleViolationException("Asset is already booked during this date window");
+        // 2. Fetch distinct unit IDs of this type already booked/locked during the requested date window
+        List<Long> lockedAssetIds = bookingQueryRepository.fetchConflictingAssetIdsForType(
+                typeId, assetName, hubId, request.getStartDate(), request.getEndDate()
+        );
+
+        long totalCapacity = fleetUnits.size();
+        long bookedUnitsCount = lockedAssetIds.size();
+
+        // Strict capacity limit: Cannot accept bookings more than actual count of that type of machines!
+        if (totalCapacity > 0 && bookedUnitsCount >= totalCapacity) {
+            String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
+            String yardName = asset.getHub() != null ? asset.getHub().getName() : "Central Yard";
+            throw new Exceptions.BusinessRuleViolationException(
+                    "FLEET INVENTORY CAPACITY EXCEEDED: All " + totalCapacity + " units of " + typeName +
+                    " at " + yardName + " are already booked and locked for dates " +
+                    request.getStartDate() + " to " + request.getEndDate() + ". " +
+                    "Cannot accept booking beyond actual fleet count of " + totalCapacity + " machines."
+            );
+        }
+
+        // 3. If requested specific unit is locked or unavailable, auto-allocate an available sister unit of the same type
+        if (lockedAssetIds.contains(asset.getId()) || asset.getStatus() == AssetStatus.MAINTENANCE ||
+            asset.getStatus() == AssetStatus.RETIRED || asset.getStatus() == AssetStatus.DAMAGED) {
+
+            Asset availableSister = fleetUnits.stream()
+                    .filter(u -> !lockedAssetIds.contains(u.getId()))
+                    .filter(u -> u.getStatus() != AssetStatus.MAINTENANCE && u.getStatus() != AssetStatus.RETIRED && u.getStatus() != AssetStatus.DAMAGED)
+                    .findFirst()
+                    .orElse(null);
+
+            if (availableSister == null) {
+                String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
+                throw new Exceptions.BusinessRuleViolationException(
+                        "All available units of " + typeName + " are booked or locked for these dates."
+                );
+            }
+
+            log.info("Requested machine {} was busy; allocating available sister unit {} (type: {})",
+                    asset.getAssetTag(), availableSister.getAssetTag(), availableSister.getName());
+            asset = availableSister;
         }
 
         boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
@@ -138,6 +187,13 @@ public class BookingServiceImpl implements IBookingService {
         auditService.log("BOOKING", saved.getBookingNumber(), "CREATE_BOOKING",
                 performedBy != null ? performedBy : "RENTAL_DESK",
                 "Booking created for " + customer.getFullName() + ", asset " + asset.getAssetTag());
+
+        try {
+            whatsAppNotificationService.notifyBookingCreated(saved.getId());
+        } catch (Exception e) {
+            log.warn("Could not dispatch WhatsApp notification for booking {}: {}", saved.getBookingNumber(), e.getMessage());
+        }
+
         return saved;
     }
 
@@ -153,6 +209,17 @@ public class BookingServiceImpl implements IBookingService {
         }
 
         Booking updated = bookingRepository.save(booking);
+
+        if (newStatus == BookingStatus.CANCELLED) {
+            Asset bookedAsset = booking.getAsset();
+            if (bookedAsset != null && (bookedAsset.getStatus() == AssetStatus.RESERVED || bookedAsset.getStatus() == AssetStatus.DISPATCH_READY)) {
+                bookedAsset.setStatus(AssetStatus.AVAILABLE);
+                assetRepository.save(bookedAsset);
+                log.info("Asset {} unlocked to AVAILABLE due to cancellation of booking {}",
+                        bookedAsset.getAssetTag(), booking.getBookingNumber());
+            }
+        }
+
         auditService.log("BOOKING", updated.getBookingNumber(), "STATUS_CHANGE",
                 performedBy != null ? performedBy : "STAFF",
                 "Status transitioned from " + oldStatus + " to " + newStatus);

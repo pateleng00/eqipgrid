@@ -33,36 +33,36 @@ export const DailyCashReconciliationView: React.FC = () => {
     color: string;
     icon: React.ReactNode;
   }) => (
-    <div className={cn('rounded-2xl border p-4 flex items-center justify-between gap-3', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
+    <div className={cn('rounded-xl border p-2.5 sm:p-3 flex items-center justify-between gap-2', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
       <div className="min-w-0">
-        <div className={cn('text-[11px] font-black uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>{label}</div>
-        <div className={cn('text-xl font-black font-mono mt-1 truncate', color)}>{value}</div>
-        {sub && <div className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-400' : 'text-slate-500')}>{sub}</div>}
+        <div className={cn('text-[10px] font-black uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>{label}</div>
+        <div className={cn('text-lg sm:text-xl font-black font-mono mt-0.5 truncate', color)}>{value}</div>
+        {sub && <div className={cn('text-[10px] mt-0.5', isDaylight ? 'text-slate-400' : 'text-slate-500')}>{sub}</div>}
       </div>
-      <div className={cn('p-2.5 rounded-xl shrink-0', isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400')}>
+      <div className={cn('p-2 rounded-lg shrink-0', isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400')}>
         {icon}
       </div>
     </div>
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-start justify-between gap-2">
         <div>
-          <h2 className={cn('text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
-            <BarChart3 className={cn('h-6 w-6', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
+          <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+            <BarChart3 className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
             End of Day Report
           </h2>
-          <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
             Daily cash balancing, receipts breakdown & DPR benchmark vs actuals
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {/* Reconciliation status pill */}
           <span className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-black',
+            'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-black',
             isBalanced
               ? isDaylight
                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
@@ -79,20 +79,20 @@ export const DailyCashReconciliationView: React.FC = () => {
           <button
             onClick={() => window.print()}
             className={cn(
-              'flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors',
+              'flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold cursor-pointer transition-colors',
               isDaylight
-                ? 'border-slate-300 bg-transparent text-slate-700 hover:bg-slate-100'
+                ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 font-bold shadow-xs'
                 : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
             )}
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
             Export Statement
           </button>
         </div>
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 flex-shrink-0">
         <StatCard
           label="Opening Float"
           value={formatINR(cashSheet.openingCash)}
@@ -123,11 +123,11 @@ export const DailyCashReconciliationView: React.FC = () => {
         />
       </div>
 
-      {/* Main — full width */}
-      <div className="space-y-4">
+      {/* Main — full width scrollable */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-0.5">
 
           {/* Receipts by mode */}
-          <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
+          <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
             <div className={cn('px-5 py-3.5 border-b flex items-center gap-2', isDaylight ? 'border-slate-200' : 'border-slate-800')}>
               <ArrowUpRight className="h-4 w-4 text-emerald-500" />
               <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>Receipts by Mode</h3>
@@ -154,7 +154,7 @@ export const DailyCashReconciliationView: React.FC = () => {
           </div>
 
           {/* Outflows */}
-          <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
+          <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
             <div className={cn('px-5 py-3.5 border-b flex items-center gap-2', isDaylight ? 'border-slate-200' : 'border-slate-800')}>
               <ArrowDownRight className="h-4 w-4 text-rose-500" />
               <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>Outflows & Deductions</h3>

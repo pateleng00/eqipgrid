@@ -15,7 +15,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/customers")
+@RequestMapping("/customers")
 @Tag(name = "Customer Management", description = "Customer onboarding and Tier-1/Tier-2 ID verification (SOP-001)")
 public class CustomerController {
 

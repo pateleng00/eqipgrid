@@ -5,7 +5,7 @@ import {
   CalendarCheck,
   Send,
   RotateCcw,
-  CreditCard,
+  BookOpen,
   Users,
   BarChart3,
   MapPin,
@@ -38,56 +38,80 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   // Guests get no sidebar at all — catalog fills the full width
   if (isGuest) return null;
 
-  const navItems = [
+  interface NavGroup {
+    groupName: string;
+    items: {
+      id: string;
+      label: string;
+      icon: React.ReactNode;
+    }[];
+  }
+
+  const navGroups: NavGroup[] = [
     {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <LayoutDashboard className="h-4 w-4" />,
+      groupName: 'OVERVIEW',
+      items: [
+        {
+          id: 'dashboard',
+          label: 'Dashboard',
+          icon: <LayoutDashboard className="h-4 w-4" />,
+        },
+      ],
     },
     {
-      id: 'catalog',
-      label: 'Assets',
-      icon: <Truck className="h-4 w-4" />,
+      groupName: 'FLEET OPERATIONS',
+      items: [
+        {
+          id: 'locations',
+          label: 'Locations',
+          icon: <MapPin className="h-4 w-4" />,
+        },
+        {
+          id: 'catalog',
+          label: 'Assets',
+          icon: <Truck className="h-4 w-4" />,
+        },
+        {
+          id: 'rental-configs',
+          label: 'Rentals',
+          icon: <SlidersHorizontal className="h-4 w-4" />,
+        },
+      ],
     },
     {
-      id: 'booking',
-      label: 'Booking',
-      icon: <CalendarCheck className="h-4 w-4" />,
+      groupName: 'RENTAL WORKFLOW',
+      items: [
+        {
+          id: 'booking',
+          label: 'Deployments',
+          icon: <CalendarCheck className="h-4 w-4" />,
+        },
+        {
+          id: 'return',
+          label: 'Returns',
+          icon: <RotateCcw className="h-4 w-4" />,
+        },
+      ],
     },
     {
-      id: 'rental-configs',
-      label: 'Rentals',
-      icon: <SlidersHorizontal className="h-4 w-4" />,
-    },
-    {
-      id: 'locations',
-      label: 'Locations',
-      icon: <MapPin className="h-4 w-4" />,
-    },
-    {
-      id: 'dispatch',
-      label: 'Dispatch',
-      icon: <Send className="h-4 w-4" />,
-    },
-    {
-      id: 'return',
-      label: 'Returns',
-      icon: <RotateCcw className="h-4 w-4" />,
-    },
-    {
-      id: 'payments',
-      label: 'Ledger',
-      icon: <CreditCard className="h-4 w-4" />,
-    },
-    {
-      id: 'dealers',
-      label: 'Dealers',
-      icon: <Users className="h-4 w-4" />,
-    },
-    {
-      id: 'cash',
-      label: 'Reconciliation',
-      icon: <BarChart3 className="h-4 w-4" />,
+      groupName: 'FINANCE & DEALERS',
+      items: [
+        {
+          id: 'dealers',
+          label: 'Dealer',
+          icon: <Users className="h-4 w-4" />,
+        },
+        {
+          id: 'payments',
+          label: 'Ledger',
+          icon: <BookOpen className="h-4 w-4" />,
+        },
+        {
+          id: 'cash',
+          label: 'Reconciliation',
+          icon: <BarChart3 className="h-4 w-4" />,
+        },
+      ],
     },
   ];
 
@@ -97,44 +121,46 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         'shrink-0 border-r p-3 flex flex-col justify-between hidden md:flex transition-all duration-300 select-none relative',
         isCollapsed ? 'w-20' : 'w-45',
         isDaylight
-          ? 'border-slate-300 bg-transparent text-slate-950'
+          ? 'border-slate-200 bg-white text-slate-950'
           : 'border-slate-800/80 bg-slate-950/60 text-slate-300'
       )}
     >
-      <div className="space-y-2">
+      <div className="flex-1 flex flex-col min-h-0 space-y-2">
         {/* Header & Collapse/Expand Toggle Button */}
         <div
-  className={cn(
-    "flex items-center pb-3 border-b border-slate-700/30",
-    isCollapsed
-      ? "justify-center"
-      : "justify-between px-2"
-  )}
->
-  {!isCollapsed && (
-    <div className="px-3 text-lg font-black">
-      EquipGrid
-    </div>
-  )}
+          className={cn(
+            "flex items-center pb-3 border-b",
+            isDaylight ? "border-slate-200" : "border-slate-700/30",
+            isCollapsed
+              ? "justify-center"
+              : "justify-between px-2"
+          )}
+        >
+          {!isCollapsed && (
+            <div className="px-2 text-lg font-black tracking-tight">
+              EquipGrid
+            </div>
+          )}
 
-  <button
-    onClick={() => setIsCollapsed(!isCollapsed)}
-    className={cn(
-      "h-9 w-9 shrink-0 rounded-xl",
-      "flex items-center justify-center",
-      "border transition-all cursor-pointer",
-      isDaylight
-        ? "border-slate-300 hover:bg-slate-200/60 text-slate-950"
-        : "border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white"
-    )}
-  >
-    {isCollapsed ? (
-      <ChevronRight className="h-4 w-4" />
-    ) : (
-      <ChevronLeft className="h-4 w-4" />
-    )}
-  </button>
-</div>
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn(
+              "h-8 w-8 shrink-0 rounded-lg",
+              "flex items-center justify-center",
+              "border transition-all cursor-pointer",
+              isDaylight
+                ? "border-slate-300 hover:bg-slate-100 text-slate-950"
+                : "border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white"
+            )}
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isCollapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </button>
+        </div>
 
         {/* Guest Mode Banner */}
         {isGuest && !isCollapsed && (
@@ -162,112 +188,147 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           </div>
         )}
 
-        {/* Navigation items */}
-        <nav className="space-y-1">
-          {navItems.map((item) => {
-            const isActive = activeTab === item.id;
-            const isLocked = isGuest && !GUEST_ALLOWED_TABS.includes(item.id);
-
-            if (isLocked) {
-              // Render a visually dimmed, locked, non-interactive item
-              return (
-                <div
-                  key={item.id}
-                  title={
-                    isCollapsed
-                      ? `${item.label} — Staff login required`
-                      : 'Staff login required'
-                  }
-                  className={cn(
-                    'group flex w-full items-center rounded-xl relative cursor-not-allowed opacity-35',
-                    isCollapsed
-                      ? 'justify-center px-2 py-2.5'
-                      : 'justify-start px-3 py-2 text-xs',
-                    isDaylight
-                      ? 'text-slate-500 border border-transparent'
-                      : 'text-slate-600 border border-transparent'
-                  )}
-                >
-                  <span className="shrink-0">{item.icon}</span>
-
-                  {!isCollapsed && (
-                    <span className="ml-2.5 truncate flex-1">{item.label}</span>
-                  )}
-
-                  {/* Lock icon */}
-                  {!isCollapsed && (
-                    <Lock
-                      className={cn(
-                        'h-3 w-3 shrink-0 ml-1',
-                        isDaylight ? 'text-slate-400' : 'text-slate-600'
-                      )}
-                    />
-                  )}
-
-                  {/* Collapsed tooltip */}
-                  {isCollapsed && (
-                    <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold items-center gap-1.5">
-                      <Lock className="h-3 w-3 text-slate-400" />
-                      {item.label}
-                    </div>
-                  )}
-                </div>
-              );
-            }
-
-            // Normal accessible nav item
-            return (
-              <button
-                key={item.id}
-                onClick={() => onTabChange(item.id)}
-                title={isCollapsed ? item.label : undefined}
-                className={cn(
-                  'group flex w-full items-center rounded-xl transition-all cursor-pointer relative',
-                  isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-start px-3 py-2 text-xs',
-                  isActive
-                    ? isDaylight
-                      ? 'bg-amber-500/15 text-slate-950 border-2 border-amber-500 font-black shadow-sm'
-                      : 'bg-slate-800/80 text-slate-200 border border-slate-700/80 font-medium'
-                    : isDaylight
-                    ? 'text-slate-800 hover:bg-slate-200/60 hover:text-slate-950 font-bold border border-transparent'
-                    : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-300 font-medium border border-transparent'
-                )}
-              >
-                <span
-                  className={cn(
-                    'transition-colors shrink-0',
-                    isActive
-                      ? isDaylight
-                        ? 'text-amber-800'
-                        : 'text-slate-200'
-                      : isDaylight
-                      ? 'text-slate-700 group-hover:text-slate-950'
-                      : 'text-slate-500 group-hover:text-slate-300'
-                  )}
-                >
-                  {item.icon}
-                </span>
-
-                {!isCollapsed && (
+        {/* Navigation items grouped with category headers */}
+        <nav className="flex-1 overflow-y-auto pr-0.5 space-y-3">
+          {navGroups.map((group, groupIdx) => (
+            <div key={group.groupName} className="space-y-0.5">
+              {/* Category Header */}
+              {!isCollapsed ? (
+                <div className={cn("px-2.5 pb-1", groupIdx === 0 ? "pt-0.5" : "pt-2")}>
                   <span
                     className={cn(
-                      'ml-2.5 truncate',
-                      isDaylight ? 'font-bold text-slate-950' : 'font-medium'
+                      "text-[10px] font-extrabold uppercase tracking-wider block select-none",
+                      isDaylight ? "text-slate-500" : "text-slate-400"
                     )}
                   >
-                    {item.label}
+                    {group.groupName}
                   </span>
-                )}
+                </div>
+              ) : (
+                groupIdx > 0 && <div className="my-1.5 border-t border-slate-700/40" />
+              )}
 
-                {/* Collapsed Tooltip */}
-                {isCollapsed && (
-                  <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold">
-                    {item.label}
-                  </div>
-                )}
-              </button>
-            );
-          })}
+              {/* Items in Group */}
+              <div className="space-y-0.5">
+                {group.items.map((item) => {
+                  const isActive = activeTab === item.id;
+                  const isLocked = isGuest && !GUEST_ALLOWED_TABS.includes(item.id);
+
+                  if (isLocked) {
+                    return (
+                      <div
+                        key={item.id}
+                        title={
+                          isCollapsed
+                            ? `${item.label} — Staff login required`
+                            : 'Staff login required'
+                        }
+                        className={cn(
+                          'group flex w-full items-center rounded-xl relative cursor-not-allowed opacity-35',
+                          isCollapsed
+                            ? 'justify-center px-2 py-2'
+                            : 'justify-start px-2.5 py-1.5 text-xs',
+                          isDaylight
+                            ? 'text-slate-500 border border-transparent'
+                            : 'text-slate-600 border border-transparent'
+                        )}
+                      >
+                        <span className="shrink-0">{item.icon}</span>
+
+                        {!isCollapsed && (
+                          <span className="ml-2.5 truncate flex-1">{item.label}</span>
+                        )}
+
+                        {!isCollapsed && (
+                          <Lock
+                            className={cn(
+                              'h-3 w-3 shrink-0 ml-1',
+                              isDaylight ? 'text-slate-400' : 'text-slate-600'
+                            )}
+                          />
+                        )}
+
+                        {isCollapsed && (
+                          <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold items-center gap-1.5">
+                            <Lock className="h-3 w-3 text-slate-400" />
+                            {item.label}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => onTabChange(item.id)}
+                      title={isCollapsed ? `${group.groupName}: ${item.label}` : undefined}
+                      className={cn(
+                        'group flex w-full items-center rounded-xl transition-all cursor-pointer relative overflow-hidden',
+                        isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-start px-3 py-2 text-xs',
+                        isActive
+                          ? isDaylight
+                            ? 'bg-indigo-50/90 text-indigo-950 font-bold border border-indigo-200/80 shadow-xs'
+                            : 'bg-indigo-950/40 text-indigo-300 font-bold border border-indigo-800/50 shadow-xs'
+                          : isDaylight
+                          ? 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-semibold border border-transparent'
+                          : 'text-slate-400 hover:bg-slate-900/60 hover:text-slate-200 font-medium border border-transparent'
+                      )}
+                    >
+                      {/* Active indicator bar on left edge like in reference image */}
+                      {isActive && (
+                        <span
+                          className={cn(
+                            'absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-6 rounded-r-md',
+                            isDaylight ? 'bg-indigo-600' : 'bg-indigo-500'
+                          )}
+                        />
+                      )}
+
+                      <span
+                        className={cn(
+                          'transition-colors shrink-0',
+                          isActive
+                            ? isDaylight
+                              ? '!text-indigo-700'
+                              : 'text-indigo-400'
+                            : isDaylight
+                            ? 'text-slate-500 group-hover:text-slate-700'
+                            : 'text-slate-400 group-hover:text-slate-200'
+                        )}
+                      >
+                        {item.icon}
+                      </span>
+
+                      {!isCollapsed && (
+                        <span
+                          className={cn(
+                            'ml-2.5 truncate',
+                            isActive
+                              ? isDaylight
+                                ? 'font-extrabold !text-indigo-950'
+                                : 'font-bold text-indigo-100'
+                              : isDaylight
+                              ? 'font-semibold text-slate-800'
+                              : 'font-medium'
+                          )}
+                        >
+                          {item.label}
+                        </span>
+                      )}
+
+                      {/* Collapsed Tooltip */}
+                      {isCollapsed && (
+                        <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold">
+                          {item.label}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
 
@@ -277,7 +338,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           className={cn(
             'rounded-xl border p-3 text-[11px] space-y-1.5 transition-colors mt-3',
             isDaylight
-              ? 'border-slate-300 bg-transparent text-slate-900'
+              ? 'border-slate-200 bg-slate-50 text-slate-900'
               : 'border-slate-800/80 bg-slate-900/40 text-slate-400'
           )}
         >
@@ -306,7 +367,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                   ? isDaylight
                     ? 'border-amber-400 text-amber-700 bg-amber-50'
                     : 'border-amber-600/50 text-amber-400 bg-amber-900/20'
-                  : 'border-slate-700/60'
+                  : isDaylight
+                    ? 'border-slate-300 text-slate-700'
+                    : 'border-slate-700/60'
               )}
             >
               {isGuest ? 'GUEST' : currentUser?.role || 'user'}

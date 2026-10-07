@@ -14,7 +14,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/payments")
+@RequestMapping("/payments")
 @Tag(name = "Payment & Ledger", description = "SOP-003 Advance collections, security deposits and refunds")
 public class PaymentController {
 
@@ -38,9 +38,7 @@ public class PaymentController {
 
     @PostMapping
     @Operation(summary = "Record receipt of advance, deposit or settlement")
-    public ResponseEntity<ApiResponse<Payment>> recordPayment(
-            @Valid @RequestBody RecordPaymentRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<Payment>> recordPayment(@Valid @RequestBody RecordPaymentRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "CASHIER";
         Payment saved = paymentService.recordPayment(request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("Payment recorded successfully", saved));

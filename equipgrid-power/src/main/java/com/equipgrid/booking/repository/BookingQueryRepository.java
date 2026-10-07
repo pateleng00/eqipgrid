@@ -106,4 +106,32 @@ public class BookingQueryRepository {
                 .fetchOne();
         return count != null ? count : 0L;
     }
+
+    public List<Long> fetchConflictingAssetIdsForType(Long typeId, String name, Long hubId, LocalDate startDate, LocalDate endDate) {
+        BooleanBuilder builder = new BooleanBuilder();
+        builder.and(qBooking.status.in(ACTIVE_RENTAL_STATUSES));
+        builder.and(qBooking.startDate.loe(endDate));
+        builder.and(qBooking.endDate.goe(startDate));
+
+        if (typeId != null) {
+            builder.and(qBooking.asset.type.id.eq(typeId));
+        } else if (name != null && !name.isBlank()) {
+            builder.and(qBooking.asset.name.equalsIgnoreCase(name.trim()));
+        }
+
+        if (hubId != null) {
+            builder.and(qBooking.asset.hub.id.eq(hubId));
+        }
+
+        return queryFactory.select(qBooking.asset.id)
+                .from(qBooking)
+                .where(builder)
+                .distinct()
+                .fetch();
+    }
+
+    public long countConflictingBookingsForType(Long typeId, String name, Long hubId, LocalDate startDate, LocalDate endDate) {
+        List<Long> lockedIds = fetchConflictingAssetIdsForType(typeId, name, hubId, startDate, endDate);
+        return lockedIds.size();
+    }
 }

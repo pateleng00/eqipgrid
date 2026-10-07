@@ -4,6 +4,7 @@ import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.payment.enums.PaymentMode;
 import com.equipgrid.payment.enums.PaymentType;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +18,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Payment {
 
     @Id

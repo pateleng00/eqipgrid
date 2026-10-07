@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
@@ -88,7 +90,7 @@ html:not(.daylight) [class*="placeholder-slate-"] {
 }
 
 /* Keep controls inside dark dialogs on the same soft elevation as the dialog. */
-html:not(.daylight) [class*="fixed"][class*="inset-0"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html:not(.daylight) [class*="fixed"][class*="inset-0"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([class*="select"]):not([class*="Select"]),
 html:not(.daylight) [class*="fixed"][class*="inset-0"] textarea,
 html:not(.daylight) [class*="fixed"][class*="inset-0"] select {
   background-color: var(--night-surface-1) !important;
@@ -96,7 +98,7 @@ html:not(.daylight) [class*="fixed"][class*="inset-0"] select {
   border-color: #3f3f46 !important;
 }
 
-html:not(.daylight) [class*="fixed"][class*="inset-0"] input::placeholder,
+html:not(.daylight) [class*="fixed"][class*="inset-0"] input:not([class*="select"]):not([class*="Select"])::placeholder,
 html:not(.daylight) [class*="fixed"][class*="inset-0"] textarea::placeholder {
   color: var(--night-text-disabled) !important;
 }
@@ -138,31 +140,40 @@ html.daylight ::-webkit-scrollbar-thumb:hover {
 }
 
 html.daylight body {
-  background-color: #f8fafc;
-  color: #020617;
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 /* ==========================================================================
-   DAYLIGHT MODE: TRANSPARENT BACKGROUND ONLY FOR CARDS & PANELS
+   DAYLIGHT MODE: SOLID WHITE BACKGROUND DEFAULT FOR TABS, CARDS & PANELS
    ========================================================================== */
-html.daylight [class*="bg-slate-950"],
-html.daylight [class*="bg-slate-900"],
-html.daylight [class*="bg-slate-850"],
-html.daylight [class*="bg-slate-800"],
-html.daylight [class*="bg-zinc-"],
-html.daylight [class*="bg-gray-"],
-html.daylight [class*="bg-gradient-to"],
-html.daylight [class*="bg-amber-950"],
-html.daylight [class*="bg-emerald-950"],
-html.daylight [class*="bg-rose-950"],
-html.daylight [class*="bg-purple-950"],
-html.daylight [class*="bg-blue-950"],
 html.daylight aside,
 html.daylight header,
 html.daylight footer,
-html.daylight .card {
-  background-color: transparent !important;
-  background-image: none !important;
+html.daylight .card,
+html.daylight [class*="bg-slate-950"]:not(button):not([class*="text-"]):not([class*="badge"]),
+html.daylight [class*="bg-slate-900"]:not(button):not([class*="text-"]):not([class*="badge"]),
+html.daylight [class*="bg-slate-850"]:not(button):not([class*="text-"]):not([class*="badge"]),
+html.daylight [class*="bg-slate-800"]:not(button):not([class*="text-"]):not([class*="badge"]),
+html.daylight [class*="bg-[#1e1e1e]"],
+html.daylight [class*="bg-[#242424]"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* All Modals & Dialog popups: solid white background by default */
+html.daylight [class*="fixed"][class*="inset-0"] > div {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.2) !important;
+}
+
+/* Secondary info pills inside modals and cards (e.g., equipment details block) */
+html.daylight .bg-slate-50,
+html.daylight [class*="bg-slate-50/"] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* Maintain solid visibility for primary buttons */
@@ -172,6 +183,26 @@ html.daylight a[class*="bg-amber-500"] {
   background-color: #f59e0b !important;
   color: #020617 !important;
   font-weight: 800 !important;
+}
+
+/* Dark action buttons preserve white text */
+html.daylight button[class~="bg-slate-950"],
+html.daylight button[class~="bg-slate-950"] *,
+html.daylight button[class~="bg-slate-900"],
+html.daylight button[class~="bg-slate-900"] *,
+html.daylight button[class~="bg-slate-800"],
+html.daylight button[class~="bg-slate-800"] *,
+html.daylight button[class~="bg-slate-700"],
+html.daylight button[class~="bg-slate-700"] *,
+html.daylight button[class*="bg-indigo-600"],
+html.daylight button[class*="bg-indigo-600"] *,
+html.daylight button[class*="bg-rose-600"],
+html.daylight button[class*="bg-rose-600"] *,
+html.daylight button[class*="bg-emerald-600"],
+html.daylight button[class*="bg-emerald-600"] *,
+html.daylight button[class*="bg-blue-600"],
+html.daylight button[class*="bg-blue-600"] * {
+  color: #ffffff !important;
 }
 
 /* Subtle badge fills */
@@ -199,10 +230,28 @@ html.daylight [class*="bg-rose-500/10"] {
 }
 
 html.daylight [class*="bg-purple-500/20"],
-html.daylight [class*="bg-purple-500/10"] {
+html.daylight [class*="bg-purple-500/10"],
+html.daylight [class*="bg-purple-950/25"] {
   background-color: rgba(168, 85, 247, 0.12) !important;
   color: #6b21a8 !important;
   border-color: #d8b4fe !important;
+}
+
+html.daylight [class*="bg-sky-500/20"],
+html.daylight [class*="bg-sky-500/10"],
+html.daylight [class*="bg-sky-950/25"],
+html.daylight [class*="bg-sky-950/40"],
+html.daylight [class*="bg-blue-500/20"],
+html.daylight [class*="bg-blue-950/25"] {
+  background-color: #f0f9ff !important;
+  color: #0369a1 !important;
+  border-color: #7dd3fc !important;
+}
+
+html.daylight [class*="text-sky-300"],
+html.daylight [class*="text-sky-400"] {
+  color: #0369a1 !important;
+  font-weight: 800 !important;
 }
 
 /* ==========================================================================
@@ -226,28 +275,41 @@ html.daylight h1,
 html.daylight h2,
 html.daylight h3,
 html.daylight h4,
-html.daylight .text-white {
+html.daylight h5,
+html.daylight h6 {
   color: #020617 !important;
-  font-weight: 700;
+  font-weight: 800;
+}
+
+/* Any light/white text classes become dark slate in daylight unless in a colored button */
+html.daylight :not(button):not(button *) > .text-white,
+html.daylight :not(button):not(button *) > [class*="text-white"],
+html.daylight [class*="dark:text-white"]:not(button):not(button *) {
+  color: #0f172a !important;
 }
 
 html.daylight [class*="text-slate-100"],
-html.daylight [class*="text-slate-200"] {
+html.daylight [class*="text-slate-200"],
+html.daylight [class*="dark:text-slate-100"],
+html.daylight [class*="dark:text-slate-200"] {
   color: #0f172a !important;
   font-weight: 600;
 }
 
-html.daylight [class*="text-slate-300"] {
+html.daylight [class*="text-slate-300"],
+html.daylight [class*="dark:text-slate-300"] {
   color: #1e293b !important;
   font-weight: 600;
 }
 
-html.daylight [class*="text-slate-400"] {
-  color: #334155 !important;
-  font-weight: 500;
+html.daylight [class*="text-slate-400"],
+html.daylight [class*="dark:text-slate-400"] {
+  color: #475569 !important;
+  font-weight: 600;
 }
 
-html.daylight [class*="text-slate-500"] {
+html.daylight [class*="text-slate-500"],
+html.daylight [class*="dark:text-slate-500"] {
   color: #475569 !important;
 }
 
@@ -281,15 +343,51 @@ html.daylight [class*="text-purple-300"] {
 
 /* ==========================================================================
    DAYLIGHT MODE: FORM CONTROLS
-   Transparent background, crisp border, dark text
+   Solid white background, crisp border, dark text
    ========================================================================== */
-html.daylight input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+html.daylight input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([class*="select"]):not([class*="Select"]),
 html.daylight textarea,
 html.daylight select {
-  background-color: transparent !important;
-  color: #020617 !important;
-  border-color: #94a3b8 !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
   font-weight: 600 !important;
+}
+
+/* Ensure React-Select inputs never inherit opaque background, borders, or shadows */
+.eg-select__input,
+.eg-select__input input,
+input.eg-select__input,
+[class*="eg-select"] input,
+div[class*="-Input"] input,
+div[class*="Input"] input {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+html.daylight input:not([class*="select"]):not([class*="Select"])::placeholder,
+html.daylight textarea::placeholder {
+  color: #94a3b8 !important;
+  font-weight: 400 !important;
+  opacity: 1 !important;
+}
+
+html:not(.daylight) input::placeholder,
+html:not(.daylight) textarea::placeholder {
+  color: #71717a !important;
+  font-weight: 400 !important;
+  opacity: 0.85 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+  font-weight: 400 !important;
 }
 
 html.daylight input:focus,
@@ -309,5 +407,5 @@ html.daylight input[type="checkbox"] {
 
 /* Table row hovers */
 html.daylight tr:hover {
-  background-color: rgba(226, 232, 240, 0.4) !important;
+  background-color: rgba(226, 232, 240, 0.5) !important;
 }

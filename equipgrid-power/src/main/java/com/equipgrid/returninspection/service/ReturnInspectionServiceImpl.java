@@ -33,6 +33,7 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
     public List<ReturnInspection> getInspectionsByBooking(Long bookingId) {
@@ -76,6 +77,14 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
 
         booking.setStatus(BookingStatus.CLOSED);
         bookingRepository.save(booking);
+
+        // Notify customer on return inspection completion & refund settlement via WhatsApp
+        try {
+            whatsAppNotificationService.notifyReturnSettlement(booking.getId());
+        } catch (Exception e) {
+            log.warn("[ReturnInspection] WhatsApp return settlement notification failed for booking {}: {}",
+                    booking.getBookingNumber(), e.getMessage());
+        }
 
         auditService.log("RETURN", saved.getId().toString(), "RETURN_INSPECTION",
                 performedBy != null ? performedBy : "INSPECTOR",

@@ -1133,7 +1133,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     %s
                     
                     🖼️ *View / Download UPI QR Code:*
-                    /api/v1/whatsapp/qr/%s
+                    /equipgrid/whatsapp/qr/%s
                     
                     💡 After completing UPI payment, please reply:
                     *PAID* (or enter your 12-digit UPI UTR Number)

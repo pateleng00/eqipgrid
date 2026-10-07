@@ -7,36 +7,37 @@ interface LayoutProps {
   children: ReactNode;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onNewDeployment?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, onNewDeployment }) => {
   const { isDaylight } = useTheme();
 
   return (
     <div
-      className={`min-h-screen flex flex-col transition-colors duration-200 ${
+      className={`h-screen flex flex-col overflow-hidden transition-colors duration-200 ${
         isDaylight ? 'bg-slate-100 text-slate-950' : 'bg-slate-950 text-slate-100'
       }`}
     >
       {/* Top Navbar */}
-      <Navbar activeTab={activeTab} onTabChange={onTabChange} />
+      <Navbar activeTab={activeTab} onTabChange={onTabChange} onNewDeployment={onNewDeployment} />
 
       {/* Main Container */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Left Sidebar */}
         <Sidebar activeTab={activeTab} onTabChange={onTabChange} />
 
         {/* Content Viewport */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="max-w-8xl mx-auto">{children}</div>
+        <main className="flex-1 overflow-hidden px-3 py-2 sm:px-5 sm:py-2 flex flex-col min-h-0">
+          <div className="w-full max-w-8xl mx-auto flex-1 flex flex-col min-h-0">{children}</div>
         </main>
       </div>
 
       {/* Footer */}
       <footer
-        className={`border-t px-6 py-3 text-xs text-center transition-colors duration-200 ${
+        className={`flex-shrink-0 border-t px-4 py-1.5 text-[11px] text-center transition-colors duration-200 ${
           isDaylight
-            ? 'border-slate-300 bg-transparent text-slate-600 font-medium'
+            ? 'border-slate-200 bg-white text-slate-700 font-semibold'
             : 'border-slate-900 bg-slate-950/80 text-slate-500'
         }`}
       >
@@ -45,3 +46,4 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     </div>
   );
 };
+

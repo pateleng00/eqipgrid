@@ -112,17 +112,25 @@ public class StorageService {
      * @param expirationTimeMinutes  must be &gt; 0
      */
     public String getPreSignedDownloadUrl(String bucketName, String fileName, Integer expirationTimeMinutes) {
-        if (expirationTimeMinutes <= 0) {
+        if (awsProperties.getAccessKey() == null || awsProperties.getAccessKey().isBlank()) {
+            return getPublicFileUrl(bucketName, fileName);
+        }
+        if (expirationTimeMinutes == null || expirationTimeMinutes <= 0) {
             throw new IllegalArgumentException("Expiration time must be a positive value.");
         }
-        Date expiration = DateUtils.addMinutes(new Date(), expirationTimeMinutes);
-        GeneratePresignedUrlRequest presignedUrlRequest =
-                new GeneratePresignedUrlRequest(bucketName, fileName)
-                        .withMethod(HttpMethod.GET)
-                        .withExpiration(expiration);
-        URL url = s3client.generatePresignedUrl(presignedUrlRequest);
-        log.info("[Storage] Presigned GET URL generated for key={}", fileName);
-        return url.toString();
+        try {
+            Date expiration = DateUtils.addMinutes(new Date(), expirationTimeMinutes);
+            GeneratePresignedUrlRequest presignedUrlRequest =
+                    new GeneratePresignedUrlRequest(bucketName, fileName)
+                            .withMethod(HttpMethod.GET)
+                            .withExpiration(expiration);
+            URL url = s3client.generatePresignedUrl(presignedUrlRequest);
+            log.info("[Storage] Presigned GET URL generated for key={}", fileName);
+            return url.toString();
+        } catch (Exception e) {
+            log.warn("[Storage] Failed to generate presigned GET URL for key={}: {}. Falling back to public URL", fileName, e.getMessage());
+            return getPublicFileUrl(bucketName, fileName);
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -276,12 +284,15 @@ public class StorageService {
      */
     public String createPreSignedFileUrl(String key) {
         if (key == null || key.isBlank()) return null;
+        if (awsProperties.getAccessKey() == null || awsProperties.getAccessKey().isBlank()) {
+            return getPublicFileUrl(awsProperties.getCommonBucketName(), key);
+        }
         try {
             Date expiration = DateUtils.addMinutes(new Date(), awsProperties.getSignedUrlExpiryMinutes());
             return s3client.generatePresignedUrl(awsProperties.getCommonBucketName(), key, expiration).toString();
         } catch (Exception e) {
-            log.warn("[Storage] Failed to generate presigned URL for key={}: {}", key, e.getMessage());
-            return null;
+            log.warn("[Storage] Failed to generate presigned URL for key={}: {}. Falling back to public URL", key, e.getMessage());
+            return getPublicFileUrl(awsProperties.getCommonBucketName(), key);
         }
     }
 
@@ -361,6 +372,14 @@ public class StorageService {
 
     private String appName() {
         return environment.getProperty("spring.application.name", "equipgrid");
+    }
+
+    public String getPublicFileUrl(String bucketName, String key) {
+        if (key == null || key.isBlank()) return null;
+        if (awsProperties.getEndpoint() != null && !awsProperties.getEndpoint().isBlank()) {
+            return awsProperties.getEndpoint() + "/" + bucketName + "/" + key;
+        }
+        return "https://" + bucketName + ".s3." + awsProperties.getRegion() + ".amazonaws.com/" + key;
     }
 
     private String buildTmpUrl(String key) {

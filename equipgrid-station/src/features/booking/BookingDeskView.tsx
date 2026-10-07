@@ -14,28 +14,47 @@ import {
   Send,
   Image as ImageIcon,
   UserPlus,
-  Pencil,
   Trash2,
+  MessageSquare,
+  Printer,
+  ExternalLink,
+  Banknote,
+  CheckCircle2,
+  FileText,
+  Clock,
+  Filter,
 } from 'lucide-react';
-import { formatINR, formatDate } from '../../lib/utils';
+import { cn, formatINR, formatDate } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
+import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
+import { HandoverChecklistModal } from '../../components/HandoverChecklistModal';
+import { CollectPaymentModal } from '../../components/CollectPaymentModal';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { Asset, Booking, Customer, CustomerTier, QuoteCalculation } from '../../types';
+import { printBookingConfirmationPdf, printDispatchChallanPdf } from '../../services/voucherPdfService';
+import { getBookingWhatsAppMessage } from '../../services/whatsappCirculation';
 
 interface BookingDeskViewProps {
   preselectedAsset?: Asset | null;
   onBookingCreated: () => void;
   onNavigateToDispatch?: () => void;
+  initialViewMode?: 'all' | 'dispatch';
+  openCreateModal?: boolean;
+  onCreateModalOpened?: () => void;
 }
 
 export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   preselectedAsset,
   onBookingCreated,
   onNavigateToDispatch,
+  initialViewMode = 'all',
+  openCreateModal = false,
+  onCreateModalOpened,
 }) => {
   const { isDaylight } = useTheme();
   const [bookingsList, setBookingsList] = useState<Booking[]>([...api.bookings]);
@@ -51,8 +70,39 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     });
   }, []);
 
-  // Modal state for creating new booking
+  // Modal states for creating new booking, WhatsApp notice, yard handover, payment collection
   const [showCreateModal, setShowCreateModal] = useState<boolean>(!!preselectedAsset);
+  const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
+  const [dispatchModalBooking, setDispatchModalBooking] = useState<Booking | null>(null);
+  const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
+
+  // SubView filter tab: 'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'
+  const [subView, setSubView] = useState<'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'>(
+    initialViewMode === 'dispatch' ? 'READY_DISPATCH' : 'ALL'
+  );
+
+  useEffect(() => {
+    if (initialViewMode === 'dispatch') {
+      setSubView('READY_DISPATCH');
+    }
+  }, [initialViewMode]);
+
+  // Open modal when triggered externally (e.g. from Navbar "New Deployment" button)
+  useEffect(() => {
+    if (openCreateModal) {
+      setBookingStateId('');
+      setBookingCityId('');
+      setBookingHubId('');
+      setBookingCategory('');
+      setSelectedAssetId(0);
+      setQuote(null);
+      setDeliveryAddress('');
+      setNotes('');
+      setShowCreateModal(true);
+      onCreateModalOpened?.();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCreateModal]);
 
   // Masters for filters
   const states = api.getStates();
@@ -66,6 +116,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
   const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const [visibleCount, setVisibleCount] = useState<number>(7);
 
   // Dependent cascading options
   const availableCities = useMemo(() => {
@@ -102,15 +154,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     setSearchQuery('');
   };
 
-  // Requirement: ONLY reserved machines row for current day which are NOT dispatched yet
-  // Status must be CONFIRMED, ALLOCATED, or DISPATCH_READY (not DISPATCHED, ON_RENT, RETURNED)
-  const reservedNotDispatched = useMemo(() => {
+  // Location and search filtered bookings
+  const locationAndSearchFilteredBookings = useMemo(() => {
     return bookingsList.filter((b) => {
-      // Must not be dispatched yet
-      const isNotDispatched =
-        b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY';
-      if (!isNotDispatched) return false;
-
       // Filter by location
       const assetHub = hubs.find((h) => h.id === b.asset.hubId);
       const assetCity = cities.find((c) => c.id === assetHub?.cityId);
@@ -133,29 +179,90 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     });
   }, [bookingsList, hubs, cities, selectedStateId, selectedCityId, selectedHubId, searchQuery]);
 
+  // Dynamic counts for each subview
+  const counts = useMemo(() => {
+    let all = locationAndSearchFilteredBookings.length;
+    let readyDispatch = 0;
+    let dispatched = 0;
+    let pendingPayment = 0;
+
+    locationAndSearchFilteredBookings.forEach((b) => {
+      if (b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY') {
+        readyDispatch++;
+      } else if (b.status === 'ON_RENT' || b.status === 'DISPATCHED') {
+        dispatched++;
+      } else if (b.status === 'PENDING_PAYMENT') {
+        pendingPayment++;
+      }
+    });
+
+    return { all, readyDispatch, dispatched, pendingPayment };
+  }, [locationAndSearchFilteredBookings]);
+
+  // Subview-filtered bookings list
+  const filteredBookings = useMemo(() => {
+    return locationAndSearchFilteredBookings.filter((b) => {
+      if (subView === 'READY_DISPATCH') {
+        return b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY';
+      }
+      if (subView === 'DISPATCHED') {
+        return b.status === 'ON_RENT' || b.status === 'DISPATCHED';
+      }
+      if (subView === 'PENDING_PAYMENT') {
+        return b.status === 'PENDING_PAYMENT';
+      }
+      return true; // 'ALL'
+    });
+  }, [locationAndSearchFilteredBookings, subView]);
+
+  const reservedNotDispatched = filteredBookings;
+
+  // Reset to initial 7 items when filters change
+  useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId, searchQuery, subView]);
+
+  // Infinite scroll slice (default 7 items, loads +7 on scroll)
+  const visibleReservations = useMemo(() => {
+    return filteredBookings.slice(0, visibleCount);
+  }, [filteredBookings, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < reservedNotDispatched.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, reservedNotDispatched.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, reservedNotDispatched.length));
+  };
+
   // Form State for creating new reservation
   const [selectedAssetId, setSelectedAssetId] = useState<number>(
-    preselectedAsset ? preselectedAsset.id : assets[0]?.id || 1
+    preselectedAsset ? preselectedAsset.id : 0
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(customerList[0]?.id || 0);
-  const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || 'ALL') : 'ALL');
-  const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || 'ALL') : 'ALL');
-  const [bookingHubId, setBookingHubId] = useState<string>(preselectedAsset?.hubId ? String(preselectedAsset.hubId) : 'ALL');
-  const [bookingCategory, setBookingCategory] = useState<string>(preselectedAsset?.category || 'ALL');
+  const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '') : '');
+  const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '');
+  const [bookingHubId, setBookingHubId] = useState<string>(preselectedAsset?.hubId ? String(preselectedAsset.hubId) : '');
+  const [bookingCategory, setBookingCategory] = useState<string>(preselectedAsset?.category || '');
   const [customerDialog, setCustomerDialog] = useState<'add' | 'edit' | null>(null);
   const [customerPendingDelete, setCustomerPendingDelete] = useState<Customer | null>(null);
   const [customerForm, setCustomerForm] = useState({ fullName: '', phone: '', address: '', email: '', tier: 'TIER_1_BASIC' as CustomerTier });
   const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date();
-    d.setDate(d.getDate() + 3);
+    d.setDate(d.getDate() + 1);
     return d.toISOString().split('T')[0];
   });
   const [distanceKm, setDistanceKm] = useState<number>(4.5);
   const [operatorRequired, setOperatorRequired] = useState<boolean>(false);
   const [selectedDealerId, setSelectedDealerId] = useState<string>('1');
-  const [deliveryAddress, setDeliveryAddress] = useState<string>('Hardoi Bypass Road, Near Sugar Mill');
-  const [notes, setNotes] = useState<string>('Site access open for flatbed transport');
+  const [deliveryAddress, setDeliveryAddress] = useState<string>('');
+  const [notes, setNotes] = useState<string>('');
 
   const [quote, setQuote] = useState<QuoteCalculation | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -165,30 +272,55 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     message: '',
   });
 
-  const currentAsset = assets.find((a) => a.id === selectedAssetId) || assets[0];
+  const currentAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) || null : null;
 
-  const bookingCities = useMemo(() => bookingStateId === 'ALL' ? cities : cities.filter((city) => city.stateId === Number(bookingStateId)), [cities, bookingStateId]);
+  const hasSelectedFilters = Boolean(bookingStateId || bookingCityId || bookingHubId || bookingCategory);
+
+  const bookingCities = useMemo(() => {
+    if (!bookingStateId || bookingStateId === 'ALL') return cities;
+    return cities.filter((city) => city.stateId === Number(bookingStateId));
+  }, [cities, bookingStateId]);
+
   const bookingHubs = useMemo(() => {
-    if (bookingCityId !== 'ALL') return hubs.filter((hub) => hub.cityId === Number(bookingCityId));
-    const cityIds = new Set(bookingCities.map((city) => city.id));
-    return bookingStateId === 'ALL' ? hubs : hubs.filter((hub) => cityIds.has(hub.cityId));
+    if (bookingCityId && bookingCityId !== 'ALL') return hubs.filter((hub) => hub.cityId === Number(bookingCityId));
+    if (bookingStateId && bookingStateId !== 'ALL') {
+      const cityIds = new Set(bookingCities.map((city) => city.id));
+      return hubs.filter((hub) => cityIds.has(hub.cityId));
+    }
+    return hubs;
   }, [hubs, bookingCities, bookingCityId, bookingStateId]);
-  const availableMachines = useMemo(() => assets.filter((asset) => {
-    if (asset.status !== 'AVAILABLE') return false;
-    if (bookingHubId !== 'ALL' && asset.hubId !== Number(bookingHubId)) return false;
-    if (bookingCategory !== 'ALL' && asset.category !== bookingCategory) return false;
-    return true;
-  }), [assets, bookingHubId, bookingCategory]);
+
+  const availableMachines = useMemo(() => {
+    if (!hasSelectedFilters) return [];
+    return assets.filter((asset) => {
+      if (asset.status !== 'AVAILABLE') return false;
+      if (bookingHubId && bookingHubId !== 'ALL' && asset.hubId !== Number(bookingHubId)) return false;
+      if (bookingCityId && bookingCityId !== 'ALL') {
+        const hub = hubs.find((h) => h.id === asset.hubId);
+        if (hub && hub.cityId !== Number(bookingCityId)) return false;
+      }
+      if (bookingStateId && bookingStateId !== 'ALL') {
+        const cityIds = new Set(cities.filter((c) => c.stateId === Number(bookingStateId)).map((c) => c.id));
+        const hub = hubs.find((h) => h.id === asset.hubId);
+        if (hub && !cityIds.has(hub.cityId)) return false;
+      }
+      if (bookingCategory && bookingCategory !== 'ALL' && asset.category !== bookingCategory) return false;
+      return true;
+    });
+  }, [assets, hasSelectedFilters, bookingHubId, bookingCityId, bookingStateId, bookingCategory, hubs, cities]);
+
   const scopedCustomers = useMemo(() => customerList.filter((customer) => {
-    if (bookingStateId !== 'ALL' && customer.stateId !== Number(bookingStateId)) return false;
-    if (bookingCityId !== 'ALL' && customer.cityId !== Number(bookingCityId)) return false;
-    if (bookingHubId !== 'ALL' && customer.hubId !== Number(bookingHubId)) return false;
+    if (bookingStateId && bookingStateId !== 'ALL' && customer.stateId !== Number(bookingStateId)) return false;
+    if (bookingCityId && bookingCityId !== 'ALL' && customer.cityId !== Number(bookingCityId)) return false;
+    if (bookingHubId && bookingHubId !== 'ALL' && customer.hubId !== Number(bookingHubId)) return false;
     return true;
   }), [customerList, bookingStateId, bookingCityId, bookingHubId]);
 
   useEffect(() => {
     if (availableMachines.length && !availableMachines.some((asset) => asset.id === selectedAssetId)) {
       setSelectedAssetId(availableMachines[0].id);
+    } else if (!availableMachines.length) {
+      setSelectedAssetId(0);
     }
   }, [availableMachines, selectedAssetId]);
 
@@ -201,13 +333,18 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   useEffect(() => {
     if (preselectedAsset) {
       setSelectedAssetId(preselectedAsset.id);
+      if (preselectedAsset.hubId) setBookingHubId(String(preselectedAsset.hubId));
+      if (preselectedAsset.category) setBookingCategory(preselectedAsset.category);
       setShowCreateModal(true);
     }
   }, [preselectedAsset]);
 
   // Quote recalculation
   useEffect(() => {
-    if (!currentAsset) return;
+    if (!currentAsset) {
+      setQuote(null);
+      return;
+    }
     const calculate = async () => {
       const q = await api.calculateQuote(
         selectedAssetId,
@@ -223,6 +360,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentAsset) {
+      setErrorModal({
+        isOpen: true,
+        message: 'Please select filters and an available machine before confirming.',
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -242,6 +386,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       setBookingSuccess(res.bookingNumber);
       setShowCreateModal(false);
       onBookingCreated();
+
+      // Automatically trigger WhatsApp notification via backend bot dispatcher
+      try {
+        await api.sendBookingWhatsAppNotification(res.id);
+      } catch (err) {
+        console.warn('WhatsApp booking notification call:', err);
+      }
     } catch (err: any) {
       setErrorModal({ isOpen: true, message: err.message || 'Booking creation failed. Please verify machine availability and customer details.' });
     } finally {
@@ -287,70 +438,134 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     }
   };
 
+  const handleOpenCreateModal = () => {
+    setBookingStateId('');
+    setBookingCityId('');
+    setBookingHubId('');
+    setBookingCategory('');
+    setSelectedAssetId(0);
+    setQuote(null);
+    setDeliveryAddress('');
+    setNotes('');
+    setShowCreateModal(true);
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* View Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2
-            className={`text-xl font-black flex items-center gap-2 ${
+            className={`text-lg sm:text-xl font-black flex items-center gap-2 ${
               isDaylight ? 'text-slate-950' : 'text-white'
             }`}
           >
-            <CalendarCheck className={`h-6 w-6 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Booking Desk
+            <CalendarCheck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`} />
+            Deployments Desk
           </h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Manage equipment reservations, payment collection, and yard delivery challans in one unified workflow.
+          </p>
         </div>
 
         <button
-          onClick={() => setShowCreateModal(true)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto ${
+          onClick={handleOpenCreateModal}
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto ${
             isDaylight
               ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 shadow-none'
+              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-none'
           }`}
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>New Reservation</span>
+          <span>New Deployment</span>
         </button>
       </div>
 
-      {bookingSuccess && (
-        <div
-          className={`rounded-xl border p-4 flex items-center justify-between ${
-            isDaylight
-              ? 'border-emerald-500/60 bg-emerald-50/50 text-emerald-950'
-              : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <CheckCircle className={`h-5 w-5 ${isDaylight ? 'text-emerald-700' : 'text-emerald-400'}`} />
-            <div>
-              <div className="font-extrabold text-sm">Booking {bookingSuccess} Reserved Successfully!</div>
-              <div className="text-xs opacity-80">
-                Machine queued for yard inspection and dispatch.
+      {bookingSuccess && (() => {
+        const recentBooking = bookingsList.find((b) => b.bookingNumber === bookingSuccess);
+        return (
+          <div
+            className={`flex-shrink-0 rounded-xl border p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+              isDaylight
+                ? 'border-emerald-500/60 bg-emerald-50/50 text-emerald-950'
+                : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300'
+            }`}
+          >
+            <div className="flex items-center gap-2.5">
+              <CheckCircle className={`h-4 w-4 ${isDaylight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+              <div>
+                <div className="font-extrabold text-xs">Booking {bookingSuccess} Reserved Successfully!</div>
+                <div className="text-[11px] opacity-80">
+                  Machine staged for yard handover. WhatsApp notification queued for customer.
+                </div>
               </div>
             </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+              {recentBooking && (
+                <>
+                  {recentBooking.status === 'PENDING_PAYMENT' ? (
+                    <button
+                      type="button"
+                      onClick={() => setPaymentModalBooking(recentBooking)}
+                      className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
+                    >
+                      <Banknote className="h-3 w-3" />
+                      <span>Collect Payment</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setDispatchModalBooking(recentBooking)}
+                      className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer transition-colors shadow-xs"
+                    >
+                      <Truck className="h-3 w-3" />
+                      <span>Dispatch Machine (DC)</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setWhatsAppModalBooking(recentBooking)}
+                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    <span>WhatsApp Notice</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => printBookingConfirmationPdf({ booking: recentBooking })}
+                    className={cn(
+                      'flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer transition-colors',
+                      isDaylight
+                        ? 'border-amber-300 bg-white text-amber-900 hover:bg-amber-50'
+                        : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+                    )}
+                  >
+                    <Printer className="h-3 w-3" />
+                    <span>PDF Voucher</span>
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setBookingSuccess(null)}
+                className={cn('text-xs px-2 py-1 font-bold cursor-pointer transition-colors', isDaylight ? 'text-slate-600 hover:text-slate-950' : 'text-slate-400 hover:text-white')}
+              >
+                Dismiss
+              </button>
+            </div>
           </div>
-          <button
-            onClick={() => setBookingSuccess(null)}
-            className="text-xs px-2 py-1 font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Cascading Filter Bar */}
       <div
-        className={`p-3.5 rounded-xl border transition-colors space-y-2.5 ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-end">
           <button
             onClick={handleResetFilters}
-            className={`text-xs flex items-center gap-1 font-medium ${
+            className={`text-[11px] flex items-center gap-1 font-medium cursor-pointer ${
               isDaylight ? 'text-amber-800 hover:text-amber-950 font-bold' : 'text-slate-400 hover:text-slate-200'
             }`}
           >
@@ -359,7 +574,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           {/* State */}
           <div>
             <SearchSelect
@@ -423,7 +638,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 placeholder="Booking #, customer, tag..."
                 className={`w-full rounded-lg border pl-8 pr-2.5 py-2 text-xs transition-colors focus:outline-none ${
                   isDaylight
-                    ? 'border-slate-300 bg-transparent text-slate-950 placeholder-slate-500 focus:border-amber-600'
+                    ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-500 focus:border-amber-600'
                     : 'border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'
                 }`}
               />
@@ -434,37 +649,127 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
       {/* Reserved Machines Not Dispatched Yet (Table) */}
       <div
-        className={`w-full rounded-2xl border overflow-hidden transition-colors ${
-          isDaylight ? 'border-slate-300 bg-transparent text-slate-950' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+        className={`flex-1 min-h-0 w-full rounded-2xl border overflow-hidden transition-colors flex flex-col ${
+          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
-        <div className="p-4 border-b flex items-center justify-between border-slate-700/20">
-          <h3 className={`text-sm font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+        <div className="px-3.5 py-2.5 border-b flex flex-col md:flex-row md:items-center justify-between gap-2 border-slate-700/20 flex-shrink-0">
+          <div className="flex items-center gap-2">
             <CalendarCheck className={`h-4 w-4 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Reserved Machines Awaiting Dispatch ({reservedNotDispatched.length})
-          </h3>
+            <h3 className={`text-xs sm:text-sm font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+              Equipment Deployments ({filteredBookings.length})
+            </h3>
+          </div>
+
+          {/* Subview Segmented Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <button
+              type="button"
+              onClick={() => setSubView('ALL')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                subView === 'ALL'
+                  ? isDaylight
+                    ? 'bg-amber-500 text-slate-950 shadow-xs'
+                    : 'bg-amber-500 text-slate-950 font-black'
+                  : isDaylight
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              )}
+            >
+              <span>All Bookings</span>
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono', subView === 'ALL' ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300')}>
+                {counts.all}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSubView('READY_DISPATCH')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                subView === 'READY_DISPATCH'
+                  ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
+                  : isDaylight
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              )}
+            >
+              <Truck className="h-3 w-3" />
+              <span>Ready for Dispatch</span>
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'READY_DISPATCH' ? 'bg-slate-950/20 text-slate-950' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400')}>
+                {counts.readyDispatch}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSubView('DISPATCHED')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                subView === 'DISPATCHED'
+                  ? 'bg-blue-600 text-white shadow-xs font-black'
+                  : isDaylight
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              )}
+            >
+              <span>Dispatched & On Rent</span>
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'DISPATCHED' ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-600 dark:text-blue-400')}>
+                {counts.dispatched}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setSubView('PENDING_PAYMENT')}
+              className={cn(
+                'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5',
+                subView === 'PENDING_PAYMENT'
+                  ? 'bg-emerald-600 text-white shadow-xs font-black'
+                  : isDaylight
+                    ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+              )}
+            >
+              <Banknote className="h-3 w-3" />
+              <span>Pending Payment</span>
+              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'PENDING_PAYMENT' ? 'bg-white/20 text-white' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400')}>
+                {counts.pendingPayment}
+              </span>
+            </button>
+          </div>
         </div>
 
         {isLoading ? (
           <div className="p-6">
             <SkeletonTable columns={7} rows={5} />
           </div>
-        ) : reservedNotDispatched.length === 0 ? (
-          <div className="p-12 text-center text-slate-500 space-y-2">
-            <CalendarCheck className="h-8 w-8 mx-auto opacity-30 text-slate-500" />
-            <div className="text-sm font-bold">No pending reservations awaiting dispatch</div>
-            <p className="text-xs max-w-sm mx-auto">
-              All reserved machines for current day have either been dispatched or no bookings match the selected filters.
+        ) : filteredBookings.length === 0 ? (
+          <div className="flex-1 min-h-0 p-8 text-center text-slate-500 flex flex-col items-center justify-center space-y-1.5">
+            <CalendarCheck className="h-7 w-7 mx-auto opacity-30 text-slate-500" />
+            <div className="text-xs font-bold">No bookings found for the selected view</div>
+            <p className="text-[11px] max-w-sm mx-auto">
+              {subView === 'READY_DISPATCH'
+                ? 'All reserved machines have been dispatched, or no reservations match the current filter.'
+                : subView === 'DISPATCHED'
+                ? 'No machinery is currently active on customer rental sites.'
+                : subView === 'PENDING_PAYMENT'
+                ? 'No bookings currently have pending advance or deposit payments.'
+                : 'No bookings match your selected location and search filters.'}
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
               <thead
-                className={`border-b text-[11px] font-black uppercase tracking-wider ${
+                className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${
                   isDaylight
-                    ? 'border-slate-300 bg-slate-200/50 text-slate-900'
-                    : 'border-slate-800 bg-slate-950/60 text-slate-400'
+                    ? 'border-slate-300 bg-slate-100 text-slate-900 shadow-xs'
+                    : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'
                 }`}
               >
                 <tr>
@@ -483,7 +788,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'
                 }`}
               >
-                {reservedNotDispatched.map((b) => (
+                {visibleReservations.map((b) => (
                   <tr
                     key={b.id}
                     className={`transition-colors ${
@@ -500,7 +805,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     {/* Reserved Machine */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-12 rounded-lg overflow-hidden bg-slate-950 border border-slate-700 shrink-0">
+                        <div className={`h-10 w-12 rounded-lg overflow-hidden shrink-0 border ${
+                          isDaylight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-700'
+                        }`}>
                           {b.asset.imageUrl ? (
                             <img
                               src={b.asset.imageUrl}
@@ -572,29 +879,100 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                     {/* Action Button */}
                     <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => {
-                          if (onNavigateToDispatch) {
-                            onNavigateToDispatch();
-                          } else {
-                            window.location.hash = 'dispatch';
-                          }
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors ${
-                          isDaylight
-                            ? 'bg-amber-500 text-slate-950 font-bold hover:bg-amber-400 shadow-sm'
-                            : 'bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700'
-                        }`}
-                      >
-                        <Send className="h-3.5 w-3.5" />
-                        <span>Dispatch Handover</span>
-                      </button>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setWhatsAppModalBooking(b)}
+                          title="Circulate Booking Confirmation on WhatsApp"
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
+                        >
+                          <MessageSquare className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">WhatsApp</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => printBookingConfirmationPdf({ booking: b })}
+                          title="Print / Download Official PDF Voucher"
+                          className={cn(
+                            'p-1.5 rounded-lg border transition-colors cursor-pointer',
+                            isDaylight
+                              ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                              : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          )}
+                        >
+                          <Printer className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        </button>
+
+                        {/* Direct Workflow Actions: Dispatch, Collect Payment, or View Challan */}
+                        {(b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY') && (
+                          <button
+                            type="button"
+                            onClick={() => setDispatchModalBooking(b)}
+                            title="Execute Yard Handover & Issue Delivery Challan (DC)"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm"
+                          >
+                            <Truck className="h-3.5 w-3.5" />
+                            <span>Dispatch (DC)</span>
+                          </button>
+                        )}
+
+                        {b.status === 'PENDING_PAYMENT' && (
+                          <button
+                            type="button"
+                            onClick={() => setPaymentModalBooking(b)}
+                            title="Collect Advance / Deposit Payment"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+                          >
+                            <Banknote className="h-3.5 w-3.5" />
+                            <span>Collect Payment</span>
+                          </button>
+                        )}
+
+                        {(b.status === 'ON_RENT' || b.status === 'DISPATCHED') && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              printDispatchChallanPdf({
+                                booking: b,
+                                challan: {
+                                  id: b.id,
+                                  challanNumber: `DC-2026-${String(b.id).padStart(4, '0')}`,
+                                  bookingId: b.id,
+                                  assetTag: b.asset.assetTag,
+                                  dispatchTimestamp: new Date().toISOString(),
+                                  fuelLevel: '100% (Full Tank)',
+                                  engineHoursOut: 14.5,
+                                  accessoriesVerified: true,
+                                  driverName: 'Suraj Logistics (E-Rickshaw 3W)',
+                                  customerSignatureConfirmed: true,
+                                },
+                              });
+                            }}
+                            title="Print / View Delivery Challan (DC)"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all border border-blue-500/40 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                          >
+                            <Printer className="h-3.5 w-3.5" />
+                            <span>Challan (DC)</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        )}
+
+        {/* Infinite Scroll Footer */}
+        {filteredBookings.length > 0 && !isLoading && (
+          <InfiniteScrollFooter
+            loadedCount={visibleReservations.length}
+            totalCount={filteredBookings.length}
+            onLoadMore={handleLoadMore}
+            itemName="bookings"
+          />
         )}
       </div>
 
@@ -606,7 +984,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-white'
             }`}
           >
-            <div className="flex items-center justify-between border-b pb-5 border-slate-700/30">
+            <div className={`flex items-center justify-between border-b pb-5 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+            }`}>
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-amber-500/15 p-2.5 text-amber-400">
                   <CalendarCheck className="h-5 w-5" />
@@ -619,7 +999,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               <button
                 onClick={() => setShowCreateModal(false)}
                 aria-label="Close reservation dialog"
-                className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                className={cn(
+                  'rounded-lg border p-2 transition-colors cursor-pointer',
+                  isDaylight
+                    ? 'border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                )}
               >
                 ✕
               </button>
@@ -634,30 +1019,43 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     <h4 className="text-xs font-black uppercase tracking-wider">Machine availability filters</h4>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map((state) => ({ value: String(state.id), label: state.name }))]} value={bookingStateId} onChange={(value) => { setBookingStateId(String(value || 'ALL')); setBookingCityId('ALL'); setBookingHubId('ALL'); }} placeholder="State" isClearable={false} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Cities' }, ...bookingCities.map((city) => ({ value: String(city.id), label: city.name }))]} value={bookingCityId} onChange={(value) => { setBookingCityId(String(value || 'ALL')); setBookingHubId('ALL'); }} placeholder="City" isClearable={false} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Hubs' }, ...bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))]} value={bookingHubId} onChange={(value) => setBookingHubId(String(value || 'ALL'))} placeholder="Hub" isClearable={false} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Categories' }, { value: 'CONSTRUCTION', label: 'Construction' }, { value: 'AGRICULTURE', label: 'Agriculture' }]} value={bookingCategory} onChange={(value) => setBookingCategory(String(value || 'ALL'))} placeholder="Category" isClearable={false} />
+                    <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map((state) => ({ value: String(state.id), label: state.name }))]} value={bookingStateId} onChange={(value) => { setBookingStateId(String(value || '')); setBookingCityId(''); setBookingHubId(''); }} placeholder="State" isClearable={true} />
+                    <SearchSelect options={[{ value: 'ALL', label: 'All Cities' }, ...bookingCities.map((city) => ({ value: String(city.id), label: city.name }))]} value={bookingCityId} onChange={(value) => { setBookingCityId(String(value || '')); setBookingHubId(''); }} placeholder="City" isClearable={true} />
+                    <SearchSelect options={[{ value: 'ALL', label: 'All Hubs' }, ...bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))]} value={bookingHubId} onChange={(value) => setBookingHubId(String(value || ''))} placeholder="Hub" isClearable={true} />
+                    <SearchSelect options={[{ value: 'ALL', label: 'All Categories' }, { value: 'CONSTRUCTION', label: 'Construction' }, { value: 'AGRICULTURE', label: 'Agriculture' }]} value={bookingCategory} onChange={(value) => setBookingCategory(String(value || ''))} placeholder="Category" isClearable={true} />
                   </div>
                 </div>
                 {/* Equipment Selection */}
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-3">
                     <label className="block text-xs font-bold">Available machine</label>
-                    <span className="text-[11px] font-bold text-emerald-500">{availableMachines.length} available</span>
+                    <span className="text-[11px] font-bold text-emerald-500">
+                      {hasSelectedFilters ? `${availableMachines.length} available` : 'Filters required'}
+                    </span>
                   </div>
-                  {availableMachines.length ? <SearchSelect
-                    options={availableMachines.map((a) => ({
-                      value: a.id,
-                      label: `[${a.assetTag}] ${a.name}`,
-                      subLabel: `${formatINR(a.dailyRate)}/day • Deposit: ${formatINR(a.depositAmount)} • Yard: ${a.hubName || 'Hardoi'}`,
-                      badge: 'AVAILABLE',
-                    }))}
-                    value={selectedAssetId}
-                    onChange={(val) => val && setSelectedAssetId(Number(val))}
-                    placeholder="Search an available machine..."
-                    isClearable={false}
-                  /> : <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-400">No available machines match this territory and category. Adjust the filters to continue.</div>}
+                  {!hasSelectedFilters ? (
+                    <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-amber-500 shrink-0" />
+                      <span>Please select filters above (State, City, Hub, or Category) to display available machinery.</span>
+                    </div>
+                  ) : availableMachines.length ? (
+                    <SearchSelect
+                      options={availableMachines.map((a) => ({
+                        value: a.id,
+                        label: `[${a.assetTag}] ${a.name}`,
+                        subLabel: `${formatINR(a.dailyRate)}/day • Dep: ${formatINR(a.depositAmount)} • Std: 8h/day (+1h buffer) • Yard: ${a.hubName || 'Hardoi'}`,
+                        badge: 'AVAILABLE',
+                      }))}
+                      value={selectedAssetId}
+                      onChange={(val) => val && setSelectedAssetId(Number(val))}
+                      placeholder="Search an available machine..."
+                      isClearable={false}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-400">
+                      No available machines match this filter. Adjust the filters to continue.
+                    </div>
+                  )}
                 </div>
 
                 {/* Customer Selection */}
@@ -694,7 +1092,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-transparent focus:outline-none focus:border-amber-500"
+                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
                       required
                     />
                   </div>
@@ -704,7 +1102,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-transparent focus:outline-none focus:border-amber-500"
+                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
                       required
                     />
                   </div>
@@ -736,7 +1134,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     type="text"
                     value={deliveryAddress}
                     onChange={(e) => setDeliveryAddress(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs bg-transparent focus:outline-none focus:border-amber-500"
+                    placeholder="e.g. Hardoi Bypass Road, Near Sugar Mill"
+                    className="w-full rounded-lg border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:border-amber-500"
                     required
                   />
                 </div>
@@ -765,46 +1164,60 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     <h4 className="font-black text-xs">Commercial Quote</h4>
                   </div>
 
-                  <div className="space-y-2 text-xs pt-2">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Duration</span>
-                      <span className="font-bold">{quote?.durationDays || 1} Days</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Base Equipment Rent</span>
-                      <span className="font-bold">{formatINR(quote?.baseRent)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">
-                        Transit {distanceKm <= 5 ? '(0–5km Free)' : '(>5km @ ₹10/km)'}
-                      </span>
-                      <span className="font-bold">
-                        {(quote?.deliveryFee ?? 0) === 0 ? 'FREE (₹0)' : formatINR(quote?.deliveryFee)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Operator Fee</span>
-                      <span className="font-bold">{formatINR(quote?.operatorFee)}</span>
-                    </div>
-                    <div className={`flex justify-between pt-1 border-t border-slate-700/40 font-medium ${
-                      isDaylight ? 'text-amber-800' : 'text-slate-300'
-                    }`}>
-                      <span>Refundable Deposit</span>
-                      <span>{formatINR(quote?.depositAmount)}</span>
-                    </div>
-                    <div className="flex justify-between pt-2 border-t border-slate-700/60 text-sm font-bold">
-                      <span>Total Value</span>
-                      <span className={isDaylight ? 'text-amber-800' : 'text-slate-100'}>
-                        {formatINR(quote?.totalAmount)}
-                      </span>
-                    </div>
+                  <div className="mt-2.5 flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
+                    <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Std: 8 hrs/day shift (+ 1 hr buffer) • Extra hrs billed from deposit</span>
                   </div>
+
+                  {currentAsset && quote ? (
+                    <div className="space-y-2 text-xs pt-2">
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Duration</span>
+                        <span className="font-bold">{quote.durationDays} Days</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Base Equipment Rent</span>
+                        <span className="font-bold">{formatINR(quote.baseRent)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">
+                          Transit {distanceKm <= 5 ? '(0–5km Free)' : '(>5km @ ₹10/km)'}
+                        </span>
+                        <span className="font-bold">
+                          {(quote?.deliveryFee ?? 0) === 0 ? 'FREE (₹0)' : formatINR(quote?.deliveryFee)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-500">Operator Fee</span>
+                        <span className="font-bold">{formatINR(quote.operatorFee)}</span>
+                      </div>
+                      <div className={`flex justify-between pt-1 border-t font-medium ${
+                        isDaylight ? 'border-slate-200 text-amber-800' : 'border-slate-700/40 text-slate-300'
+                      }`}>
+                        <span>Refundable Deposit</span>
+                        <span>{formatINR(quote.depositAmount)}</span>
+                      </div>
+                      <div className={`flex justify-between pt-2 border-t text-sm font-bold ${
+                        isDaylight ? 'border-slate-200' : 'border-slate-700/60'
+                      }`}>
+                        <span>Total Value</span>
+                        <span className={isDaylight ? 'text-amber-800' : 'text-slate-100'}>
+                          {formatINR(quote.totalAmount)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-8 text-center text-xs text-slate-400 space-y-1">
+                      <p className="font-bold text-slate-500">No machine selected</p>
+                      <p className="text-[11px]">Select filters and choose a machine to view commercial breakdown.</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2 pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting || availableMachines.length === 0 || scopedCustomers.length === 0}
+                    disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
                     className={`w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors ${
                       isDaylight
                         ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
@@ -816,7 +1229,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="w-full py-2.5 rounded-xl border border-slate-700 text-xs font-bold text-slate-300 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                    className={cn(
+                      'w-full py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer',
+                      isDaylight
+                        ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                        : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                    )}
                   >
                     Cancel
                   </button>
@@ -830,12 +1248,26 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       {customerDialog && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/55 p-4 sm:p-6 backdrop-blur-md">
           <div className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 ${isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-slate-100'}`}>
-            <div className="mb-6 flex items-center justify-between border-b border-slate-700/30 pb-4">
+            <div className={`mb-6 flex items-center justify-between border-b pb-4 ${
+              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+            }`}>
               <div>
                 <h3 className="text-lg font-black">{customerDialog === 'add' ? 'Add customer' : 'Edit customer'}</h3>
                 <p className="mt-0.5 text-xs text-slate-400">This customer will be assigned to the selected booking territory.</p>
               </div>
-              <button type="button" onClick={() => setCustomerDialog(null)} aria-label="Close customer dialog" className="rounded-lg border border-slate-700 p-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100">✕</button>
+              <button
+                type="button"
+                onClick={() => setCustomerDialog(null)}
+                aria-label="Close customer dialog"
+                className={cn(
+                  'rounded-lg border p-2 transition-colors cursor-pointer',
+                  isDaylight
+                    ? 'border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                )}
+              >
+                ✕
+              </button>
             </div>
             <form onSubmit={saveCustomer} className="space-y-4">
               <div>
@@ -849,7 +1281,18 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               <div><label className="mb-1 block text-xs font-bold">Address</label><input required value={customerForm.address} onChange={(event) => setCustomerForm({ ...customerForm, address: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="Street, locality, city" /></div>
               <div><label className="mb-1 block text-xs font-bold">Verification tier</label><select value={customerForm.tier} onChange={(event) => setCustomerForm({ ...customerForm, tier: event.target.value as CustomerTier })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none"><option value="TIER_1_BASIC">Basic customer</option><option value="TIER_2_VERIFIED">Verified customer</option></select></div>
               <div className="flex justify-end gap-3 pt-3">
-                <button type="button" onClick={() => setCustomerDialog(null)} className="rounded-xl border border-slate-700 px-4 py-2.5 text-xs font-bold text-slate-300 hover:bg-slate-800">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerDialog(null)}
+                  className={cn(
+                    'rounded-xl border px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer',
+                    isDaylight
+                      ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                      : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                  )}
+                >
+                  Cancel
+                </button>
                 <button type="submit" className="rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-400">{customerDialog === 'add' ? 'Add customer' : 'Save customer'}</button>
               </div>
             </form>
@@ -876,6 +1319,48 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         title="Booking Failed"
         message={errorModal.message}
       />
+
+      {/* WhatsApp Circulation Modal */}
+      {whatsAppModalBooking && (
+        <WhatsAppCirculationModal
+          isOpen={!!whatsAppModalBooking}
+          onClose={() => setWhatsAppModalBooking(null)}
+          stageName="Booking Confirmation"
+          bookingNumber={whatsAppModalBooking.bookingNumber}
+          recipientName={whatsAppModalBooking.customer.fullName}
+          recipientPhone={whatsAppModalBooking.customer.phone}
+          message={getBookingWhatsAppMessage(whatsAppModalBooking)}
+          onPrintPdf={() => printBookingConfirmationPdf({ booking: whatsAppModalBooking })}
+          pdfButtonLabel="Print Booking Voucher PDF"
+        />
+      )}
+
+      {/* Direct Yard Handover Checklist Modal */}
+      {dispatchModalBooking && (
+        <HandoverChecklistModal
+          isOpen={!!dispatchModalBooking}
+          booking={dispatchModalBooking}
+          onClose={() => setDispatchModalBooking(null)}
+          onHandoverCompleted={(_record) => {
+            setBookingsList([...api.bookings]);
+          }}
+        />
+      )}
+
+      {/* Direct Collect Payment Modal */}
+      {paymentModalBooking && (
+        <CollectPaymentModal
+          isOpen={!!paymentModalBooking}
+          booking={paymentModalBooking}
+          onClose={() => setPaymentModalBooking(null)}
+          onPaymentCollected={(updated) => {
+            setBookingsList([...api.bookings]);
+            setPaymentModalBooking(null);
+            // Immediately chain into handover checklist modal for uninterrupted flow!
+            setDispatchModalBooking(updated);
+          }}
+        />
+      )}
     </div>
   );
 };

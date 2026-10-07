@@ -1,5 +1,8 @@
 package com.equipgrid.payment.service;
 
+import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.enums.AssetStatus;
+import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.audit.service.IAuditService;
 import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.enums.BookingStatus;
@@ -28,7 +31,9 @@ public class PaymentServiceImpl implements IPaymentService {
     private final PaymentQueryRepository paymentQueryRepository;
     private final BookingRepository bookingRepository;
     private final BookingQueryRepository bookingQueryRepository;
+    private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
     public List<Payment> getPaymentsByBooking(Long bookingId) {
@@ -70,11 +75,30 @@ public class PaymentServiceImpl implements IPaymentService {
         BigDecimal deposit = booking.getDepositPaid() != null ? booking.getDepositPaid() : BigDecimal.ZERO;
         BigDecimal requiredBarrier = booking.getDepositAmount().add(booking.getBaseRent());
 
-        if (advance.add(deposit).compareTo(requiredBarrier) >= 0 && booking.getStatus() == BookingStatus.CONFIRMED) {
-            booking.setStatus(BookingStatus.DISPATCH_READY);
+        if (advance.add(deposit).compareTo(requiredBarrier) >= 0) {
+            if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.ALLOCATED || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
+                booking.setStatus(BookingStatus.DISPATCH_READY);
+            }
+
+            // Lock respective machine for further bookings
+            Asset asset = booking.getAsset();
+            if (asset != null && (asset.getStatus() == AssetStatus.AVAILABLE || asset.getStatus() == AssetStatus.NA)) {
+                asset.setStatus(AssetStatus.RESERVED);
+                assetRepository.save(asset);
+                log.info("[Payment] Asset {} locked (status: RESERVED) for booking {} after advance + deposit payment barrier satisfied",
+                        asset.getAssetTag(), booking.getBookingNumber());
+            }
         }
 
         bookingRepository.save(booking);
+
+        // Notify customer on booking payment confirmation via WhatsApp
+        try {
+            whatsAppNotificationService.notifyBookingCreated(booking.getId());
+        } catch (Exception e) {
+            log.warn("[Payment] WhatsApp payment confirmation notification failed for booking {}: {}",
+                    booking.getBookingNumber(), e.getMessage());
+        }
 
         auditService.log("PAYMENT", saved.getId().toString(), "RECORD_PAYMENT",
                 performedBy != null ? performedBy : "CASHIER",

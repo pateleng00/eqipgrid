@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/api/v1/reports")
+@RequestMapping("/reports")
 @Tag(name = "Reports & Operations KPI", description = "SOP-015 Daily cash reconciliation and fleet utilization metrics")
 public class ReportingController {
 

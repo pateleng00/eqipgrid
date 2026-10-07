@@ -24,7 +24,67 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function getStatusColor(status: string): { bg: string; text: string; border: string; dot: string } {
+export function getStatusColor(status: string, isDaylight = false): { bg: string; text: string; border: string; dot: string } {
+  if (isDaylight) {
+    switch (status) {
+      case 'AVAILABLE':
+        return {
+          bg: 'bg-emerald-50',
+          text: 'text-emerald-900 font-bold',
+          border: 'border-emerald-300',
+          dot: 'bg-emerald-600',
+        };
+      case 'ON_RENT':
+      case 'DISPATCHED':
+        return {
+          bg: 'bg-amber-50',
+          text: 'text-amber-950 font-bold',
+          border: 'border-amber-300',
+          dot: 'bg-amber-600',
+        };
+      case 'CONFIRMED':
+      case 'ALLOCATED':
+      case 'DISPATCH_READY':
+        return {
+          bg: 'bg-sky-50',
+          text: 'text-sky-950 font-bold',
+          border: 'border-sky-300',
+          dot: 'bg-sky-600',
+        };
+      case 'MAINTENANCE':
+      case 'DAMAGED':
+        return {
+          bg: 'bg-rose-50',
+          text: 'text-rose-950 font-bold',
+          border: 'border-rose-300',
+          dot: 'bg-rose-600',
+        };
+      case 'INSPECTION':
+      case 'RETURN_PENDING':
+      case 'RETURNED':
+        return {
+          bg: 'bg-purple-50',
+          text: 'text-purple-950 font-bold',
+          border: 'border-purple-300',
+          dot: 'bg-purple-600',
+        };
+      case 'CLOSED':
+        return {
+          bg: 'bg-slate-100',
+          text: 'text-slate-800 font-bold',
+          border: 'border-slate-300',
+          dot: 'bg-slate-500',
+        };
+      default:
+        return {
+          bg: 'bg-slate-100',
+          text: 'text-slate-800 font-bold',
+          border: 'border-slate-300',
+          dot: 'bg-slate-500',
+        };
+    }
+  }
+
   switch (status) {
     case 'AVAILABLE':
       return {

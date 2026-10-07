@@ -39,7 +39,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
   options,
   value,
   onChange,
-  placeholder = 'Search & select...',
+  placeholder = 'Select...',
   isClearable = true,
   isDisabled = false,
   isLoading = false,
@@ -59,14 +59,14 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
   const customStyles: StylesConfig<SelectOption, false> = {
     control: (provided, state) => ({
       ...provided,
-      backgroundColor: isDaylight ? 'transparent' : '#121212',
+      backgroundColor: isDaylight ? '#ffffff' : '#121212',
       borderColor: state.isFocused
         ? '#b45309'
         : isDaylight
-        ? '#94a3b8'
+        ? '#cbd5e1'
         : '#334155',
       borderRadius: '0.625rem',
-      padding: '1px 3px',
+      padding: '0 4px',
       fontSize: '0.875rem',
       borderWidth: isDaylight ? '1.5px' : '1px',
       boxShadow: state.isFocused
@@ -76,32 +76,63 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
         : 'none',
       transition: 'all 0.15s ease',
       cursor: state.isDisabled ? 'not-allowed' : 'pointer',
-      minHeight: '40px',
+      minHeight: '38px',
+      height: '38px',
+      display: 'flex',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
       '&:hover': {
-        borderColor: state.isFocused ? '#b45309' : isDaylight ? '#475569' : '#475569',
+        borderColor: state.isFocused ? '#b45309' : isDaylight ? '#94a3b8' : '#475569',
       },
     }),
     valueContainer: (provided) => ({
       ...provided,
-      padding: '2px 8px',
+      padding: '0 8px',
+      display: 'flex',
+      flexWrap: 'nowrap',
+      alignItems: 'center',
+      overflow: 'hidden',
+      flex: '1 1 auto',
+      minWidth: 0,
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: isDaylight ? '#94a3b8' : '#52525b',
+      color: isDaylight ? '#94a3b8' : '#71717a',
       fontSize: '0.8125rem',
       fontWeight: 400,
-      opacity: 0.8,
+      opacity: 1,
+      margin: 0,
+      whiteSpace: 'nowrap',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
     }),
     singleValue: (provided) => ({
       ...provided,
       color: isDaylight ? '#020617' : '#f4f4f5',
       fontWeight: 700,
+      margin: 0,
+      maxWidth: '100%',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
     }),
     input: (provided) => ({
       ...provided,
       color: isDaylight ? '#020617' : '#f4f4f5',
       fontSize: '0.875rem',
       fontWeight: 600,
+      margin: 0,
+      padding: 0,
+      backgroundColor: 'transparent !important',
+      background: 'transparent !important',
+      border: 'none !important',
+      boxShadow: 'none !important',
+      outline: 'none !important',
+    }),
+    indicatorsContainer: (provided) => ({
+      ...provided,
+      flexShrink: 0,
+      display: 'flex',
+      alignItems: 'center',
     }),
     menu: (provided) => ({
       ...provided,
@@ -216,12 +247,12 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     const isAllOption = data.value === 'ALL' || data.value === '' || data.label.startsWith('All ');
     return (
       <components.SingleValue {...props}>
-        <div className="flex items-center gap-2 truncate">
+        <div className="flex items-center gap-1.5 truncate min-w-0 max-w-full overflow-hidden">
           <span
-            className={`truncate ${
+            className={`truncate shrink-0 ${
               isAllOption
                 ? isDaylight
-                  ? 'text-slate-500 font-normal text-xs'
+                  ? 'text-slate-800 font-semibold text-xs'
                   : 'text-slate-400 font-normal text-xs'
                 : isDaylight
                 ? 'text-slate-950 font-bold text-xs'
@@ -231,7 +262,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
             {data.label}
           </span>
           {data.subLabel && !isAllOption && (
-            <span className={`text-[11px] truncate ${isDaylight ? 'text-slate-600' : 'opacity-60'}`}>
+            <span className={`text-[11px] truncate shrink min-w-0 ${isDaylight ? 'text-slate-600' : 'opacity-60'}`}>
               ({data.subLabel})
             </span>
           )}

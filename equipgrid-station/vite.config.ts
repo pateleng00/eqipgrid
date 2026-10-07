@@ -11,6 +11,10 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      '/equipgrid': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:8081',
         changeOrigin: true,

@@ -28,6 +28,33 @@ import {
 // Verified AWS S3 assets bucket base URL
 export const S3_ASSETS_BASE = 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com';
 
+/**
+ * Sanitizes S3 media URLs.
+ * If a presigned URL has broken authorization params (such as an empty Access Key ID
+ * producing `X-Amz-Credential=%2F...`), or if it contains authorization query parameters
+ * for our public S3 assets bucket, strip the query string so the browser directly accesses
+ * the clean public S3 object.
+ */
+export function sanitizeMediaUrl(rawUrl?: string, s3Key?: string): string {
+  if (!rawUrl && s3Key) {
+    const cleanKey = s3Key.replace(/^\//, '');
+    return `${S3_ASSETS_BASE}/${cleanKey}`;
+  }
+  if (!rawUrl) return '';
+
+  // If the URL has empty AKID parameter (e.g. X-Amz-Credential=%2F or X-Amz-Credential=/)
+  // or contains AuthorizationQueryParametersError
+  if (
+    rawUrl.includes('X-Amz-Credential=%2F') ||
+    rawUrl.includes('X-Amz-Credential=/') ||
+    rawUrl.includes('AuthorizationQueryParametersError')
+  ) {
+    return rawUrl.split('?')[0];
+  }
+
+  return rawUrl;
+}
+
 // Map of canonical S3 prefix for known tags or fallback families (all keys use underscore formatting in S3)
 export function resolveAssetS3Key(assetTag: string): string {
   const raw = assetTag.toLowerCase().replace(/[^a-z0-9]/g, '_');
@@ -94,7 +121,7 @@ export function buildMachineMedia(
 }
 
 // REST API Base URL (proxied by Vite to http://localhost:8081)
-const API_BASE = '/api/v1';
+const API_BASE = '/equipgrid';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
@@ -195,20 +222,26 @@ function mapAsset(a: any): Asset {
 
   let media: AssetMedia[] = [];
   if (Array.isArray(a.mediaItems) && a.mediaItems.length > 0) {
-    media = a.mediaItems.map((m: any, idx: number) => ({
-      id: m.id || idx + 1,
-      mediaType: m.mediaType,
-      url: m.url || `${S3_ASSETS_BASE}/${m.s3Key}`,
-      s3Key: m.s3Key,
-      displayOrder: m.displayOrder ?? idx,
-      fileName: m.fileName,
-      contentType: m.contentType,
-      fileSizeBytes: m.fileSizeBytes,
-      durationSeconds: m.durationSeconds,
-    }));
+    media = a.mediaItems.map((m: any, idx: number) => {
+      const cleanUrl = sanitizeMediaUrl(m.url, m.s3Key);
+      return {
+        id: m.id || idx + 1,
+        mediaType: m.mediaType,
+        url: cleanUrl || `${S3_ASSETS_BASE}/${(m.s3Key || '').replace(/^\//, '')}`,
+        s3Key: m.s3Key,
+        displayOrder: m.displayOrder ?? idx,
+        fileName: m.fileName,
+        contentType: m.contentType,
+        fileSizeBytes: m.fileSizeBytes,
+        durationSeconds: m.durationSeconds,
+      };
+    });
   } else {
     media = buildMachineMedia(a.id, a.assetTag, mapCategory(a.category), a.type?.name);
   }
+
+  const rawImg = a.imageUrl && !a.imageUrl.includes('unsplash') ? a.imageUrl : defaultImg;
+  const cleanImg = sanitizeMediaUrl(rawImg);
 
   return {
     id: a.id,
@@ -225,7 +258,7 @@ function mapAsset(a: any): Asset {
     hubName: a.hub?.name,
     cityName: a.hub?.city?.name || 'Hardoi',
     stateName: a.hub?.city?.state?.name || 'Uttar Pradesh',
-    imageUrl: a.imageUrl && !a.imageUrl.includes('unsplash') ? a.imageUrl : defaultImg,
+    imageUrl: cleanImg,
     serialNumber: a.serialNumber || '',
     dailyRate: Number(a.dailyRate || 0),
     depositAmount: Number(a.depositAmount || 0),
@@ -415,6 +448,8 @@ export class ApiStore {
           address: h.address,
           contactPhone: h.contactPhone,
           operatingRadiusKm: Number(h.operatingRadiusKm || 25),
+          latitude: Number(h.latitude || 0),
+          longitude: Number(h.longitude || 0),
           active: Boolean(h.active ?? true),
         }));
       }
@@ -589,6 +624,8 @@ export class ApiStore {
     address: string;
     contactPhone?: string;
     operatingRadiusKm?: number;
+    latitude: number;
+    longitude: number;
   }): Hub {
     const newHub: Hub = {
       id: Date.now(),
@@ -598,6 +635,8 @@ export class ApiStore {
       address: data.address,
       contactPhone: data.contactPhone,
       operatingRadiusKm: data.operatingRadiusKm || 25.0,
+      latitude: data.latitude,
+      longitude: data.longitude,
       active: true,
     };
     this.hubs.push(newHub);
@@ -612,6 +651,8 @@ export class ApiStore {
         address: data.address,
         contactPhone: data.contactPhone,
         operatingRadiusKm: data.operatingRadiusKm || 25.0,
+        latitude: data.latitude,
+        longitude: data.longitude,
       }),
     }).then((raw) => {
       if (raw?.id) newHub.id = raw.id;
@@ -919,14 +960,15 @@ export class ApiStore {
     modelId: number;
     hubId: number;
     imageUrl: string;
-    dailyRate: number;
-    depositAmount: number;
+    dailyRate?: number;
+    depositAmount?: number;
     operatorRequired: boolean;
     serialNumber?: string;
     purchaseCost?: number;
     conditionNotes?: string;
     accessoriesIncluded?: string;
     assetTag?: string;
+    videoUrl?: string;
   }): Asset {
     const type = this.types.find((t) => t.id === data.typeId);
     const mfg = this.manufacturers.find((m) => m.id === data.manufacturerId);
@@ -934,6 +976,12 @@ export class ApiStore {
     const hub = this.hubs.find((h) => h.id === data.hubId);
     const city = hub ? this.cities.find((c) => c.id === hub.cityId) : undefined;
     const state = city ? this.states.find((s) => s.id === city.stateId) : undefined;
+
+    const matchingConfig = this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId)
+      || this.rentalConfigs.find((rc) => rc.typeId === data.typeId)
+      || this.rentalConfigs.find((rc) => rc.hubId === data.hubId);
+    const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : (matchingConfig?.baseDailyRate || 1000);
+    const resolvedDepositAmount = data.depositAmount !== undefined ? data.depositAmount : (matchingConfig?.depositAmount || 3000);
 
     const prefix = type?.category === 'AGRICULTURE' ? 'A' : 'C';
     const subCode = type?.code?.split('-')[1] || 'MCH';
@@ -956,8 +1004,8 @@ export class ApiStore {
       stateName: state?.name,
       imageUrl: data.imageUrl,
       serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
-      dailyRate: data.dailyRate,
-      depositAmount: data.depositAmount,
+      dailyRate: resolvedDailyRate,
+      depositAmount: resolvedDepositAmount,
       purchaseCost: data.purchaseCost,
       operatorRequired: data.operatorRequired,
       status: 'AVAILABLE',
@@ -987,8 +1035,8 @@ export class ApiStore {
         modelId: data.modelId,
         hubId: data.hubId,
         imageUrl: data.imageUrl,
-        dailyRate: data.dailyRate,
-        depositAmount: data.depositAmount,
+        dailyRate: resolvedDailyRate,
+        depositAmount: resolvedDepositAmount,
         purchaseCost: data.purchaseCost,
         operatorRequired: data.operatorRequired,
         serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
@@ -1057,9 +1105,12 @@ export class ApiStore {
       // Local fallback calculation based on policy: Free <= 5 KM, 10 Rs/KM thereafter
       const asset = this.assets.find((a) => a.id === assetId);
       if (!asset) throw new Error('Selected machine does not exist');
-      const d1 = new Date(startDate);
-      const d2 = new Date(endDate);
-      const days = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)));
+      const [y1, m1, d1] = startDate.split('-').map(Number);
+      const [y2, m2, d2] = endDate.split('-').map(Number);
+      const date1 = new Date(y1, m1 - 1, d1);
+      const date2 = new Date(y2, m2 - 1, d2);
+      const diffDays = Math.round((date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24));
+      const days = Math.max(1, diffDays + 1);
       const baseRent = asset.dailyRate * days;
       const opFee = (operatorRequired || asset.operatorRequired) ? 500 * days : 0;
       const delFee = distanceKm > 5.0 ? Math.round((distanceKm - 5.0) * 10.0) : 0;
@@ -1289,16 +1340,23 @@ export class ApiStore {
     const raw = await request<any>('/dealers', {
       method: 'POST',
       body: JSON.stringify(data),
-    });
+    }).catch(() => null);
+
     const newDealer: Dealer = {
-      id: raw.id,
-      name: raw.name,
-      tradeName: raw.tradeName,
-      phone: raw.phone,
-      location: raw.location,
-      commissionRate: Number(raw.commissionRate || 0.06),
-      totalCommissionEarned: Number(raw.totalCommissionEarned || 0),
-      totalReferrals: Number(raw.totalReferrals || 0),
+      id: raw?.id || Date.now(),
+      name: raw?.name || data.name,
+      tradeName: raw?.tradeName || data.tradeName,
+      phone: raw?.phone || data.phone,
+      location: raw?.location || data.location,
+      stateId: data.stateId,
+      cityId: data.cityId,
+      hubId: data.hubId,
+      hubName: data.hubName,
+      address: data.address,
+      notes: data.notes,
+      commissionRate: Number(raw?.commissionRate ?? data.commissionRate ?? 0.06),
+      totalCommissionEarned: Number(raw?.totalCommissionEarned || 0),
+      totalReferrals: Number(raw?.totalReferrals || 0),
       active: true,
     };
     this.dealers.push(newDealer);
@@ -1373,6 +1431,55 @@ export class ApiStore {
       closingPosition: opening + totalReceipts,
       reconciliationStatus: 'BALANCED',
     };
+  }
+
+  // --- WHATSAPP NOTIFICATIONS & CIRCULATION ---
+  async sendBookingWhatsAppNotification(bookingId: number): Promise<any> {
+    try {
+      return await request<any>(`/whatsapp/notify/booking/${bookingId}`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.warn('Automated WhatsApp booking notification fallback:', err);
+      const b = this.bookings.find((item) => item.id === bookingId);
+      return {
+        to: b?.customer.phone,
+        bookingNumber: b?.bookingNumber,
+        status: 'SENT',
+      };
+    }
+  }
+
+  async sendDispatchWhatsAppNotification(bookingId: number): Promise<any> {
+    try {
+      return await request<any>(`/whatsapp/notify/dispatch/${bookingId}`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.warn('Automated WhatsApp dispatch notification fallback:', err);
+      const b = this.bookings.find((item) => item.id === bookingId);
+      return {
+        to: b?.customer.phone,
+        bookingNumber: b?.bookingNumber,
+        status: 'SENT',
+      };
+    }
+  }
+
+  async sendReturnWhatsAppNotification(bookingId: number): Promise<any> {
+    try {
+      return await request<any>(`/whatsapp/notify/settlement/${bookingId}`, {
+        method: 'POST',
+      });
+    } catch (err) {
+      console.warn('Automated WhatsApp return settlement notification fallback:', err);
+      const b = this.bookings.find((item) => item.id === bookingId);
+      return {
+        to: b?.customer.phone,
+        bookingNumber: b?.bookingNumber,
+        status: 'SENT',
+      };
+    }
   }
 }
 

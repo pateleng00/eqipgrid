@@ -21,7 +21,7 @@ import java.util.List;
 
 @RestController
 @AllArgsConstructor
-@RequestMapping("/api/v1/assets")
+@RequestMapping("/assets")
 @Tag(name = "Asset Management", description = "Equipment catalog, availability and status control")
 public class AssetController {
 
@@ -59,9 +59,7 @@ public class AssetController {
 
     @PostMapping
     @Operation(summary = "Register new machinery into fleet")
-    public ResponseEntity<ApiResponse<Asset>> createAsset(
-            @Valid @RequestBody CreateAssetRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<Asset>> createAsset(@Valid @RequestBody CreateAssetRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "ADMIN";
         Asset created = assetService.createAsset(request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("Asset created successfully", created));

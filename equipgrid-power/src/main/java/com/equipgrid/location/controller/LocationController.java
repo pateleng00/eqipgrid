@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/locations")
+@RequestMapping("/locations")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class LocationController {
@@ -84,6 +84,8 @@ public class LocationController {
                 .code(request.code())
                 .address(request.address())
                 .contactPhone(request.contactPhone())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
                 .operatingRadiusKm(request.operatingRadiusKm() != null ? request.operatingRadiusKm() : new java.math.BigDecimal("25.0"))
                 .active(true)
                 .build();
@@ -92,5 +94,14 @@ public class LocationController {
     }
 
     public record CityRequest(Long stateId, String name, String pinCode) {}
-    public record HubRequest(Long cityId, String name, String code, String address, String contactPhone, java.math.BigDecimal operatingRadiusKm) {}
+    public record HubRequest(
+            Long cityId,
+            String name,
+            String code,
+            String address,
+            String contactPhone,
+            java.math.BigDecimal operatingRadiusKm,
+            java.math.BigDecimal latitude,
+            java.math.BigDecimal longitude
+    ) {}
 }

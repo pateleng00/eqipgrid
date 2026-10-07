@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatINR, formatDate } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
+import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { Payment } from '../../types';
@@ -79,6 +80,32 @@ export const PaymentLedgerView: React.FC = () => {
     });
   }, [allPayments, allBookings, hubs, cities, selectedStateId, selectedCityId, selectedHubId, searchQuery]);
 
+  const [visibleCount, setVisibleCount] = useState<number>(7);
+
+  // Reset to initial 7 items when filters change
+  React.useEffect(() => {
+    setVisibleCount(7);
+  }, [selectedStateId, selectedCityId, selectedHubId, searchQuery]);
+
+  // Infinite scroll slice (most recent first, default 7 items, loads +7 on scroll)
+  const visiblePayments = useMemo(() => {
+    const reversed = [...filteredPayments].reverse();
+    return reversed.slice(0, visibleCount);
+  }, [filteredPayments, visibleCount]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollTop + clientHeight >= scrollHeight - 60) {
+      if (visibleCount < filteredPayments.length) {
+        setVisibleCount((prev) => Math.min(prev + 7, filteredPayments.length));
+      }
+    }
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount((prev) => Math.min(prev + 7, filteredPayments.length));
+  };
+
   // Totals
   const totalCollected = filteredPayments
     .filter((p) => PAYMENT_TYPE_STYLE[p.paymentType]?.isCredit !== false)
@@ -96,21 +123,21 @@ export const PaymentLedgerView: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 flex flex-col min-h-0 gap-2">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className={cn('text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
-            <CreditCard className={cn('h-6 w-6', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
+          <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+            <CreditCard className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
             Payments & Ledger
           </h2>
-          <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
             Append-only transaction ledger — payments are recorded at Booking, Dispatch, and Return stages
           </p>
         </div>
         <button
           onClick={() => setShowQrModal(true)}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md shadow-emerald-500/20 cursor-pointer whitespace-nowrap"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto"
         >
           <QrCode className="h-4 w-4" />
           Merchant UPI QR
@@ -118,7 +145,7 @@ export const PaymentLedgerView: React.FC = () => {
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
         {[
           { label: 'Total Collected', value: formatINR(totalCollected), color: isDaylight ? 'text-emerald-700' : 'text-emerald-400', icon: <ArrowUpRight className="h-4 w-4" /> },
           { label: 'Total Refunded', value: formatINR(totalRefunded), color: isDaylight ? 'text-rose-600' : 'text-rose-400', icon: <ArrowDownLeft className="h-4 w-4" /> },
@@ -126,13 +153,13 @@ export const PaymentLedgerView: React.FC = () => {
         ].map((stat) => (
           <div
             key={stat.label}
-            className={cn('rounded-xl border p-4 flex items-center justify-between', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}
+            className={cn('rounded-xl border p-2.5 sm:p-3 flex items-center justify-between', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}
           >
             <div>
-              <div className={cn('text-[11px] font-bold uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>{stat.label}</div>
-              <div className={cn('text-xl font-black font-mono mt-1', stat.color)}>{stat.value}</div>
+              <div className={cn('text-[10px] font-bold uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>{stat.label}</div>
+              <div className={cn('text-lg sm:text-xl font-black font-mono mt-0.5', stat.color)}>{stat.value}</div>
             </div>
-            <div className={cn('p-2.5 rounded-xl', isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400')}>
+            <div className={cn('p-2 rounded-lg', isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400')}>
               {stat.icon}
             </div>
           </div>
@@ -140,16 +167,16 @@ export const PaymentLedgerView: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className={cn('p-3.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className="flex items-center justify-end mb-2">
+      <div className={cn('flex-shrink-0 p-2.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className="flex items-center justify-end mb-1.5">
           <button
             onClick={resetFilters}
-            className={cn('text-xs font-bold flex items-center gap-1', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+            className={cn('text-[11px] font-bold flex items-center gap-1 cursor-pointer', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
           >
             <RotateCcw className="h-3 w-3" /> Reset
           </button>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <SearchSelect
             options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
             value={selectedStateId}
@@ -177,9 +204,9 @@ export const PaymentLedgerView: React.FC = () => {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Ref, booking, customer..."
               className={cn(
-                'w-full rounded-lg border pl-8 pr-3 py-2 text-xs focus:outline-none transition-colors',
+                'w-full rounded-lg border pl-8 pr-3 py-1.5 text-xs focus:outline-none transition-colors',
                 isDaylight
-                  ? 'border-slate-300 bg-transparent text-slate-950 placeholder-slate-400 focus:border-amber-500'
+                  ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500'
                   : 'border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'
               )}
             />
@@ -188,29 +215,32 @@ export const PaymentLedgerView: React.FC = () => {
       </div>
 
       {/* Ledger Table — read-only */}
-      <div className={cn('rounded-2xl border overflow-hidden', isDaylight ? 'border-slate-300 bg-transparent' : 'border-slate-800 bg-slate-900/40')}>
-        <div className={cn('px-4 py-3 border-b flex items-center justify-between', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+      <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div className={cn('px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
           <div className="flex items-center gap-2">
             <CreditCard className={cn('h-4 w-4', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
-            <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
+            <h3 className={cn('font-black text-xs sm:text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
               Transaction History
             </h3>
           </div>
-          <span className={cn('text-xs font-mono font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+          <span className={cn('text-[11px] font-mono font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
             {filteredPayments.length} transactions
           </span>
         </div>
 
         {filteredPayments.length === 0 ? (
-          <div className="p-12 text-center space-y-2">
-            <CreditCard className="h-8 w-8 mx-auto opacity-25 text-slate-500" />
-            <p className={cn('text-sm font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>No transactions found</p>
-            <p className="text-xs text-slate-500">Payments are recorded when bookings are confirmed, dispatched, and returned.</p>
+          <div className="flex-1 min-h-0 p-8 text-center flex flex-col items-center justify-center space-y-1.5">
+            <CreditCard className="h-7 w-7 mx-auto opacity-25 text-slate-500" />
+            <p className={cn('text-xs font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>No transactions found</p>
+            <p className="text-[11px] text-slate-500">Payments are recorded when bookings are confirmed, dispatched, and returned.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div
+            onScroll={handleScroll}
+            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+          >
             <table className="w-full text-left text-xs">
-              <thead className={cn('border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-200 bg-slate-100/60 text-slate-600' : 'border-slate-800 bg-slate-950/60 text-slate-400')}>
+              <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs')}>
                 <tr>
                   <th className="py-3 px-4">Transaction Ref</th>
                   <th className="py-3 px-4">Booking / Customer</th>
@@ -221,7 +251,7 @@ export const PaymentLedgerView: React.FC = () => {
                 </tr>
               </thead>
               <tbody className={cn('divide-y', isDaylight ? 'divide-slate-100' : 'divide-slate-800/50')}>
-                {[...filteredPayments].reverse().map((p) => {
+                {visiblePayments.map((p) => {
                   const typeStyle = PAYMENT_TYPE_STYLE[p.paymentType];
                   const isRefund = p.paymentType === 'REFUND';
                   return (
@@ -320,25 +350,35 @@ export const PaymentLedgerView: React.FC = () => {
             </table>
           </div>
         )}
+
+        {/* Infinite Scroll Footer */}
+        {filteredPayments.length > 0 && (
+          <InfiniteScrollFooter
+            loadedCount={visiblePayments.length}
+            totalCount={filteredPayments.length}
+            onLoadMore={handleLoadMore}
+            itemName="transactions"
+          />
+        )}
       </div>
 
       {/* UPI QR Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
-          <div className="w-full max-w-lg min-h-80 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border border-emerald-500/25 bg-[#242424] p-7 sm:p-8 space-y-5 text-center">
-            <div className="flex items-center justify-between border-b border-slate-700/50 pb-4">
-              <h3 className="text-lg font-black text-white">EquipGrid Rental Desk UPI QR</h3>
+          <div className={cn('w-full max-w-lg min-h-80 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 space-y-5 text-center', isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-emerald-500/25 text-white')}>
+            <div className={cn('flex items-center justify-between border-b pb-4', isDaylight ? 'border-slate-200' : 'border-slate-700/50')}>
+              <h3 className={cn('text-lg font-black', isDaylight ? 'text-slate-950' : 'text-white')}>EquipGrid Rental Desk UPI QR</h3>
               <button
                 type="button"
                 onClick={() => setShowQrModal(false)}
                 aria-label="Close UPI QR dialog"
-                className="rounded-lg border border-slate-700 p-2 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-100"
+                className={cn('rounded-lg border p-2 transition-colors cursor-pointer', isDaylight ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800' : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100')}
               >
                 ✕
               </button>
             </div>
-            <p className="text-xs text-slate-400">UPI VPA: <span className="font-mono text-amber-400">equipgrid@icici</span></p>
-            <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl bg-white p-3 shadow-inner">
+            <p className={cn('text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>UPI VPA: <span className="font-mono text-amber-600 font-bold">equipgrid@icici</span></p>
+            <div className="mx-auto flex h-48 w-48 items-center justify-center rounded-xl bg-white p-3 shadow-inner border border-slate-200">
               <div className="grid grid-cols-6 grid-rows-6 gap-1 h-full w-full bg-slate-900 p-2 rounded">
                 {Array.from({ length: 36 }).map((_, i) => (
                   <div
@@ -348,10 +388,10 @@ export const PaymentLedgerView: React.FC = () => {
                 ))}
               </div>
             </div>
-            <p className="text-[11px] text-slate-400">Supports PhonePe, Google Pay, Paytm, BHIM.</p>
+            <p className={cn('text-[11px]', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Supports PhonePe, Google Pay, Paytm, BHIM.</p>
             <button
               onClick={() => setShowQrModal(false)}
-              className="w-full py-2.5 rounded-xl border border-slate-700 bg-slate-800 text-xs font-bold text-slate-200 transition-colors hover:bg-slate-700 hover:text-white cursor-pointer"
+              className={cn('w-full py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 hover:bg-slate-200' : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700 hover:text-white')}
             >
               Cancel
             </button>

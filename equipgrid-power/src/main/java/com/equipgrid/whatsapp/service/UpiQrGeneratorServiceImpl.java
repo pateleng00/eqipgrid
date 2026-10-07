@@ -94,7 +94,7 @@ public class UpiQrGeneratorServiceImpl implements IUpiQrGeneratorService {
                 .transactionNote(note)
                 .upiUri(upiUri)
                 .qrCodeBase64(qrBase64)
-                .qrCodeImageUrl("/api/v1/whatsapp/qr/" + (bookingNumber != null ? bookingNumber : "quick"))
+                .qrCodeImageUrl("/equipgrid/whatsapp/qr/" + (bookingNumber != null ? bookingNumber : "quick"))
                 .build();
     }
 }

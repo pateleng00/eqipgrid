@@ -18,7 +18,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/rental-configs")
+@RequestMapping("/rental-configs")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class RentalConfigController {

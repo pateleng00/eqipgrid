@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/intelligence")
+@RequestMapping("/intelligence")
 @RequiredArgsConstructor
 @Tag(name = "Intelligence Service", description = "In-place website AI Copilot driven by backend Gemini AI and EquipGrid knowledge engine")
 public class IntelligenceChatController {

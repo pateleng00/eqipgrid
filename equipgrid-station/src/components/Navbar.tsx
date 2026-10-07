@@ -14,6 +14,7 @@ import logoRectangle from '../assets/logo-rectangle.png';
 interface NavbarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  onNewDeployment?: () => void;
 }
 
 const ROLE_BADGE: Record<UserRole, { label: string; className: string }> = {
@@ -46,7 +47,7 @@ const ROLE_AVATAR: Record<UserRole, string> = {
   guest: 'bg-slate-500 text-white',
 };
 
-export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
+export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onNewDeployment }) => {
   const { isDaylight, toggleTheme } = useTheme();
   const { currentUser, logout } = useAuth();
   const [showProfile, setShowProfile] = useState(false);
@@ -72,7 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 w-full border-b backdrop-blur-md px-4 sm:px-6 py-2.5 transition-colors duration-200',
+        'sticky top-0 z-40 w-full border-b backdrop-blur-md px-4 sm:px-6 py-2 transition-colors duration-200',
         isDaylight
           ? 'border-slate-300 bg-white/80 text-slate-950'
           : 'border-slate-800/80 bg-slate-950/90 text-white'
@@ -135,10 +136,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
         {/* ── Right: New Booking + Profile Dropdown ── */}
         <div className="flex items-center gap-2">
 
-          {/* New Booking — only for permissioned staff, not guests */}
+          {/* New Deployment — only for permissioned staff, not guests */}
           {currentUser?.permissions.canBook && !isGuest && (
             <button
-              onClick={() => onTabChange('booking')}
+              onClick={onNewDeployment}
               className={cn(
                 'flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer',
                 isDaylight
@@ -152,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                   isDaylight ? 'text-slate-950' : 'text-slate-400'
                 )}
               />
-              <span className="hidden sm:inline">New Booking</span>
+              <span className="hidden sm:inline">New Deployment</span>
             </button>
           )}
 
@@ -288,10 +289,15 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange }) => {
                         setShowProfile(false);
                         logout();
                       }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                      className={cn(
+                        "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-bold transition-colors cursor-pointer",
+                        isDaylight
+                          ? "text-rose-700 bg-rose-50/60 hover:bg-rose-100 border border-rose-200/80"
+                          : "text-rose-400 hover:bg-rose-500/10"
+                      )}
                     >
-                      <LogOut className="h-3.5 w-3.5" />
-                      <span>{isGuest ? 'Back to Sign In' : 'Sign Out'}</span>
+                      <LogOut className="h-3.5 w-3.5 shrink-0 text-rose-600 dark:text-rose-400" />
+                      <span className="font-bold text-rose-700 dark:text-rose-400">{isGuest ? 'Back to Sign In' : 'Sign Out'}</span>
                     </button>
                   </div>
 

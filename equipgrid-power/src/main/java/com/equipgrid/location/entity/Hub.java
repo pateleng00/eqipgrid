@@ -39,6 +39,12 @@ public class Hub extends BaseEntity {
     @Column(name = "operating_radius_km", precision = 6, scale = 2)
     private BigDecimal operatingRadiusKm = new BigDecimal("25.00");
 
+    @Column(nullable = false, precision = 10, scale = 7)
+    private BigDecimal latitude;
+
+    @Column(nullable = false, precision = 10, scale = 7)
+    private BigDecimal longitude;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;

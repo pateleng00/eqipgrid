@@ -298,7 +298,9 @@ export const LoginPage: React.FC = () => {
                         'info'
                       )
                     }
-                    className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                    className={`text-[11px] transition-colors cursor-pointer ${
+                      isDaylight ? 'text-slate-600 hover:text-slate-900 font-semibold' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   >
                     Forgot password?
                   </button>
@@ -320,7 +322,9 @@ export const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer ${
+                      isDaylight ? 'text-slate-500 hover:text-slate-900' : 'text-slate-400 hover:text-slate-200'
+                    }`}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -403,7 +407,9 @@ export const LoginPage: React.FC = () => {
                 Write to Us:{' '}
                 <a
                   href="mailto:support@equipgrid.in"
-                  className="font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  className={`font-bold hover:underline ${
+                    isDaylight ? 'text-blue-700' : 'text-blue-400'
+                  }`}
                 >
                   support@equipgrid.in
                 </a>
@@ -419,7 +425,9 @@ export const LoginPage: React.FC = () => {
                 'EquipGrid Station Data Security: 256-bit AES encrypted with zero-credit escrow validation. All data is processed locally and never shared with third parties.',
                 'info'
               )}
-              className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              className={`transition-colors cursor-pointer ${
+                isDaylight ? 'hover:text-slate-900 text-slate-600' : 'hover:text-slate-200 text-slate-400'
+              }`}
             >
               Privacy Policy
             </button>
@@ -430,7 +438,9 @@ export const LoginPage: React.FC = () => {
                 'Operating under Uttar Pradesh Rural Equipment Dispatch Regulations 2026. All rental contracts are governed by applicable UP state equipment leasing norms.',
                 'info'
               )}
-              className="hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+              className={`transition-colors cursor-pointer ${
+                isDaylight ? 'hover:text-slate-900 text-slate-600' : 'hover:text-slate-200 text-slate-400'
+              }`}
             >
               Legal Disclosures
             </button>

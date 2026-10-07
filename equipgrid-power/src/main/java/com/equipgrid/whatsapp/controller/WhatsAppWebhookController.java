@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/whatsapp")
+@RequestMapping("/whatsapp")
 @RequiredArgsConstructor
 @Tag(name = "WhatsApp Service", description = "WhatsApp bot, UPI QR code generation, and mobile-identified rental lifecycle")
 public class WhatsAppWebhookController {

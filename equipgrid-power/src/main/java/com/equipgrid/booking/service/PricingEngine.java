@@ -14,7 +14,7 @@ public class PricingEngine {
     public CommercialQuote calculate(BigDecimal dailyRate, BigDecimal depositAmount,
                                      LocalDate startDate, LocalDate endDate,
                                      BigDecimal distanceKm, boolean operatorRequired) {
-        long days = ChronoUnit.DAYS.between(startDate, endDate);
+        long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         if (days <= 0) days = 1;
 
         BigDecimal duration = BigDecimal.valueOf(days);

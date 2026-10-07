@@ -21,13 +21,13 @@ import java.util.Map;
  * Mirrors the Stride Observatory StorageController structure.
  *
  * <ul>
- *   <li>{@code POST /api/v1/common/storage/upload}          — multipart upload to tmp bucket</li>
- *   <li>{@code POST /api/v1/common/storage/signed-url}      — presigned GET URL for common bucket</li>
- *   <li>{@code POST /api/v1/common/storage/presigned-upload} — presigned PUT URL for direct client upload</li>
+ *   <li>{@code POST /common/storage/upload}          — multipart upload to tmp bucket</li>
+ *   <li>{@code POST /common/storage/signed-url}      — presigned GET URL for common bucket</li>
+ *   <li>{@code POST /common/storage/presigned-upload} — presigned PUT URL for direct client upload</li>
  * </ul>
  */
 @RestController
-@RequestMapping("/api/v1/common/storage")
+@RequestMapping("/common/storage")
 @AllArgsConstructor
 @Tag(name = "Storage", description = "File upload, presigned URL generation and access management")
 public class StorageController {

@@ -42,18 +42,19 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/api/v1/whatsapp/**",
-                                "/api/v1/intelligence/**",
+                                "/auth/**",
+                                "/whatsapp/**",
+                                "/intelligence/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**",
                                 "/api-docs/**",
                                 "/error"
                         ).permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/assets/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/dealers/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/bookings/quote").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/locations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/dealers/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/bookings/quote").permitAll()
                         .anyRequest().permitAll()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

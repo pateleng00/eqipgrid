@@ -37,6 +37,10 @@ export interface Hub {
   address: string;
   contactPhone?: string;
   operatingRadiusKm: number;
+  /** GPS latitude of the hub yard — mandatory for distance calculations. */
+  latitude: number;
+  /** GPS longitude of the hub yard — mandatory for distance calculations. */
+  longitude: number;
   active: boolean;
 }
 
@@ -248,6 +252,12 @@ export interface Dealer {
   tradeName: string;
   phone: string;
   location: string;
+  stateId?: number;
+  cityId?: number;
+  hubId?: number;
+  hubName?: string;
+  address?: string;
+  notes?: string;
   commissionRate: number;
   totalCommissionEarned: number;
   totalReferrals: number;

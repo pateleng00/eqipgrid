@@ -34,6 +34,7 @@ public class DispatchServiceImpl implements IDispatchService {
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     private static final AtomicLong CHALLAN_SEQ = new AtomicLong(100);
 
@@ -86,6 +87,14 @@ public class DispatchServiceImpl implements IDispatchService {
 
         booking.setStatus(BookingStatus.ON_RENT);
         bookingRepository.save(booking);
+
+        // Notify customer on machinery dispatch from yard via WhatsApp
+        try {
+            whatsAppNotificationService.notifyDispatchIssued(booking.getId());
+        } catch (Exception e) {
+            log.warn("[Dispatch] WhatsApp dispatch notification failed for booking {}: {}",
+                    booking.getBookingNumber(), e.getMessage());
+        }
 
         auditService.log("DISPATCH", saved.getChallanNumber(), "DISPATCH_RELEASE",
                 performedBy != null ? performedBy : "YARD_DISPATCH",

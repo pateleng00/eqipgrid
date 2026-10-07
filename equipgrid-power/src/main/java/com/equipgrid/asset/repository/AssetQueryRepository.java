@@ -68,4 +68,27 @@ public class AssetQueryRepository {
                 .fetchFirst();
         return count != null;
     }
+
+    public List<Asset> fetchOperationalMachinesByType(Long typeId, String name, Long hubId) {
+        BooleanBuilder builder = new BooleanBuilder();
+        builder.and(qAsset.status.notIn(AssetStatus.RETIRED, AssetStatus.DAMAGED));
+
+        if (typeId != null) {
+            builder.and(qAsset.type.id.eq(typeId));
+        } else if (name != null && !name.isBlank()) {
+            builder.and(qAsset.name.equalsIgnoreCase(name.trim()));
+        }
+
+        if (hubId != null) {
+            builder.and(qAsset.hub.id.eq(hubId));
+        }
+
+        return queryFactory.selectFrom(qAsset)
+                .where(builder)
+                .fetch();
+    }
+
+    public long countOperationalMachinesByType(Long typeId, String name, Long hubId) {
+        return fetchOperationalMachinesByType(typeId, name, hubId).size();
+    }
 }

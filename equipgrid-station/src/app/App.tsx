@@ -26,6 +26,7 @@ export const App: React.FC = () => {
   });
   const [preselectedAsset, setPreselectedAsset] = useState<Asset | null>(null);
   const [guestBlockModal, setGuestBlockModal] = useState(false);
+  const [triggerNewDeployment, setTriggerNewDeployment] = useState(false);
   const [, setApiVersion] = useState(0);
 
   React.useEffect(() => {
@@ -62,24 +63,30 @@ export const App: React.FC = () => {
     setActiveTab(tab);
   };
 
+  const handleNewDeployment = () => {
+    if (isGuest) { setGuestBlockModal(true); return; }
+    setActiveTab('booking');
+    // Small delay so the BookingDeskView mounts before the effect fires
+    setTimeout(() => setTriggerNewDeployment(true), 50);
+  };
+
   return (
-    <Layout activeTab={isGuest ? 'catalog' : activeTab} onTabChange={handleTabChange}>
+    <Layout activeTab={isGuest ? 'catalog' : activeTab} onTabChange={handleTabChange} onNewDeployment={handleNewDeployment}>
       {activeTab === 'dashboard' && <DashboardView onNavigate={setActiveTab} />}
       {activeTab === 'catalog' && (
         <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />
       )}
-      {activeTab === 'booking' && (
+      {(activeTab === 'booking' || activeTab === 'dispatch') && (
         <BookingDeskView
           preselectedAsset={preselectedAsset}
           onBookingCreated={() => setActiveTab('dashboard')}
-          onNavigateToDispatch={() => setActiveTab('dispatch')}
+          initialViewMode={activeTab === 'dispatch' ? 'dispatch' : 'all'}
+          openCreateModal={triggerNewDeployment}
+          onCreateModalOpened={() => setTriggerNewDeployment(false)}
         />
       )}
       {activeTab === 'rental-configs' && <RentalConfigView />}
       {activeTab === 'locations' && <LocationMasterView />}
-      {activeTab === 'dispatch' && (
-        <DispatchYardView onNavigateToPayment={() => setActiveTab('payments')} />
-      )}
       {activeTab === 'return' && <ReturnAuditView />}
       {activeTab === 'payments' && <PaymentLedgerView />}
       {activeTab === 'dealers' && <DealerNetworkView />}

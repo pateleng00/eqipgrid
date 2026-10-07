@@ -31,10 +31,10 @@ export const StatCard: React.FC<StatCardProps> = ({
   };
 
   const daylightAccentBorders = {
-    amber: 'border-2 border-amber-400/80 bg-transparent hover:border-amber-500 shadow-none',
-    emerald: 'border-2 border-emerald-400/80 bg-transparent hover:border-emerald-500 shadow-none',
-    blue: 'border-2 border-blue-400/80 bg-transparent hover:border-blue-500 shadow-none',
-    purple: 'border-2 border-purple-400/80 bg-transparent hover:border-purple-500 shadow-none',
+    amber: 'border-2 border-amber-300 bg-white hover:border-amber-400 shadow-sm',
+    emerald: 'border-2 border-emerald-300 bg-white hover:border-emerald-400 shadow-sm',
+    blue: 'border-2 border-blue-300 bg-white hover:border-blue-400 shadow-sm',
+    purple: 'border-2 border-purple-300 bg-white hover:border-purple-400 shadow-sm',
   };
 
   const darkIconColors = {
@@ -54,15 +54,15 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <div
       className={cn(
-        'relative rounded-2xl border p-5 transition-all duration-200 shadow-md',
+        'relative rounded-xl border p-3 sm:p-3.5 transition-all duration-200 shadow-sm',
         isDaylight ? daylightAccentBorders[accentColor] : darkAccentBorders[accentColor]
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className={cn("text-xs font-black uppercase tracking-wider", isDaylight ? "text-slate-950" : "text-slate-400")}>{title}</p>
-          <div className={cn("mt-2 text-2xl lg:text-3xl font-black tracking-tight", isDaylight ? "text-slate-950" : "text-white")}>{value}</div>
-          {subtitle && <p className={cn("mt-1 text-xs font-semibold", isDaylight ? "text-slate-800" : "text-slate-400")}>{subtitle}</p>}
+          <p className={cn("text-[10px] sm:text-xs font-black uppercase tracking-wider", isDaylight ? "text-slate-950" : "text-slate-400")}>{title}</p>
+          <div className={cn("mt-1 text-xl lg:text-2xl font-black tracking-tight", isDaylight ? "text-slate-950" : "text-white")}>{value}</div>
+          {subtitle && <p className={cn("mt-0.5 text-[11px] font-semibold", isDaylight ? "text-slate-800" : "text-slate-400")}>{subtitle}</p>}
         </div>
         <div
           className={cn(

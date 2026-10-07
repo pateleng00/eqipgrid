@@ -16,7 +16,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/dealers")
+@RequestMapping("/dealers")
 @Tag(name = "Dealer & Channel Partners", description = "SOP-006 Channel partner network and 6% commission tracking")
 public class DealerController {
 

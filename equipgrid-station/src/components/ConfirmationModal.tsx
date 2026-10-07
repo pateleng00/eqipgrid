@@ -175,8 +175,8 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
               className={cn(
                 'px-5 py-2 rounded-lg text-xs font-bold cursor-pointer transition-colors',
                 isDaylight
-                  ? 'bg-slate-900 hover:bg-slate-800 text-white'
-                  : 'bg-slate-700 hover:bg-slate-600 text-white'
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold'
               )}
             >
               Got it

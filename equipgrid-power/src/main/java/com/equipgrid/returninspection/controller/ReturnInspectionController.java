@@ -15,7 +15,7 @@ import java.security.Principal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/returns")
+@RequestMapping("/returns")
 @Tag(name = "Return Inspection & Damage Audit", description = "SOP-008 Post-rental return inspection, damage logging and deposit refund calculation")
 public class ReturnInspectionController {
 

@@ -14,18 +14,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.security.Principal;
 import java.util.List;
 
-/**
- * Media gallery management for individual assets.
- *
- * <pre>
- * GET    /api/v1/assets/{id}/media               — list all media
- * POST   /api/v1/assets/{id}/media/images         — upload image (max 4, 10 MB each)
- * POST   /api/v1/assets/{id}/media/video          — upload video (max 1, 30s, 100 MB)
- * DELETE /api/v1/assets/{id}/media/{mediaId}      — delete media item
- * </pre>
- */
 @RestController
-@RequestMapping("/api/v1/assets/{id}/media")
+@RequestMapping("/assets/{id}/media")
 @RequiredArgsConstructor
 @Tag(name = "Asset Media", description = "Machine image gallery and short video management")
 public class AssetMediaController {
