@@ -114,8 +114,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch {
       // ignore
     }
-    // Default to admin for seamless first load or null if login is required
-    return PRESET_USERS.admin;
+    // Unauthenticated by default — requires login
+    return null;
   });
 
   useEffect(() => {
