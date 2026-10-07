@@ -2,6 +2,22 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 export type UserRole = 'root' | 'admin' | 'manager' | 'user' | 'guest';
 
+export interface UserPermissions {
+  canManageUsers: boolean;
+  canDeleteUsers: boolean;
+  canDeleteAdmins: boolean;
+  canDeleteManagers: boolean;
+  canManageAllHubs: boolean;
+  canManageFleet: boolean;
+  canDeleteMachines: boolean;
+  canDispatch: boolean;
+  canManagePricing: boolean;
+  canManageLocations: boolean;
+  canBook: boolean;
+  canRefund: boolean;
+  isReadOnly: boolean;
+}
+
 export interface AuthUser {
   id: string;
   name: string;
@@ -13,90 +29,51 @@ export interface AuthUser {
   hubLocation: string;
   avatarInitials: string;
   token?: string;
-  permissions: {
-    canManageUsers: boolean;
-    canDeleteUsers: boolean;
-    canDeleteAdmins: boolean;
-    canDeleteManagers: boolean;
-    canManageAllHubs: boolean;
-    canManageFleet: boolean;
-    canDeleteMachines: boolean;
-    canDispatch: boolean;
-    canManagePricing: boolean;
-    canManageLocations: boolean;
-    canBook: boolean;
-    canRefund: boolean;
-    isReadOnly: boolean;
-  };
+  permissions: UserPermissions;
 }
 
-export const PRESET_USERS: Record<UserRole, AuthUser> = {
-  root: {
-    id: 'usr-root-01',
-    name: 'Vikramaditya Rao',
-    email: 'admin@equipgrid.in',
-    username: 'admin@equipgrid.in',
-    role: 'root',
-    roleTitle: 'Root (Super Administrator)',
-    hubLocation: 'Central Headquarter (UP)',
-    avatarInitials: 'VR',
-    permissions: {
+export function getRolePermissions(role: UserRole): UserPermissions {
+  if (role === 'root') {
+    return {
       canManageUsers: true,
       canDeleteUsers: true,
       canDeleteAdmins: true,
       canDeleteManagers: true,
       canManageAllHubs: true,
       canManageFleet: true,
-      canDeleteMachines: true,
+      canDeleteMachines: true, // Only Root can delete machinery
       canDispatch: true,
       canManagePricing: true,
       canManageLocations: true,
       canBook: true,
       canRefund: true,
       isReadOnly: false,
-    },
-  },
-  admin: {
-    id: 'usr-admin-02',
-    name: 'Priya Singhania',
-    email: 'admin.ops@equipgrid.in',
-    username: 'admin.ops@equipgrid.in',
-    role: 'admin',
-    roleTitle: 'Operations Administrator',
-    hubLocation: 'Central Headquarter (UP)',
-    avatarInitials: 'PS',
-    permissions: {
+    };
+  }
+  if (role === 'admin') {
+    return {
       canManageUsers: true,
       canDeleteUsers: true,
       canDeleteAdmins: false,
-      canDeleteManagers: false,
+      canDeleteManagers: false, // Per SOP: Admins cannot delete Managers
       canManageAllHubs: true,
       canManageFleet: true,
-      canDeleteMachines: false,
+      canDeleteMachines: false, // Per SOP: Admins cannot delete Machinery
       canDispatch: true,
       canManagePricing: true,
       canManageLocations: true,
       canBook: true,
       canRefund: true,
       isReadOnly: false,
-    },
-  },
-  manager: {
-    id: 'usr-mgr-03',
-    name: 'Rajesh Sharma',
-    email: 'manager.hardoi@equipgrid.in',
-    username: 'manager.hardoi@equipgrid.in',
-    role: 'manager',
-    roleTitle: 'Yard & Fleet Manager',
-    hubId: 1,
-    hubLocation: 'Hardoi Central Hub Yard',
-    avatarInitials: 'RS',
-    permissions: {
-      canManageUsers: true,
-      canDeleteUsers: true,
+    };
+  }
+  if (role === 'manager') {
+    return {
+      canManageUsers: true, // Scoped to assigned Hub only
+      canDeleteUsers: true, // Scoped to assigned Hub only
       canDeleteAdmins: false,
       canDeleteManagers: false,
-      canManageAllHubs: false,
+      canManageAllHubs: false, // Strictly scoped to assigned Hub
       canManageFleet: false,
       canDeleteMachines: false,
       canDispatch: true,
@@ -105,44 +82,10 @@ export const PRESET_USERS: Record<UserRole, AuthUser> = {
       canBook: true,
       canRefund: true,
       isReadOnly: false,
-    },
-  },
-  user: {
-    id: 'usr-desk-04',
-    name: 'Amit Verma',
-    email: 'booking.desk@equipgrid.in',
-    username: 'booking.desk@equipgrid.in',
-    role: 'user',
-    roleTitle: 'Station Booking Desk Operator',
-    hubId: 1,
-    hubLocation: 'Hardoi Central Hub Yard',
-    avatarInitials: 'AV',
-    permissions: {
-      canManageUsers: false,
-      canDeleteUsers: false,
-      canDeleteAdmins: false,
-      canDeleteManagers: false,
-      canManageAllHubs: false,
-      canManageFleet: false,
-      canDeleteMachines: false,
-      canDispatch: false,
-      canManagePricing: false,
-      canManageLocations: false,
-      canBook: true,
-      canRefund: false,
-      isReadOnly: false,
-    },
-  },
-  guest: {
-    id: 'usr-gst-05',
-    name: 'Field Auditor / Viewer',
-    email: 'guest.auditor@equipgrid.in',
-    username: 'guest.auditor@equipgrid.in',
-    role: 'guest',
-    roleTitle: 'Guest (Read-Only Access)',
-    hubLocation: 'All UP Hubs (Viewer)',
-    avatarInitials: 'GA',
-    permissions: {
+    };
+  }
+  if (role === 'guest') {
+    return {
       canManageUsers: false,
       canDeleteUsers: false,
       canDeleteAdmins: false,
@@ -156,9 +99,25 @@ export const PRESET_USERS: Record<UserRole, AuthUser> = {
       canBook: false,
       canRefund: false,
       isReadOnly: true,
-    },
-  },
-};
+    };
+  }
+  // Default operator / user
+  return {
+    canManageUsers: false,
+    canDeleteUsers: false,
+    canDeleteAdmins: false,
+    canDeleteManagers: false,
+    canManageAllHubs: false,
+    canManageFleet: false,
+    canDeleteMachines: false,
+    canDispatch: false,
+    canManagePricing: false,
+    canManageLocations: false,
+    canBook: true,
+    canRefund: false,
+    isReadOnly: false,
+  };
+}
 
 interface AuthContextType {
   currentUser: AuthUser | null;
@@ -183,7 +142,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } catch {
       // ignore
     }
-    // Unauthenticated by default — requires login
     return null;
   });
 
@@ -200,93 +158,94 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [currentUser]);
 
   const loginAsRole = (role: UserRole) => {
-    const user = PRESET_USERS[role];
-    setCurrentUser(user);
+    // Only guest is allowed without DB credentials for public machinery catalog browsing
+    if (role === 'guest') {
+      const guestUser: AuthUser = {
+        id: 'guest',
+        name: 'Guest Viewer',
+        email: 'guest@equipgrid.in',
+        username: 'guest',
+        role: 'guest',
+        roleTitle: 'Guest (Catalog Read-Only)',
+        hubId: null,
+        hubLocation: 'All UP Hubs (Viewer)',
+        avatarInitials: 'GV',
+        permissions: getRolePermissions('guest'),
+      };
+      setCurrentUser(guestUser);
+    }
   };
 
   const loginWithCredentials = async (emailOrUsername: string, password?: string): Promise<boolean> => {
     const clean = emailOrUsername.toLowerCase().trim();
 
-    // 1. Try backend authentication if available
-    try {
-      const res = await fetch('/equipgrid/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: clean,
-          password: password || 'admin123',
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.data && data.data.token) {
-          const u = data.data;
-          const roleStr = String(u.role).toUpperCase();
-          const role: UserRole = roleStr === 'ROOT' ? 'root'
-            : roleStr === 'ADMIN' ? 'admin'
-            : roleStr === 'MANAGER' ? 'manager' : 'user';
+    // 100% Database-Driven: Must authenticate via Spring Boot backend /auth/login connected to PostgreSQL
+    const res = await fetch('/equipgrid/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: clean,
+        password: password || '',
+      }),
+    });
 
-          const authUser: AuthUser = {
-            ...PRESET_USERS[role],
-            id: String(u.userId),
-            name: u.fullName || u.username,
-            email: u.email || u.username,
-            username: u.username,
-            role,
-            token: u.token,
-            hubId: u.hubId,
-            hubLocation: u.hubName || PRESET_USERS[role].hubLocation,
-          };
-          setCurrentUser(authUser);
-          return true;
-        }
+    if (!res.ok) {
+      let errMsg = 'Invalid username or password';
+      try {
+        const errData = await res.json();
+        if (errData?.message?.text) errMsg = errData.message.text;
+        else if (errData?.message) errMsg = typeof errData.message === 'string' ? errData.message : JSON.stringify(errData.message);
+      } catch {
+        // ignore
       }
-    } catch (err) {
-      console.warn('Backend login fallback to preset users:', err);
+      throw new Error(errMsg);
     }
 
-    // 2. Exact match against admin@equipgrid.in -> ROOT
-    if (clean === 'admin@equipgrid.in' || clean === 'admin') {
-      setCurrentUser(PRESET_USERS.root);
-      return true;
+    const json = await res.json();
+    const data = json?.data;
+    if (!data || !data.token) {
+      throw new Error('Authentication failed: Missing authorization token from database');
     }
 
-    // 3. Match against known preset users
-    const foundUser = Object.values(PRESET_USERS).find(
-      (u) => u.email.toLowerCase() === clean || u.username?.toLowerCase() === clean
-    );
+    // Map role strictly from DB enum
+    const roleStr = String(data.role).toUpperCase();
+    const role: UserRole =
+      (roleStr === 'ROOT' || roleStr === '8') ? 'root'
+      : (roleStr === 'ADMIN' || roleStr === '7' || roleStr === '1') ? 'admin'
+      : (roleStr === 'MANAGER' || roleStr === '6') ? 'manager'
+      : 'user';
 
-    if (foundUser) {
-      setCurrentUser(foundUser);
-      return true;
-    }
+    const roleTitle =
+      role === 'root' ? 'Root Super Admin'
+      : role === 'admin' ? 'Operations Admin'
+      : role === 'manager' ? 'Yard Manager'
+      : 'Station Desk Operator';
 
-    // 4. Determine role based on credentials / email prefix
-    let role: UserRole = 'user';
-    if (clean.includes('root')) {
-      role = 'root';
-    } else if (clean.includes('admin') || clean.includes('super') || clean.includes('hq')) {
-      role = 'admin';
-    } else if (clean.includes('manager') || clean.includes('yard') || clean.includes('lead')) {
-      role = 'manager';
-    }
-
-    const fallback: AuthUser = {
-      ...PRESET_USERS[role],
-      id: `usr-${Date.now()}`,
-      email: clean,
-      name: clean.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Station Operator',
+    const authUser: AuthUser = {
+      id: String(data.userId),
+      name: data.fullName || data.username,
+      email: data.email || data.username,
+      username: data.username,
+      role,
+      roleTitle,
+      hubId: data.hubId || null,
+      hubLocation: data.hubName || (role === 'root' || role === 'admin' ? 'Central HQ / Global' : 'Unassigned Hub'),
+      avatarInitials: data.fullName ? data.fullName.substring(0, 2).toUpperCase() : 'ST',
+      token: data.token,
+      permissions: getRolePermissions(role),
     };
-    setCurrentUser(fallback);
+
+    setCurrentUser(authUser);
     return true;
   };
 
   const logout = () => {
     setCurrentUser(null);
+    localStorage.removeItem(AUTH_STORAGE_KEY);
   };
 
-  const switchRole = (role: UserRole) => {
-    loginAsRole(role);
+  const switchRole = (_role: UserRole) => {
+    // In production, role switching is disabled; roles are strictly governed by DB user records
   };
 
   return (

@@ -11,7 +11,7 @@ import {
   Headphones,
   Truck,
 } from 'lucide-react';
-import { useAuth, PRESET_USERS } from '../../lib/AuthContext';
+import { useAuth } from '../../lib/AuthContext';
 import { useTheme } from '../../lib/ThemeContext';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 
@@ -278,7 +278,7 @@ export const LoginPage: React.FC = () => {
                     type="text"
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="e.g. admin@equipgrid.in, manager.hardoi@equipgrid.in"
+                    placeholder="Enter registered staff email or username"
                     className={`w-full rounded-xl border pl-10 pr-3.5 py-3 text-xs transition-colors focus:outline-none ${
                       isDaylight
                         ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-slate-950'

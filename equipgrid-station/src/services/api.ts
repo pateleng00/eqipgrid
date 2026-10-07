@@ -1515,74 +1515,15 @@ export class ApiStore {
   }
 
   async getUsers(hubId?: number, role?: string): Promise<UserAccount[]> {
-    try {
-      const params = new URLSearchParams();
-      if (hubId) params.append('hubId', String(hubId));
-      if (role) params.append('role', role);
-      const qs = params.toString() ? `?${params.toString()}` : '';
-      const list = await request<UserAccount[]>(`/users${qs}`);
-      return list.map((u) => ({
-        ...u,
-        role: this.normalizeStaffRole(u.role),
-      }));
-    } catch (err) {
-      console.warn('Backend /users request fallback:', err);
-      // Fallback list of users
-      return [
-        {
-          id: 1,
-          username: 'admin@equipgrid.in',
-          email: 'admin@equipgrid.in',
-          fullName: 'Vikramaditya Rao',
-          role: 'ROOT',
-          roleTitle: 'Root (Super Admin)',
-          phone: '+919876543210',
-          hubId: null,
-          hubName: 'Central Headquarter (UP)',
-          active: true,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          username: 'admin.ops@equipgrid.in',
-          email: 'admin.ops@equipgrid.in',
-          fullName: 'Priya Singhania',
-          role: 'ADMIN',
-          roleTitle: 'Operations Administrator',
-          phone: '+919876543215',
-          hubId: null,
-          hubName: 'Central Headquarter (UP)',
-          active: true,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 3,
-          username: 'manager.hardoi@equipgrid.in',
-          email: 'manager.hardoi@equipgrid.in',
-          fullName: 'Rajesh Sharma',
-          role: 'MANAGER',
-          roleTitle: 'Yard & Fleet Manager',
-          phone: '+919876543211',
-          hubId: 1,
-          hubName: 'Hardoi Central Yard',
-          active: true,
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: 4,
-          username: 'booking.desk@equipgrid.in',
-          email: 'booking.desk@equipgrid.in',
-          fullName: 'Amit Verma',
-          role: 'OPERATOR',
-          roleTitle: 'Station Booking Operator',
-          phone: '+919876543212',
-          hubId: 1,
-          hubName: 'Hardoi Central Yard',
-          active: true,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-    }
+    const params = new URLSearchParams();
+    if (hubId) params.append('hubId', String(hubId));
+    if (role) params.append('role', role);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    const list = await request<UserAccount[]>(`/users${qs}`);
+    return (list || []).map((u) => ({
+      ...u,
+      role: this.normalizeStaffRole(u.role),
+    }));
   }
 
   async createUser(payload: CreateUserPayload): Promise<UserAccount> {

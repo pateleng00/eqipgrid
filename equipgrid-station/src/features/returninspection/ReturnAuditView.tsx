@@ -19,6 +19,7 @@ import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
 import { formatINR, formatDate } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
+import { useAuth } from '../../lib/AuthContext';
 import { api } from '../../services/api';
 import { Booking, ReturnInspection } from '../../types';
 import { cn } from '../../lib/utils';
@@ -90,9 +91,10 @@ export const ReturnAuditView: React.FC = () => {
   };
 
   // Inspection panel state
+  const { currentUser } = useAuth();
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [inspectorName, setInspectorName] = useState<string>('Rajesh Sharma (Lead Tech)');
-  const [fuelDeltaCharge, setFuelDeltaCharge] = useState<number>(200);
+  const [inspectorName, setInspectorName] = useState<string>(currentUser?.name || '');
+  const [fuelDeltaCharge, setFuelDeltaCharge] = useState<number>(0);
   const [hasDamage, setHasDamage] = useState<boolean>(false);
   const [damageCost, setDamageCost] = useState<number>(0);
   const [damageDescription, setDamageDescription] = useState<string>('');
@@ -106,8 +108,8 @@ export const ReturnAuditView: React.FC = () => {
 
   const openInspectionPanel = (b: Booking) => {
     setSelectedBooking(b);
-    setInspectorName('Rajesh Sharma (Lead Tech)');
-    setFuelDeltaCharge(200);
+    setInspectorName(currentUser?.name || '');
+    setFuelDeltaCharge(0);
     setHasDamage(false);
     setDamageCost(0);
     setDamageDescription('');
@@ -581,7 +583,7 @@ export const ReturnAuditView: React.FC = () => {
               fuelDeltaCharge: 200,
               engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
               accessoriesReturnedOk: true,
-              inspectorName: 'Rajesh Sharma (Lead Tech)',
+              inspectorName: currentUser?.name || 'Inspection Officer',
               hasDamage: false,
               damageCost: 0,
               damageDescription: 'Clean return, no mechanical damage observed.',
@@ -606,7 +608,7 @@ export const ReturnAuditView: React.FC = () => {
                 fuelDeltaCharge: 200,
                 engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
                 accessoriesReturnedOk: true,
-                inspectorName: 'Rajesh Sharma (Lead Tech)',
+                inspectorName: currentUser?.name || 'Inspection Officer',
                 hasDamage: false,
                 damageCost: 0,
                 damageDescription: 'Clean return, no mechanical damage observed.',
@@ -617,7 +619,7 @@ export const ReturnAuditView: React.FC = () => {
               damageCost: 0,
               netRefund: Math.max(0, (whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0) - 200),
               refundDestination: whatsAppModalBooking.customer.phone,
-              inspectorName: 'Rajesh Sharma',
+              inspectorName: currentUser?.name || 'Inspection Officer',
             })
           }
           pdfButtonLabel="Print Settlement Voucher (F-004)"

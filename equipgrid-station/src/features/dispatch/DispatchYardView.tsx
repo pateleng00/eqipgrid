@@ -107,10 +107,10 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
 
   // Handover form state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [driverName, setDriverName] = useState<string>('Suraj Logistics (E-Rickshaw 3W)');
+  const [driverName, setDriverName] = useState<string>('');
   const [fuelLevel, setFuelLevel] = useState<string>('100% (Full Tank)');
-  const [engineHoursOut, setEngineHoursOut] = useState<number>(14.5);
-  const [conditionNotes, setConditionNotes] = useState<string>('Clean machine, fresh oil, air filter blown clean');
+  const [engineHoursOut, setEngineHoursOut] = useState<number>(0);
+  const [conditionNotes, setConditionNotes] = useState<string>('');
   const [checkEngine, setCheckEngine] = useState(true);
   const [checkAccessories, setCheckAccessories] = useState(true);
   const [checkSignature, setCheckSignature] = useState(true);
@@ -123,10 +123,10 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
   const openHandoverPanel = (b: Booking) => {
     setSelectedBooking(b);
     setIssuedChallan(null);
-    setDriverName('Suraj Logistics (E-Rickshaw 3W)');
+    setDriverName('');
     setFuelLevel('100% (Full Tank)');
-    setEngineHoursOut(14.5);
-    setConditionNotes('Clean machine, fresh oil, air filter blown clean');
+    setEngineHoursOut(0);
+    setConditionNotes('');
     setCheckEngine(true);
     setCheckAccessories(true);
     setCheckSignature(true);
