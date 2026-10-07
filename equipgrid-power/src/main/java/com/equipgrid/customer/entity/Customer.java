@@ -2,6 +2,7 @@ package com.equipgrid.customer.entity;
 
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.customer.enums.CustomerTier;
+import com.equipgrid.location.entity.Hub;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -46,4 +47,8 @@ public class Customer extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "hub_id")
+    private Hub hub;
 }

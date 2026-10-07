@@ -95,6 +95,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       setBookingHubId('');
       setBookingCategory('');
       setSelectedAssetId(0);
+      setSelectedCustomerId(0);
       setQuote(null);
       setDeliveryAddress('');
       setNotes('');
@@ -244,7 +245,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const [selectedAssetId, setSelectedAssetId] = useState<number>(
     preselectedAsset ? preselectedAsset.id : 0
   );
-  const [selectedCustomerId, setSelectedCustomerId] = useState<number>(customerList[0]?.id || 0);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number>(0);
   const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '') : '');
   const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '');
   const [bookingHubId, setBookingHubId] = useState<string>(preselectedAsset?.hubId ? String(preselectedAsset.hubId) : '');
@@ -309,12 +310,19 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     });
   }, [assets, hasSelectedFilters, bookingHubId, bookingCityId, bookingStateId, bookingCategory, hubs, cities]);
 
-  const scopedCustomers = useMemo(() => customerList.filter((customer) => {
-    if (bookingStateId && bookingStateId !== 'ALL' && customer.stateId !== Number(bookingStateId)) return false;
-    if (bookingCityId && bookingCityId !== 'ALL' && customer.cityId !== Number(bookingCityId)) return false;
-    if (bookingHubId && bookingHubId !== 'ALL' && customer.hubId !== Number(bookingHubId)) return false;
-    return true;
-  }), [customerList, bookingStateId, bookingCityId, bookingHubId]);
+  const scopedCustomers = useMemo(() => {
+    // Before hub selection, NO customer should show!
+    if (!bookingHubId || bookingHubId === 'ALL') {
+      return [];
+    }
+    const targetHubId = Number(bookingHubId);
+    return customerList.filter((customer) => {
+      if (customer.hubId) {
+        return customer.hubId === targetHubId;
+      }
+      return false;
+    });
+  }, [customerList, bookingHubId]);
 
   useEffect(() => {
     if (availableMachines.length && !availableMachines.some((asset) => asset.id === selectedAssetId)) {
@@ -325,10 +333,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   }, [availableMachines, selectedAssetId]);
 
   useEffect(() => {
-    if (scopedCustomers.length && !scopedCustomers.some((customer) => customer.id === selectedCustomerId)) {
-      setSelectedCustomerId(scopedCustomers[0].id);
+    // If hub is not selected or current customer is not in this hub's list, reset customer selection
+    if (!bookingHubId || bookingHubId === 'ALL') {
+      setSelectedCustomerId(0);
+    } else if (selectedCustomerId && !scopedCustomers.some((customer) => customer.id === selectedCustomerId)) {
+      setSelectedCustomerId(0);
     }
-  }, [scopedCustomers, selectedCustomerId]);
+  }, [scopedCustomers, selectedCustomerId, bookingHubId]);
 
   useEffect(() => {
     if (preselectedAsset) {
@@ -367,6 +378,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       });
       return;
     }
+    if (!selectedCustomerId) {
+      setErrorModal({
+        isOpen: true,
+        message: 'Please select a customer mapped to the chosen hub yard before confirming.',
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -401,6 +419,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   };
 
   const openCustomerDialog = (mode: 'add' | 'edit') => {
+    if (!bookingHubId || bookingHubId === 'ALL') {
+      setErrorModal({
+        isOpen: true,
+        message: 'Please select a State, City, and Hub Yard before adding or managing a customer.',
+      });
+      return;
+    }
     const customer = customerList.find((item) => item.id === selectedCustomerId);
     setCustomerForm(mode === 'edit' && customer
       ? { fullName: customer.fullName, phone: customer.phone, address: customer.address, email: customer.email || '', tier: customer.tier }
@@ -444,6 +469,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     setBookingHubId('');
     setBookingCategory('');
     setSelectedAssetId(0);
+    setSelectedCustomerId(0);
     setQuote(null);
     setDeliveryAddress('');
     setNotes('');
@@ -1061,27 +1087,54 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 {/* Customer Selection */}
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className="block text-xs font-bold">Customer / Contractor</label>
+                    <label className="block text-xs font-bold">
+                      Customer / Contractor <span className="text-amber-500">*</span>
+                    </label>
                     <div className="flex items-center gap-2">
-                      {scopedCustomers.length > 0 && <>
-                        <button type="button" onClick={() => openCustomerDialog('edit')} className="text-[11px] font-bold text-slate-400 hover:text-amber-400">Edit</button>
-                        <button type="button" onClick={() => setCustomerPendingDelete(customerList.find((customer) => customer.id === selectedCustomerId) || null)} className="text-[11px] font-bold text-rose-400 hover:text-rose-300">Delete</button>
-                      </>}
-                      <button type="button" onClick={() => openCustomerDialog('add')} className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-400"><UserPlus className="h-3 w-3" /> Add customer</button>
+                      {bookingHubId && bookingHubId !== 'ALL' && selectedCustomerId ? (
+                        <>
+                          <button type="button" onClick={() => openCustomerDialog('edit')} className="text-[11px] font-bold text-slate-400 hover:text-amber-400">Edit</button>
+                          <button type="button" onClick={() => setCustomerPendingDelete(customerList.find((customer) => customer.id === selectedCustomerId) || null)} className="text-[11px] font-bold text-rose-400 hover:text-rose-300">Delete</button>
+                        </>
+                      ) : null}
+                      <button
+                        type="button"
+                        onClick={() => openCustomerDialog('add')}
+                        className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-400 cursor-pointer"
+                      >
+                        <UserPlus className="h-3 w-3" /> Add customer
+                      </button>
                     </div>
                   </div>
-                  {scopedCustomers.length ? <SearchSelect
-                    options={scopedCustomers.map((c) => ({
-                      value: c.id,
-                      label: c.fullName,
-                      subLabel: `Phone: ${c.phone} • ${c.address}`,
-                      badge: c.tier,
-                    }))}
-                    value={selectedCustomerId}
-                    onChange={(val) => val && setSelectedCustomerId(Number(val))}
-                    placeholder="Search customer..."
-                    isClearable={false}
-                  /> : <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-400">No customer is assigned to this territory. <button type="button" onClick={() => openCustomerDialog('add')} className="font-bold text-amber-400 hover:text-amber-300">Add the first customer.</button></div>}
+
+                  {!bookingHubId || bookingHubId === 'ALL' ? (
+                    <div className={`rounded-xl border border-dashed p-3 text-xs flex items-center gap-2 ${
+                      isDaylight ? 'border-amber-300 bg-amber-50/70 text-amber-900 font-medium' : 'border-amber-500/30 bg-amber-950/20 text-amber-300'
+                    }`}>
+                      <MapPin className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                      <span>Select <strong>State, City & Hub Yard</strong> above first to view customers assigned to that yard.</span>
+                    </div>
+                  ) : scopedCustomers.length ? (
+                    <SearchSelect
+                      options={scopedCustomers.map((c) => ({
+                        value: c.id,
+                        label: c.fullName,
+                        subLabel: `Phone: ${c.phone} • ${c.address}`,
+                        badge: c.tier,
+                      }))}
+                      value={selectedCustomerId || ''}
+                      onChange={(val) => setSelectedCustomerId(Number(val) || 0)}
+                      placeholder="Select customer assigned to this hub yard..."
+                      isClearable={false}
+                    />
+                  ) : (
+                    <div className="rounded-xl border border-dashed border-amber-500/40 p-3.5 text-xs text-slate-400">
+                      No customer is mapped to this Hub Yard yet.{' '}
+                      <button type="button" onClick={() => openCustomerDialog('add')} className="font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer">
+                        Add the first customer for this hub.
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Rental Dates */}

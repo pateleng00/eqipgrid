@@ -33,4 +33,6 @@ public class CreateCustomerRequest {
     private Boolean verified = false;
 
     private String notes;
+
+    private Long hubId;
 }

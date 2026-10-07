@@ -1,0 +1,73 @@
+services:
+  # ─── 1. PostgreSQL Database (Used if not using AWS RDS) ──────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: equipgrid-postgres-db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-equipgrid_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-equipgrid_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-equipgrid_secure_pass_2026}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - equipgrid-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-equipgrid_user} -d ${POSTGRES_DB:-equipgrid_prod}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ─── 2. Power Backend (Spring Boot 3 + Java 21) ──────────────────────────────
+  power-backend:
+    build:
+      context: ./equipgrid-power
+      dockerfile: Dockerfile
+    container_name: equipgrid-power-backend
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL:-jdbc:postgresql://postgres:5432/equipgrid_prod}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-equipgrid_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-equipgrid_secure_pass_2026}
+      SERVER_PORT: 8081
+      SERVER_SERVLET_CONTEXT_PATH: /equipgrid
+      AWS_S3_ACCESS_KEY: ${AWS_S3_ACCESS_KEY:-}
+      AWS_S3_SECRET_KEY: ${AWS_S3_SECRET_KEY:-}
+      AWS_S3_REGION: ${AWS_S3_REGION:-ap-south-1}
+      AWS_S3_TMP_BUCKET_NAME: ${AWS_S3_TMP_BUCKET_NAME:-equipgrid-tmp-prod}
+      AWS_S3_COMMON_BUCKET_NAME: ${AWS_S3_COMMON_BUCKET_NAME:-equipgrid-assets-prod}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    networks:
+      - equipgrid-network
+    expose:
+      - "8081"
+
+  # ─── 3. Station Frontend (React Vite SPA + Nginx Reverse Proxy) ──────────────
+  station-frontend:
+    build:
+      context: ./equipgrid-station
+      dockerfile: Dockerfile
+    container_name: equipgrid-station-frontend
+    restart: always
+    depends_on:
+      - power-backend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      # Optional: Mount SSL certificates if using Let's Encrypt directly on the host
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - equipgrid-network
+
+volumes:
+  postgres_data:
+    name: equipgrid_postgres_data
+
+networks:
+  equipgrid-network:
+    name: equipgrid-network
+    driver: bridge

@@ -7,6 +7,7 @@ import com.equipgrid.customer.dto.request.VerifyCustomerRequest;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.repository.CustomerQueryRepository;
 import com.equipgrid.customer.repository.CustomerRepository;
+import com.equipgrid.location.repository.HubRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class CustomerServiceImpl implements ICustomerService {
 
     private final CustomerRepository customerRepository;
     private final CustomerQueryRepository customerQueryRepository;
+    private final HubRepository hubRepository;
     private final IAuditService auditService;
 
     @Override
@@ -54,6 +56,9 @@ public class CustomerServiceImpl implements ICustomerService {
         if (request.getTier() != null) customer.setTier(request.getTier());
         if (request.getVerified() != null) customer.setVerified(request.getVerified());
         if (request.getNotes() != null) customer.setNotes(request.getNotes());
+        if (request.getHubId() != null) {
+            hubRepository.findById(request.getHubId()).ifPresent(customer::setHub);
+        }
 
         Customer saved = customerRepository.save(customer);
         auditService.log("CUSTOMER", saved.getId().toString(), "SAVE_CUSTOMER",

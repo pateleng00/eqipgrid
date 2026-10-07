@@ -507,6 +507,9 @@ export class ApiStore {
           tier: c.tier === 2 ? 'TIER_2_VERIFIED' : 'TIER_1_BASIC',
           verified: Boolean(c.verified),
           notes: c.notes,
+          hubId: c.hub?.id || c.hubId,
+          cityId: c.hub?.cityId || c.cityId,
+          stateId: c.hub?.city?.stateId || c.stateId,
         }));
       }
 
@@ -698,6 +701,7 @@ export class ApiStore {
         tier: tierNum,
         verified: data.verified,
         notes: data.notes,
+        hubId: data.hubId,
       }),
     }).then((raw) => {
       const idx = this.customers.findIndex((c) => c.id === tempId);
