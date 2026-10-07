@@ -23,6 +23,9 @@ import {
   RentalConfiguration,
   ReturnInspection,
   State,
+  UserAccount,
+  CreateUserPayload,
+  UpdateUserPayload,
 } from '../types';
 
 // Verified AWS S3 assets bucket base URL
@@ -125,9 +128,19 @@ const API_BASE = '/equipgrid';
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
-  const headers = {
+  let token = '';
+  try {
+    const authStored = localStorage.getItem('equipgrid_auth_user');
+    if (authStored) {
+      const parsed = JSON.parse(authStored);
+      if (parsed?.token) token = parsed.token;
+    }
+  } catch {}
+
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...(options?.headers || {}),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...((options?.headers as Record<string, string>) || {}),
   };
 
   const res = await fetch(url, { ...options, headers });
@@ -1484,6 +1497,114 @@ export class ApiStore {
         status: 'SENT',
       };
     }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // USER MANAGEMENT & RBAC APIS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async getUsers(hubId?: number, role?: string): Promise<UserAccount[]> {
+    try {
+      const params = new URLSearchParams();
+      if (hubId) params.append('hubId', String(hubId));
+      if (role) params.append('role', role);
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      return await request<UserAccount[]>(`/users${qs}`);
+    } catch (err) {
+      console.warn('Backend /users request fallback:', err);
+      // Fallback list of users
+      return [
+        {
+          id: 1,
+          username: 'admin@equipgrid.in',
+          email: 'admin@equipgrid.in',
+          fullName: 'Vikramaditya Rao',
+          role: 'ROOT',
+          roleTitle: 'Root (Super Admin)',
+          phone: '+919876543210',
+          hubId: null,
+          hubName: 'Central Headquarter (UP)',
+          active: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          username: 'admin.ops@equipgrid.in',
+          email: 'admin.ops@equipgrid.in',
+          fullName: 'Priya Singhania',
+          role: 'ADMIN',
+          roleTitle: 'Operations Administrator',
+          phone: '+919876543215',
+          hubId: null,
+          hubName: 'Central Headquarter (UP)',
+          active: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 3,
+          username: 'manager.hardoi@equipgrid.in',
+          email: 'manager.hardoi@equipgrid.in',
+          fullName: 'Rajesh Sharma',
+          role: 'MANAGER',
+          roleTitle: 'Yard & Fleet Manager',
+          phone: '+919876543211',
+          hubId: 1,
+          hubName: 'Hardoi Central Yard',
+          active: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 4,
+          username: 'booking.desk@equipgrid.in',
+          email: 'booking.desk@equipgrid.in',
+          fullName: 'Amit Verma',
+          role: 'OPERATOR',
+          roleTitle: 'Station Booking Operator',
+          phone: '+919876543212',
+          hubId: 1,
+          hubName: 'Hardoi Central Yard',
+          active: true,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+  }
+
+  async createUser(payload: CreateUserPayload): Promise<UserAccount> {
+    const res = await request<UserAccount>('/users', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    this.notify();
+    return res;
+  }
+
+  async updateUser(id: number, payload: UpdateUserPayload): Promise<UserAccount> {
+    const res = await request<UserAccount>(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+    this.notify();
+    return res;
+  }
+
+  async deleteUser(id: number): Promise<void> {
+    await request<void>(`/users/${id}`, {
+      method: 'DELETE',
+    });
+    this.notify();
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // MACHINERY FLEET DELETION (STRICTLY ROOT ONLY)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  async deleteAsset(id: number): Promise<void> {
+    await request<void>(`/assets/${id}`, {
+      method: 'DELETE',
+    });
+    this.assets = this.assets.filter((a) => a.id !== id);
+    this.notify();
   }
 }
 

@@ -42,6 +42,19 @@ public class UserQueryRepository {
         );
     }
 
+    public Optional<User> fetchByUsernameOrEmail(String identifier) {
+        if (identifier == null) {
+            return Optional.empty();
+        }
+        String clean = identifier.trim();
+        return Optional.ofNullable(
+                queryFactory.selectFrom(qUser)
+                        .where(qUser.username.equalsIgnoreCase(clean)
+                                .or(qUser.email.equalsIgnoreCase(clean)))
+                        .fetchOne()
+        );
+    }
+
     public boolean existsByUsername(String username) {
         if (username == null) {
             return false;
@@ -53,8 +66,29 @@ public class UserQueryRepository {
         return count != null;
     }
 
+    public boolean existsByEmail(String email) {
+        if (email == null) {
+            return false;
+        }
+        Integer count = queryFactory.selectOne()
+                .from(qUser)
+                .where(qUser.email.equalsIgnoreCase(email.trim()))
+                .fetchFirst();
+        return count != null;
+    }
+
     public List<User> fetchAll() {
         return queryFactory.selectFrom(qUser)
+                .orderBy(qUser.id.desc())
+                .fetch();
+    }
+
+    public List<User> fetchByHubId(Long hubId) {
+        if (hubId == null) {
+            return List.of();
+        }
+        return queryFactory.selectFrom(qUser)
+                .where(qUser.hub.id.eq(hubId))
                 .orderBy(qUser.id.desc())
                 .fetch();
     }

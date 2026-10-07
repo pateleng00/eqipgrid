@@ -1,91 +1,160 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type UserRole = 'admin' | 'manager' | 'user' | 'guest';
+export type UserRole = 'root' | 'admin' | 'manager' | 'user' | 'guest';
 
 export interface AuthUser {
   id: string;
   name: string;
   email: string;
+  username?: string;
   role: UserRole;
   roleTitle: string;
+  hubId?: number | null;
   hubLocation: string;
   avatarInitials: string;
+  token?: string;
   permissions: {
+    canManageUsers: boolean;
+    canDeleteUsers: boolean;
+    canDeleteAdmins: boolean;
+    canDeleteManagers: boolean;
+    canManageAllHubs: boolean;
     canManageFleet: boolean;
+    canDeleteMachines: boolean;
     canDispatch: boolean;
     canManagePricing: boolean;
     canManageLocations: boolean;
     canBook: boolean;
+    canRefund: boolean;
     isReadOnly: boolean;
   };
 }
 
 export const PRESET_USERS: Record<UserRole, AuthUser> = {
-  admin: {
-    id: 'usr-admin-01',
+  root: {
+    id: 'usr-root-01',
     name: 'Vikramaditya Rao',
     email: 'admin@equipgrid.in',
-    role: 'admin',
-    roleTitle: 'Super Administrator',
+    username: 'admin@equipgrid.in',
+    role: 'root',
+    roleTitle: 'Root (Super Administrator)',
     hubLocation: 'Central Headquarter (UP)',
     avatarInitials: 'VR',
     permissions: {
+      canManageUsers: true,
+      canDeleteUsers: true,
+      canDeleteAdmins: true,
+      canDeleteManagers: true,
+      canManageAllHubs: true,
       canManageFleet: true,
+      canDeleteMachines: true,
       canDispatch: true,
       canManagePricing: true,
       canManageLocations: true,
       canBook: true,
+      canRefund: true,
+      isReadOnly: false,
+    },
+  },
+  admin: {
+    id: 'usr-admin-02',
+    name: 'Priya Singhania',
+    email: 'admin.ops@equipgrid.in',
+    username: 'admin.ops@equipgrid.in',
+    role: 'admin',
+    roleTitle: 'Operations Administrator',
+    hubLocation: 'Central Headquarter (UP)',
+    avatarInitials: 'PS',
+    permissions: {
+      canManageUsers: true,
+      canDeleteUsers: true,
+      canDeleteAdmins: false,
+      canDeleteManagers: false,
+      canManageAllHubs: true,
+      canManageFleet: true,
+      canDeleteMachines: false,
+      canDispatch: true,
+      canManagePricing: true,
+      canManageLocations: true,
+      canBook: true,
+      canRefund: true,
       isReadOnly: false,
     },
   },
   manager: {
-    id: 'usr-mgr-02',
+    id: 'usr-mgr-03',
     name: 'Rajesh Sharma',
     email: 'manager.hardoi@equipgrid.in',
+    username: 'manager.hardoi@equipgrid.in',
     role: 'manager',
     roleTitle: 'Yard & Fleet Manager',
+    hubId: 1,
     hubLocation: 'Hardoi Central Hub Yard',
     avatarInitials: 'RS',
     permissions: {
-      canManageFleet: true,
+      canManageUsers: true,
+      canDeleteUsers: true,
+      canDeleteAdmins: false,
+      canDeleteManagers: false,
+      canManageAllHubs: false,
+      canManageFleet: false,
+      canDeleteMachines: false,
       canDispatch: true,
       canManagePricing: false,
       canManageLocations: false,
       canBook: true,
+      canRefund: true,
       isReadOnly: false,
     },
   },
   user: {
-    id: 'usr-desk-03',
+    id: 'usr-desk-04',
     name: 'Amit Verma',
     email: 'booking.desk@equipgrid.in',
+    username: 'booking.desk@equipgrid.in',
     role: 'user',
     roleTitle: 'Station Booking Desk Operator',
+    hubId: 1,
     hubLocation: 'Hardoi Central Hub Yard',
     avatarInitials: 'AV',
     permissions: {
+      canManageUsers: false,
+      canDeleteUsers: false,
+      canDeleteAdmins: false,
+      canDeleteManagers: false,
+      canManageAllHubs: false,
       canManageFleet: false,
+      canDeleteMachines: false,
       canDispatch: false,
       canManagePricing: false,
       canManageLocations: false,
       canBook: true,
+      canRefund: false,
       isReadOnly: false,
     },
   },
   guest: {
-    id: 'usr-gst-04',
+    id: 'usr-gst-05',
     name: 'Field Auditor / Viewer',
     email: 'guest.auditor@equipgrid.in',
+    username: 'guest.auditor@equipgrid.in',
     role: 'guest',
     roleTitle: 'Guest (Read-Only Access)',
     hubLocation: 'All UP Hubs (Viewer)',
     avatarInitials: 'GA',
     permissions: {
+      canManageUsers: false,
+      canDeleteUsers: false,
+      canDeleteAdmins: false,
+      canDeleteManagers: false,
+      canManageAllHubs: false,
       canManageFleet: false,
+      canDeleteMachines: false,
       canDispatch: false,
       canManagePricing: false,
       canManageLocations: false,
       canBook: false,
+      canRefund: false,
       isReadOnly: true,
     },
   },
@@ -95,7 +164,7 @@ interface AuthContextType {
   currentUser: AuthUser | null;
   isAuthenticated: boolean;
   loginAsRole: (role: UserRole) => void;
-  loginWithCredentials: (email: string, role?: UserRole) => boolean;
+  loginWithCredentials: (email: string, password?: string) => Promise<boolean>;
   logout: () => void;
   switchRole: (role: UserRole) => void;
 }
@@ -135,11 +204,56 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCurrentUser(user);
   };
 
-  const loginWithCredentials = (email: string): boolean => {
-    const lower = email.toLowerCase().trim();
-    // Match against known preset users
+  const loginWithCredentials = async (emailOrUsername: string, password?: string): Promise<boolean> => {
+    const clean = emailOrUsername.toLowerCase().trim();
+
+    // 1. Try backend authentication if available
+    try {
+      const res = await fetch('/equipgrid/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: clean,
+          password: password || 'admin123',
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.data && data.data.token) {
+          const u = data.data;
+          const roleStr = String(u.role).toUpperCase();
+          const role: UserRole = roleStr === 'ROOT' ? 'root'
+            : roleStr === 'ADMIN' ? 'admin'
+            : roleStr === 'MANAGER' ? 'manager' : 'user';
+
+          const authUser: AuthUser = {
+            ...PRESET_USERS[role],
+            id: String(u.userId),
+            name: u.fullName || u.username,
+            email: u.email || u.username,
+            username: u.username,
+            role,
+            token: u.token,
+            hubId: u.hubId,
+            hubLocation: u.hubName || PRESET_USERS[role].hubLocation,
+          };
+          setCurrentUser(authUser);
+          return true;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend login fallback to preset users:', err);
+    }
+
+    // 2. Exact match against admin@equipgrid.in -> ROOT
+    if (clean === 'admin@equipgrid.in' || clean === 'admin') {
+      setCurrentUser(PRESET_USERS.root);
+      return true;
+    }
+
+    // 3. Match against known preset users
     const foundUser = Object.values(PRESET_USERS).find(
-      (u) => u.email.toLowerCase() === lower
+      (u) => u.email.toLowerCase() === clean || u.username?.toLowerCase() === clean
     );
 
     if (foundUser) {
@@ -147,19 +261,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return true;
     }
 
-    // Determine role based on credentials / email prefix
+    // 4. Determine role based on credentials / email prefix
     let role: UserRole = 'user';
-    if (lower.includes('admin') || lower.includes('super') || lower.includes('hq')) {
+    if (clean.includes('root')) {
+      role = 'root';
+    } else if (clean.includes('admin') || clean.includes('super') || clean.includes('hq')) {
       role = 'admin';
-    } else if (lower.includes('manager') || lower.includes('yard') || lower.includes('lead')) {
+    } else if (clean.includes('manager') || clean.includes('yard') || clean.includes('lead')) {
       role = 'manager';
     }
 
     const fallback: AuthUser = {
       ...PRESET_USERS[role],
       id: `usr-${Date.now()}`,
-      email,
-      name: email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Station Operator',
+      email: clean,
+      name: clean.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || 'Station Operator',
     };
     setCurrentUser(fallback);
     return true;

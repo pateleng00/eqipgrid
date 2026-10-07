@@ -29,4 +29,9 @@ public interface IAssetService {
      * Get distinct machine models grouped for the customer website catalog.
      */
     List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId);
+
+    /**
+     * Delete an asset from fleet - strictly restricted to ROOT users.
+     */
+    void deleteAsset(Long id, com.equipgrid.auth.entity.User caller);
 }

@@ -300,3 +300,40 @@ export interface DashboardSummary {
   fleetUtilizationPercent: number;
   zeroCreditCompliancePercent: number;
 }
+
+export type StaffRole = 'ROOT' | 'ADMIN' | 'MANAGER' | 'OPERATOR' | 'TECHNICIAN' | 'DRIVER' | 'CUSTOMER';
+
+export interface UserAccount {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  role: StaffRole;
+  roleTitle?: string;
+  phone?: string;
+  hubId?: number | null;
+  hubName?: string | null;
+  hubCode?: string | null;
+  active: boolean;
+  createdAt?: string;
+}
+
+export interface CreateUserPayload {
+  fullName: string;
+  email: string;
+  username?: string;
+  password: string;
+  phone?: string;
+  role: StaffRole;
+  hubId?: number | null;
+}
+
+export interface UpdateUserPayload {
+  fullName?: string;
+  email?: string;
+  password?: string;
+  phone?: string;
+  role?: StaffRole;
+  hubId?: number | null;
+  active?: boolean;
+}

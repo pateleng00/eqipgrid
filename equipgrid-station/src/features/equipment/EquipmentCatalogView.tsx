@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useCallback } from 'react';
 import {
   Truck, Plus, Search, RotateCcw, Zap, Building2, MapPin,
   Clock, UserCheck, Play, Pause, ChevronLeft, ChevronRight,
-  Video, Images, X, Maximize2, Volume2, VolumeX, Star,
+  Video, Images, X, Maximize2, Volume2, VolumeX, Star, Trash2,
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -427,7 +427,9 @@ const MachineCard: React.FC<{
   asset: Asset;
   onBook: () => void;
   onExpand: () => void;
-}> = ({ asset, onBook, onExpand }) => {
+  onDelete?: () => void;
+  isRoot?: boolean;
+}> = ({ asset, onBook, onExpand, onDelete, isRoot }) => {
   const { isDaylight } = useTheme();
   const isAvail = asset.status === 'AVAILABLE';
 
@@ -512,21 +514,36 @@ const MachineCard: React.FC<{
                 Deposit: {formatINR(asset.depositAmount)}
               </div>
             </div>
-            <button
-              onClick={onBook}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                isAvail
-                  ? isDaylight
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm shadow-amber-200'
-                    : 'bg-amber-500 hover:bg-amber-400 text-black'
-                  : isDaylight
-                  ? 'bg-slate-200 text-slate-500 cursor-default'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
-              }`}
-            >
-              <Zap className="h-3.5 w-3.5" />
-              {isAvail ? 'Book Now' : 'Unavailable'}
-            </button>
+            <div className="flex items-center gap-1.5">
+              {isRoot && onDelete && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="p-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                  title="Delete Machine from Fleet (Root Authority Only)"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                onClick={onBook}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  isAvail
+                    ? isDaylight
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm shadow-amber-200'
+                      : 'bg-amber-500 hover:bg-amber-400 text-black'
+                    : isDaylight
+                    ? 'bg-slate-200 text-slate-500 cursor-default'
+                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                {isAvail ? 'Book Now' : 'Unavailable'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -539,10 +556,24 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const { isDaylight } = useTheme();
   const { currentUser } = useAuth();
   const isGuest = currentUser?.role === 'guest';
+  const isRoot = currentUser?.role === 'root';
+  const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
   const [assetsList, setAssetsList] = useState<Asset[]>([...api.assets]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  const handleDeleteAssetConfirm = async () => {
+    if (!assetToDelete) return;
+    try {
+      await api.deleteAsset(assetToDelete.id);
+      setAssetToDelete(null);
+      setAssetsList((prev) => prev.filter((a) => a.id !== assetToDelete.id));
+      showFeedback('success', 'Machinery Deleted', `${assetToDelete.name} has been removed from the fleet.`);
+    } catch (err: any) {
+      showFeedback('error', 'Deletion Failed', err.message || 'Could not delete machine.');
+    }
+  };
 
   React.useEffect(() => {
     setAssetsList([...api.assets]);
@@ -734,6 +765,8 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                   asset={asset}
                   onBook={() => onSelectForBooking(asset)}
                   onExpand={() => setLightboxAsset(asset)}
+                  onDelete={() => setAssetToDelete(asset)}
+                  isRoot={isRoot}
                 />
               ))}
             </div>
@@ -815,9 +848,20 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       </td>
                       <td className="py-3 px-4"><StatusBadge status={asset.status} size="sm" /></td>
                       <td className="py-3 px-4 text-right">
-                        <button onClick={() => onSelectForBooking(asset)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${isAvail ? isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm' : 'bg-amber-500 hover:bg-amber-400 text-black' : isDaylight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                          <Zap className="h-3.5 w-3.5" />{isAvail ? 'Book' : 'Unavailable'}
-                        </button>
+                        <div className="inline-flex items-center gap-1.5 justify-end">
+                          {isRoot && (
+                            <button
+                              onClick={() => setAssetToDelete(asset)}
+                              className="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                              title="Delete Machine from Fleet (Root Authority Only)"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => onSelectForBooking(asset)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${isAvail ? isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm' : 'bg-amber-500 hover:bg-amber-400 text-black' : isDaylight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
+                            <Zap className="h-3.5 w-3.5" />{isAvail ? 'Book' : 'Unavailable'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -849,6 +893,18 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
         variant={feedbackModal.variant}
         title={feedbackModal.title}
         message={feedbackModal.message}
+      />
+
+      {/* Machine Deletion Confirmation Modal (Root only) */}
+      <ConfirmationModal
+        isOpen={!!assetToDelete}
+        onClose={() => setAssetToDelete(null)}
+        onConfirm={handleDeleteAssetConfirm}
+        variant="error"
+        title={`Delete Machine: ${assetToDelete?.name} (${assetToDelete?.assetTag})`}
+        message={`Are you sure you want to permanently remove this machinery from the fleet? This operation is irreversible and strictly restricted to Root administrators.`}
+        confirmLabel="Confirm Permanent Delete"
+        showCancel={true}
       />
     </div>
   );

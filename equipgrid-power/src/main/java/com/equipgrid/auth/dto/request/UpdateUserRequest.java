@@ -1,4 +1,4 @@
-package com.equipgrid.auth.dto.response;
+package com.equipgrid.auth.dto.request;
 
 import com.equipgrid.auth.enums.Role;
 import lombok.AllArgsConstructor;
@@ -10,14 +10,13 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
-    private String token;
-    private String tokenType;
-    private Long userId;
-    private String username;
-    private String email;
+public class UpdateUserRequest {
+
     private String fullName;
+    private String email;
+    private String password;
+    private String phone;
     private Role role;
     private Long hubId;
-    private String hubName;
+    private Boolean active;
 }

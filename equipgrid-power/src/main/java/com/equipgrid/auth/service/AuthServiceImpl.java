@@ -27,7 +27,7 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userQueryRepository.fetchByUsername(request.getUsername())
+        User user = userQueryRepository.fetchByUsernameOrEmail(request.getUsername())
                 .orElseThrow(() -> new Exceptions.BusinessRuleViolationException("Invalid username or password"));
 
         boolean matches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash())
@@ -44,8 +44,11 @@ public class AuthServiceImpl implements IAuthService {
                 .tokenType("Bearer")
                 .userId(user.getId())
                 .username(user.getUsername())
+                .email(user.getEmail())
                 .fullName(user.getFullName())
                 .role(user.getRole())
+                .hubId(user.getHub() != null ? user.getHub().getId() : null)
+                .hubName(user.getHub() != null ? user.getHub().getName() : null)
                 .build();
     }
 

@@ -18,6 +18,11 @@ interface NavbarProps {
 }
 
 const ROLE_BADGE: Record<UserRole, { label: string; className: string }> = {
+  root: {
+    label: 'Root (Super Admin)',
+    className:
+      'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/60 font-black',
+  },
   admin: {
     label: 'Admin',
     className:
@@ -41,6 +46,7 @@ const ROLE_BADGE: Record<UserRole, { label: string; className: string }> = {
 };
 
 const ROLE_AVATAR: Record<UserRole, string> = {
+  root: 'bg-gradient-to-tr from-amber-600 to-purple-600 text-white font-bold ring-2 ring-amber-400',
   admin: 'bg-purple-600 text-white',
   manager: 'bg-blue-600 text-white',
   user: 'bg-emerald-600 text-white',

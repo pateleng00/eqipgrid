@@ -15,6 +15,7 @@ import {
   Layers,
   Lock,
   Eye,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTheme } from '../lib/ThemeContext';
@@ -113,6 +114,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         },
       ],
     },
+    ...((currentUser?.role === 'root' || currentUser?.role === 'admin' || currentUser?.role === 'manager')
+      ? [
+          {
+            groupName: 'ACCESS CONTROL',
+            items: [
+              {
+                id: 'users',
+                label: 'Staff & Roles',
+                icon: <UserCheck className="h-4 w-4" />,
+              },
+            ],
+          },
+        ]
+      : []),
   ];
 
   return (

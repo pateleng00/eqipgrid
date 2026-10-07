@@ -15,7 +15,8 @@ public enum Role {
     DRIVER((short) 4),
     DEALER((short) 5),
     MANAGER((short) 6),
-    ADMIN((short) 7);
+    ADMIN((short) 7),
+    ROOT((short) 8);
 
     @JsonValue
     private final Short value;

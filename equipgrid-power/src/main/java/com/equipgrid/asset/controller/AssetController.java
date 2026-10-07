@@ -90,4 +90,13 @@ public class AssetController {
         Asset updated = assetService.uploadImage(id, file, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("Image uploaded successfully", updated));
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete machinery from fleet (Strictly ROOT only)")
+    public ResponseEntity<ApiResponse<Object>> deleteAsset(
+            @PathVariable Long id,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.equipgrid.auth.entity.User currentUser) {
+        assetService.deleteAsset(id, currentUser);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Machinery deleted successfully"));
+    }
 }

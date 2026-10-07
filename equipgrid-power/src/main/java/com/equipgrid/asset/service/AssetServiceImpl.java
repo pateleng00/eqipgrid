@@ -266,4 +266,19 @@ public class AssetServiceImpl implements IAssetService {
         if (upper.contains("AUGER") || upper.contains("HOLE")) return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
         return name;
     }
+
+    @Override
+    @Transactional
+    public void deleteAsset(Long id, com.equipgrid.auth.entity.User caller) {
+        if (caller != null && caller.getRole() != null && caller.getRole() != com.equipgrid.auth.enums.Role.ROOT) {
+            throw new Exceptions.BusinessRuleViolationException(
+                    "Forbidden: Only Root administrators can delete machinery from the fleet. Admins and Managers cannot delete machines.");
+        }
+
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Asset not found with ID: " + id));
+
+        assetRepository.delete(asset);
+        log.info("Asset {} (Tag: {}) deleted by actor: {}", id, asset.getAssetTag(), caller != null ? caller.getUsername() : "ROOT");
+    }
 }

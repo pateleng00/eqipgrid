@@ -34,6 +34,7 @@ import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationMo
 import { HandoverChecklistModal } from '../../components/HandoverChecklistModal';
 import { CollectPaymentModal } from '../../components/CollectPaymentModal';
 import { useTheme } from '../../lib/ThemeContext';
+import { useAuth } from '../../lib/AuthContext';
 import { api } from '../../services/api';
 import { Asset, Booking, Customer, CustomerTier, QuoteCalculation } from '../../types';
 import { printBookingConfirmationPdf, printDispatchChallanPdf } from '../../services/voucherPdfService';
@@ -57,6 +58,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   onCreateModalOpened,
 }) => {
   const { isDaylight } = useTheme();
+  const { currentUser } = useAuth();
+  const isManager = currentUser?.role === 'manager';
+  const managerHubId = isManager && currentUser?.hubId ? String(currentUser.hubId) : null;
+
   const [bookingsList, setBookingsList] = useState<Booking[]>([...api.bookings]);
   const [customerList, setCustomerList] = useState<Customer[]>([...api.customers]);
   const [isLoading, setIsLoading] = useState(false);
@@ -92,7 +97,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     if (openCreateModal) {
       setBookingStateId('');
       setBookingCityId('');
-      setBookingHubId('');
+      setBookingHubId(managerHubId || '');
       setBookingCategory('');
       setSelectedAssetId(0);
       setSelectedCustomerId(0);
@@ -115,7 +120,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   // Filter states
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
   const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
-  const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
+  const [selectedHubId, setSelectedHubId] = useState<string>(managerHubId || 'ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visibleCount, setVisibleCount] = useState<number>(7);
@@ -248,7 +253,11 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(0);
   const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '') : '');
   const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '');
-  const [bookingHubId, setBookingHubId] = useState<string>(preselectedAsset?.hubId ? String(preselectedAsset.hubId) : '');
+  const [bookingHubId, setBookingHubId] = useState<string>(
+    preselectedAsset?.hubId
+      ? String(preselectedAsset.hubId)
+      : managerHubId || ''
+  );
   const [bookingCategory, setBookingCategory] = useState<string>(preselectedAsset?.category || '');
   const [customerDialog, setCustomerDialog] = useState<'add' | 'edit' | null>(null);
   const [customerPendingDelete, setCustomerPendingDelete] = useState<Customer | null>(null);

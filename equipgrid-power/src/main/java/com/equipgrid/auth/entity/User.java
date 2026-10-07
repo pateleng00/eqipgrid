@@ -21,6 +21,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 64)
     private String username;
 
+    @Column(unique = true, length = 128)
+    private String email;
+
     @com.fasterxml.jackson.annotation.JsonIgnore
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
@@ -33,6 +36,10 @@ public class User extends BaseEntity {
 
     @Column(length = 20)
     private String phone;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "hub_id")
+    private com.equipgrid.location.entity.Hub hub;
 
     @Builder.Default
     @Column(nullable = false)

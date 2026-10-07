@@ -10,6 +10,7 @@ import { DealerNetworkView } from '../features/dealer/DealerNetworkView';
 import { DailyCashReconciliationView } from '../features/reporting/DailyCashReconciliationView';
 import { RentalConfigView } from '../features/rentalconfig/RentalConfigView';
 import { LocationMasterView } from '../features/location/LocationMasterView';
+import { UserManagementView } from '../features/users/UserManagementView';
 import { Asset } from '../types';
 import { useAuth } from '../lib/AuthContext';
 import { LoginPage } from '../features/auth/LoginPage';
@@ -91,6 +92,7 @@ export const App: React.FC = () => {
       {activeTab === 'payments' && <PaymentLedgerView />}
       {activeTab === 'dealers' && <DealerNetworkView />}
       {activeTab === 'cash' && <DailyCashReconciliationView />}
+      {activeTab === 'users' && <UserManagementView />}
 
       {/* Guest booking restriction modal */}
       <ConfirmationModal
