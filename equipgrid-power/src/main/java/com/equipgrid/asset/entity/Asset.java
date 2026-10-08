@@ -28,12 +28,6 @@ public class Asset extends BaseEntity {
     @Column(name = "asset_tag", nullable = false, unique = true, length = 32)
     private String assetTag;
 
-    @Column(nullable = false, length = 128)
-    private String name;
-
-    @Column(nullable = false)
-    private AssetCategory category;
-
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "type_id")
     private EquipmentType type;
@@ -54,8 +48,7 @@ public class Asset extends BaseEntity {
     @Column(name = "image_url", nullable = false, length = 512)
     private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
 
-    @Column(name = "model_name", length = 128)
-    private String modelName;
+
 
     @Column(name = "serial_number", length = 128)
     private String serialNumber;
@@ -86,6 +79,14 @@ public class Asset extends BaseEntity {
 
     @Column(name = "accessories_included", columnDefinition = "TEXT")
     private String accessoriesIncluded;
+
+    public String getName() {
+        return this.model != null ? this.model.getName() : null;
+    }
+
+    public AssetCategory getCategory() {
+        return this.type != null ? this.type.getCategory() : null;
+    }
 
     /**
      * Associated media items (images and video) populated dynamically.

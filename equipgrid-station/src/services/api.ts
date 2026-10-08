@@ -97,7 +97,7 @@ export function resolveAssetS3Key(assetTag: string): string {
 export function buildMachineMedia(
   assetId: number,
   assetTag: string,
-  _category: 'CONSTRUCTION' | 'AGRICULTURE' = 'CONSTRUCTION',
+  _category: 'CONSTRUCTION' | 'AGRICULTURE' | 'MULTIPURPOSE_FLEET' = 'CONSTRUCTION',
   _typeName: string = '',
   _baseImageUrl?: string
 ): AssetMedia[] {
@@ -1033,7 +1033,7 @@ export class ApiStore {
       mediaItems: buildMachineMedia(
         Date.now(),
         tag,
-        type?.category || 'CONSTRUCTION',
+        type?.category,
         type?.name,
         data.imageUrl
       ),
@@ -1434,7 +1434,7 @@ export class ApiStore {
     const upi = this.payments.filter((p) => p.paymentMode === 'UPI').reduce((sum, p) => sum + p.amount, 0);
     const bank = this.payments.filter((p) => p.paymentMode === 'BANK_TRANSFER').reduce((sum, p) => sum + p.amount, 0);
 
-    const opening = 10000;
+    const opening = 0;
     const totalReceipts = cash + upi + bank;
 
     return {

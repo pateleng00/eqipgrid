@@ -78,11 +78,11 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   // 4. Equipment Type selection
   const [selectedTypeId, setSelectedTypeId] = useState<number | ''>(() => availableTypes[0]?.id || '');
 
-  // 5. Machine Model selection (driven by Type & Manufacturer)
+  // 5. Machine Model selection (driven by Manufacturer only)
   const availableModels = useMemo(() => {
-    if (!selectedTypeId || !selectedMfgId) return [];
-    return api.getMachineModels(Number(selectedTypeId), Number(selectedMfgId));
-  }, [selectedTypeId, selectedMfgId]);
+    if (!selectedMfgId) return [];
+    return api.getMachineModels(undefined, Number(selectedMfgId));
+  }, [selectedMfgId]);
 
   const [selectedModelId, setSelectedModelId] = useState<number | ''>('');
 
@@ -129,33 +129,18 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
     const filtered = types.filter((t) => t.category === cat);
     if (filtered.length > 0) {
       setSelectedTypeId(filtered[0].id);
-      const models = api.getMachineModels(filtered[0].id, Number(selectedMfgId));
-      if (models.length > 0) {
-        setSelectedModelId(models[0].id);
-        setMachineName(models[0].name);
-      } else {
-        setSelectedModelId('');
-      }
     } else {
       setSelectedTypeId('');
-      setSelectedModelId('');
     }
   };
 
   const handleTypeChange = (typeId: number) => {
     setSelectedTypeId(typeId);
-    const models = api.getMachineModels(typeId, Number(selectedMfgId));
-    if (models.length > 0) {
-      setSelectedModelId(models[0].id);
-      setMachineName(models[0].name);
-    } else {
-      setSelectedModelId('');
-    }
   };
 
   const handleMfgChange = (mfgId: number) => {
     setSelectedMfgId(mfgId);
-    const models = api.getMachineModels(Number(selectedTypeId), mfgId);
+    const models = api.getMachineModels(undefined, mfgId);
     if (models.length > 0) {
       setSelectedModelId(models[0].id);
       setMachineName(models[0].name);
@@ -374,7 +359,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               </div>
             </div>
 
-            {/* 2. Category & Manufacturer */}
+            {/* 2. Category & Equipment Type */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold mb-1">Category *</label>
@@ -382,6 +367,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                   options={[
                     { value: 'CONSTRUCTION', label: 'Construction', badge: 'HEAVY' },
                     { value: 'AGRICULTURE', label: 'Agriculture', badge: 'AGRI' },
+                    { value: 'MULTIPURPOSE_FLEET', label: 'Multipurpose Fleet', badge: 'FLEET' },
                   ]}
                   value={selectedCategory}
                   onChange={(val) => val && handleCategoryChange(val as AssetCategory)}
@@ -389,24 +375,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold mb-1">Manufacturer (OEM) *</label>
-                <SearchSelect
-                  options={manufacturers.map((m) => ({
-                    value: m.id,
-                    label: m.name,
-                    subLabel: `Origin: ${m.country} • Code: ${m.code}`,
-                  }))}
-                  value={selectedMfgId}
-                  onChange={(val) => val && handleMfgChange(Number(val))}
-                  placeholder="Select Manufacturer..."
-                  isClearable={false}
-                />
-              </div>
-            </div>
-
-            {/* 3. Type & Model */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold mb-1">Equipment Type *</label>
                 <SearchSelect
@@ -422,22 +390,34 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                   isClearable={false}
                 />
               </div>
+            </div>
+
+            {/* 3. Manufacturer & Model */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">Manufacturer (OEM) *</label>
+                <SearchSelect
+                  options={manufacturers.map((m) => ({
+                    value: m.id,
+                    label: m.name,
+                    subLabel: `Origin: ${m.country} • Code: ${m.code}`,
+                  }))}
+                  value={selectedMfgId}
+                  onChange={(val) => val && handleMfgChange(Number(val))}
+                  placeholder="Select Manufacturer..."
+                  isClearable={false}
+                />
+              </div>
 
               <div>
                 <label className="block text-xs font-bold mb-1">Machine Model *</label>
                 <SearchSelect
                   options={
-                    availableModels.length > 0
-                      ? availableModels.map((mod) => ({
-                          value: mod.id,
-                          label: mod.name,
-                          subLabel: `Model: ${mod.modelNumber} • ${mod.specs?.slice(0, 30)}...`,
-                        }))
-                      : api.models.map((mod) => ({
-                          value: mod.id,
-                          label: mod.name,
-                          subLabel: mod.modelNumber,
-                        }))
+                    availableModels.map((mod) => ({
+                      value: mod.id,
+                      label: mod.name,
+                      subLabel: `Model: ${mod.modelNumber} • ${mod.specs?.slice(0, 30)}...`,
+                    }))
                   }
                   value={selectedModelId}
                   onChange={(val) => val && handleModelChange(Number(val))}

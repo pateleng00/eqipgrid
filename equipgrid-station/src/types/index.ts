@@ -1,4 +1,4 @@
-export type AssetCategory = 'CONSTRUCTION' | 'AGRICULTURE';
+export type AssetCategory = 'CONSTRUCTION' | 'AGRICULTURE' | 'MULTIPURPOSE_FLEET';
 
 export type AssetStatus =
   | 'AVAILABLE'

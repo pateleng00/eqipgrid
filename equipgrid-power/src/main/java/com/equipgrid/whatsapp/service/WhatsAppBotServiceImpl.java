@@ -608,7 +608,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             for (Asset a : availableAssets) {
                 if (a.getAssetTag().equalsIgnoreCase(input.trim()) ||
                         a.getName().toLowerCase().contains(search) ||
-                        (a.getModelName() != null && a.getModelName().toLowerCase().contains(search))) {
+                        (a.getModel() != null && a.getModel().getName().toLowerCase().contains(search))) {
                     selected = a;
                     break;
                 }
@@ -667,8 +667,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         }
         sb.append(String.format("• 💰 Daily Rent: ₹%,.0f/day\n", selected.getDailyRate()));
         sb.append(String.format("• 🛡️ Security Deposit: ₹%,.0f (100%% Refundable)\n", selected.getDepositAmount()));
-        if (selected.getModelName() != null) {
-            sb.append(String.format("• ⚙️ Model: %s\n", selected.getModelName()));
+        if (selected.getModel() != null) {
+            sb.append(String.format("• ⚙️ Model: %s\n", selected.getModel().getName()));
         }
         sb.append("━━━━━━━━━━━━━━━━━━━━━━\n");
 

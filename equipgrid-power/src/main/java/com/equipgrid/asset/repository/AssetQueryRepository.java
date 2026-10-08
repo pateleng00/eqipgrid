@@ -26,7 +26,7 @@ public class AssetQueryRepository {
     public List<Asset> fetchAssets(AssetCategory category, AssetStatus status) {
         BooleanBuilder builder = new BooleanBuilder();
         if (category != null) {
-            builder.and(qAsset.category.eq(category));
+            builder.and(qAsset.type.category.eq(category));
         }
         if (status != null) {
             builder.and(qAsset.status.eq(status));
@@ -76,7 +76,7 @@ public class AssetQueryRepository {
         if (typeId != null) {
             builder.and(qAsset.type.id.eq(typeId));
         } else if (name != null && !name.isBlank()) {
-            builder.and(qAsset.name.equalsIgnoreCase(name.trim()));
+            builder.and(qAsset.model.name.equalsIgnoreCase(name.trim()));
         }
 
         if (hubId != null) {

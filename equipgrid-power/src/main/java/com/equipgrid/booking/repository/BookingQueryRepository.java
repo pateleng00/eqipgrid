@@ -116,7 +116,7 @@ public class BookingQueryRepository {
         if (typeId != null) {
             builder.and(qBooking.asset.type.id.eq(typeId));
         } else if (name != null && !name.isBlank()) {
-            builder.and(qBooking.asset.name.equalsIgnoreCase(name.trim()));
+            builder.and(qBooking.asset.model.name.equalsIgnoreCase(name.trim()));
         }
 
         if (hubId != null) {
