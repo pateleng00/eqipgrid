@@ -11,7 +11,7 @@ export function cleanIndianPhoneNumber(rawPhone?: string): string {
   if (digits.length === 10) return `91${digits}`;
   if (digits.length === 12 && digits.startsWith('91')) return digits;
   if (digits.length > 10 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-  return digits || '919450000000';
+  return digits || '15556300171';
 }
 
 function formatINR(val?: number): string {

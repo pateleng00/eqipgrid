@@ -175,7 +175,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         for (Hub h : hubs) {
             sb.append("   - ").append(h.getName()).append(" (").append(h.getAddress()).append(") - Phone: ").append(h.getContactPhone()).append(", Radius: ").append(h.getOperatingRadiusKm()).append("km\n");
         }
-        sb.append("6. **24x7 Helpline**: Toll-free 1800-889-AGRI (1800-889-2474) and WhatsApp: +91 94500 01100.\n\n");
+        sb.append("6. **24x7 Helpline**: Toll-free 1800-889-AGRI (1800-889-2474) and WhatsApp: +1 555 630-0171.\n\n");
 
         sb.append("### Current Fleet & Catalog (Live Data):\n");
         for (Asset a : assets) {
