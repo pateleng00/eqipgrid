@@ -10,7 +10,8 @@ import lombok.Getter;
 public enum AssetCategory {
     NA((short) 0),
     CONSTRUCTION((short) 1),
-    AGRICULTURE((short) 2);
+    AGRICULTURE((short) 2),
+    MULTIPURPOSE_FLEET((short) 3),;
 
     @JsonValue
     private final Short value;
