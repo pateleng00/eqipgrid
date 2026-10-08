@@ -1052,7 +1052,7 @@ export class ApiStore {
       manufacturerId: data.manufacturerId,
       manufacturerName: mfg?.name,
       modelId: data.modelId,
-      modelName: model?.name,
+      modelName: model?.name || 'Standard Model',
       hubId: data.hubId,
       hubName: hub?.name,
       cityName: city?.name,
