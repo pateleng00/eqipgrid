@@ -26,14 +26,18 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
     private final ReturnInspectionQueryRepository returnInspectionQueryRepository;
     private final IUpiQrGeneratorService upiQrGeneratorService;
     private final ChallanDocumentService challanDocumentService;
+    private final MetaWhatsAppClientService metaWhatsAppClientService;
 
     @Override
     public WhatsAppMessageResponse sendNotification(WhatsAppNotificationRequest request) {
         log.info("Sending outbound WhatsApp alert to: {}, type: {}", request.getPhoneNumber(), request.getNotificationType());
 
+        String msg = request.getCustomMessage() != null ? request.getCustomMessage() : "Alert from EquipGrid Rentals";
+        metaWhatsAppClientService.sendTextMessage(request.getPhoneNumber(), msg);
+
         return WhatsAppMessageResponse.builder()
                 .to(request.getPhoneNumber())
-                .message(request.getCustomMessage() != null ? request.getCustomMessage() : "Alert from EquipGrid Rentals")
+                .message(msg)
                 .bookingNumber(request.getBookingNumber())
                 .build();
     }
@@ -132,6 +136,8 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         log.info("Sent booking notification via WhatsApp to phone: {} (paymentConfirmed={})",
                 booking.getCustomer().getPhone(), isPaymentConfirmed);
 
+        metaWhatsAppClientService.sendTextMessage(booking.getCustomer().getPhone(), message);
+
         return WhatsAppMessageResponse.builder()
                 .to(booking.getCustomer().getPhone())
                 .message(message)
@@ -169,6 +175,8 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         String fullMessage = alertHeader + "\n" + challanText;
 
         log.info("Sent dispatch notification with digital challan via WhatsApp to phone: {}", booking.getCustomer().getPhone());
+
+        metaWhatsAppClientService.sendTextMessage(booking.getCustomer().getPhone(), fullMessage);
 
         return WhatsAppMessageResponse.builder()
                 .to(booking.getCustomer().getPhone())
@@ -215,6 +223,8 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         );
 
         log.info("Sent damage checklist ready notification to phone: {}", booking.getCustomer().getPhone());
+
+        metaWhatsAppClientService.sendTextMessage(booking.getCustomer().getPhone(), message);
 
         return WhatsAppMessageResponse.builder()
                 .to(booking.getCustomer().getPhone())
@@ -285,6 +295,8 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         );
 
         log.info("Sent return settlement notification via WhatsApp to phone: {}", booking.getCustomer().getPhone());
+
+        metaWhatsAppClientService.sendTextMessage(booking.getCustomer().getPhone(), message);
 
         return WhatsAppMessageResponse.builder()
                 .to(booking.getCustomer().getPhone())

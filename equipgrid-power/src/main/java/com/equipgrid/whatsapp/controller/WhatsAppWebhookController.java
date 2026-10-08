@@ -9,6 +9,7 @@ import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
 import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
 import com.equipgrid.whatsapp.service.IWhatsAppBotService;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
+import com.equipgrid.whatsapp.service.MetaWhatsAppClientService;
 import com.equipgrid.whatsapp.service.WhatsAppNotificationServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -33,12 +34,139 @@ public class WhatsAppWebhookController {
     private final IUpiQrGeneratorService upiQrGeneratorService;
     private final BookingQueryRepository bookingQueryRepository;
 
-    @Operation(summary = "WhatsApp Inbound Webhook", description = "Receives incoming WhatsApp messages from BSP (Twilio, Meta Cloud API, Gupshup)")
-    @PostMapping(value = "/webhook", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingWebhook(@Valid @RequestBody WhatsAppInboundRequest request) {
+    private final MetaWhatsAppClientService metaWhatsAppClientService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Operation(summary = "Meta Webhook Verification Challenge", description = "Responds to Meta Cloud API webhook verification GET request")
+    @GetMapping("/webhook")
+    public ResponseEntity<String> verifyMetaWebhook(
+            @RequestParam(value = "hub.mode", required = false) String mode,
+            @RequestParam(value = "hub.verify_token", required = false) String token,
+            @RequestParam(value = "hub.challenge", required = false) String challenge) {
+        log.info("[Meta Webhook] Verification request: mode={}, token={}", mode, token);
+        return ResponseEntity.ok(challenge != null ? challenge : "OK");
+    }
+
+    @Operation(summary = "WhatsApp Inbound Webhook (JSON)", description = "Receives incoming WhatsApp messages from Meta Cloud API or direct JSON")
+    @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingJsonWebhook(@RequestBody com.fasterxml.jackson.databind.JsonNode payload) {
+        WhatsAppInboundRequest request = parseInboundPayload(payload);
+        if (request == null) {
+            log.info("[WhatsApp Webhook] Received non-message event (e.g. delivery/status receipt), acknowledged with 200 OK");
+            return ResponseEntity.ok(ApiResponse.<WhatsAppMessageResponse>buildSuccess("EVENT_ACK", "Event acknowledged", null));
+        }
         log.info("Received WhatsApp webhook message from {}", request.getFrom());
         WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
+
+        // Automatically dispatch bot response back to farmer via Meta Cloud API
+        if (response != null && response.getMessage() != null && !response.getMessage().isBlank()) {
+            metaWhatsAppClientService.sendTextMessage(request.getFrom(), response.getMessage());
+        }
+
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
+    }
+
+    @Operation(summary = "WhatsApp Inbound Webhook (Twilio Form)", description = "Receives incoming WhatsApp messages from Twilio form-urlencoded webhooks")
+    @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingTwilioWebhook(@RequestParam java.util.Map<String, String> formParams) {
+        String from = formParams.getOrDefault("From", "").replace("whatsapp:", "").replace("+", "").trim();
+        String body = formParams.getOrDefault("Body", "").trim();
+        String profileName = formParams.getOrDefault("ProfileName", "Farmer");
+
+        if (from.isBlank()) {
+            return ResponseEntity.badRequest().body(ApiResponse.buildFail("INVALID_SENDER", "Missing From parameter", null));
+        }
+
+        WhatsAppInboundRequest request = WhatsAppInboundRequest.builder()
+                .from(from)
+                .message(body)
+                .userName(profileName)
+                .messageId(formParams.get("MessageSid"))
+                .timestamp(System.currentTimeMillis() / 1000)
+                .build();
+
+        log.info("[Twilio Webhook] Received incoming message from {}, body: {}", from, body);
+        WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
+        return ResponseEntity.ok(ApiResponse.buildSuccess(response));
+    }
+
+    private WhatsAppInboundRequest parseInboundPayload(com.fasterxml.jackson.databind.JsonNode root) {
+        if (root == null) return null;
+
+        // 1. Check if direct WhatsAppInboundRequest format
+        if (root.has("from") && !root.path("from").asText().isBlank()) {
+            try {
+                return objectMapper.treeToValue(root, WhatsAppInboundRequest.class);
+            } catch (Exception e) {
+                log.warn("Failed to deserialize direct WhatsAppInboundRequest: {}", e.getMessage());
+            }
+        }
+
+        // 2. Check if Meta Cloud API nested structure
+        if (root.has("entry")) {
+            com.fasterxml.jackson.databind.JsonNode entry = root.path("entry");
+            if (entry.isArray() && !entry.isEmpty()) {
+                com.fasterxml.jackson.databind.JsonNode changes = entry.get(0).path("changes");
+                if (changes.isArray() && !changes.isEmpty()) {
+                    com.fasterxml.jackson.databind.JsonNode value = changes.get(0).path("value");
+
+                    // Check for incoming customer messages
+                    com.fasterxml.jackson.databind.JsonNode messages = value.path("messages");
+                    if (messages.isArray() && !messages.isEmpty()) {
+                        com.fasterxml.jackson.databind.JsonNode msg = messages.get(0);
+                        String from = msg.path("from").asText();
+                        String text = "";
+                        if (msg.has("text")) {
+                            text = msg.path("text").path("body").asText();
+                        } else if (msg.has("button")) {
+                            text = msg.path("button").path("text").asText();
+                        } else if (msg.has("interactive")) {
+                            com.fasterxml.jackson.databind.JsonNode interactive = msg.path("interactive");
+                            if (interactive.has("button_reply")) {
+                                text = interactive.path("button_reply").path("title").asText();
+                            } else if (interactive.has("list_reply")) {
+                                text = interactive.path("list_reply").path("title").asText();
+                            }
+                        }
+
+                        String userName = "Farmer";
+                        com.fasterxml.jackson.databind.JsonNode contacts = value.path("contacts");
+                        if (contacts.isArray() && !contacts.isEmpty()) {
+                            userName = contacts.get(0).path("profile").path("name").asText("Farmer");
+                        }
+
+                        WhatsAppInboundRequest.WhatsAppInboundRequestBuilder builder = WhatsAppInboundRequest.builder()
+                                .from(from)
+                                .message(text)
+                                .userName(userName)
+                                .messageId(msg.path("id").asText())
+                                .timestamp(msg.path("timestamp").asLong(System.currentTimeMillis() / 1000));
+
+                        // Handle location pin
+                        if (msg.has("location")) {
+                            com.fasterxml.jackson.databind.JsonNode loc = msg.path("location");
+                            builder.latitude(loc.path("latitude").asDouble())
+                                   .longitude(loc.path("longitude").asDouble())
+                                   .locationName(loc.path("name").asText(null))
+                                   .locationAddress(loc.path("address").asText(null));
+                        }
+
+                        return builder.build();
+                    }
+
+                    // Status receipt (delivered/read/failed)
+                    com.fasterxml.jackson.databind.JsonNode statuses = value.path("statuses");
+                    if (statuses.isArray() && !statuses.isEmpty()) {
+                        com.fasterxml.jackson.databind.JsonNode st = statuses.get(0);
+                        log.info("[Meta Status Webhook] Status: {}, recipient: {}, id: {}",
+                                st.path("status").asText(), st.path("recipient_id").asText(), st.path("id").asText());
+                        return null; // Acknowledged without triggering bot
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     @Operation(summary = "Simulate WhatsApp Conversation", description = "Interactive testing endpoint for rural mobile booking, UPI QR generation, and tracking")
