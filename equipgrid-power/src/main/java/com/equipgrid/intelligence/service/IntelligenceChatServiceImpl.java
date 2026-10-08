@@ -42,7 +42,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
     @Value("${equipgrid.intelligence.gemini.api-key:}")
     private String configuredGeminiApiKey;
 
-    @Value("${equipgrid.intelligence.gemini.model:gemini-1.5-flash}")
+    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
     private String geminiModel;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
