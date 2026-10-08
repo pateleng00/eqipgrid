@@ -167,6 +167,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 function mapCategory(cat: any): AssetCategory {
   if (cat === 2 || cat === 'AGRICULTURE') return 'AGRICULTURE';
+  if (cat === 3 || cat === 'MULTIPURPOSE_FLEET') return 'MULTIPURPOSE_FLEET';
   return 'CONSTRUCTION';
 }
 
@@ -366,15 +367,141 @@ export class ApiStore {
   states: State[] = [];
   cities: City[] = [];
   hubs: Hub[] = [];
-  types: EquipmentType[] = [];
-  manufacturers: Manufacturer[] = [];
-  models: MachineModel[] = [];
-  assets: Asset[] = [];
-  rentalConfigs: RentalConfiguration[] = [];
-  customers: Customer[] = [];
-  dealers: Dealer[] = [];
-  bookings: Booking[] = [];
-  payments: Payment[] = [];
+  private _types: EquipmentType[] = [];
+  private _typesLoading = false;
+  get types(): EquipmentType[] {
+    if (this._types.length === 0 && !this._typesLoading) {
+      this._typesLoading = true;
+      request<any[]>('/masters/types').then(res => {
+        this._types = (res || []).map((t: any) => ({
+          id: t.id, name: t.name, code: t.code, category: mapCategory(t.category), description: t.description, active: Boolean(t.active ?? true)
+        }));
+        this.notify();
+      });
+    }
+    return this._types;
+  }
+  set types(v) { this._types = v; }
+
+  private _manufacturers: Manufacturer[] = [];
+  private _manufacturersLoading = false;
+  get manufacturers(): Manufacturer[] {
+    if (this._manufacturers.length === 0 && !this._manufacturersLoading) {
+      this._manufacturersLoading = true;
+      request<any[]>('/masters/manufacturers').then(res => {
+        this._manufacturers = (res || []).map((m: any) => ({
+          id: m.id, name: m.name, code: m.code, country: m.country || 'India', active: Boolean(m.active ?? true)
+        }));
+        this.notify();
+      });
+    }
+    return this._manufacturers;
+  }
+  set manufacturers(v) { this._manufacturers = v; }
+
+  private _models: MachineModel[] = [];
+  private _modelsLoading = false;
+  get models(): MachineModel[] {
+    if (this._models.length === 0 && !this._modelsLoading) {
+      this._modelsLoading = true;
+      request<any[]>('/masters/models').then(res => {
+        this._models = (res || []).map((m: any) => ({
+          id: m.id, typeId: m.type?.id || m.typeId, manufacturerId: m.manufacturer?.id || m.manufacturerId, name: m.name, modelNumber: m.modelNumber, specs: m.specs, active: Boolean(m.active ?? true)
+        }));
+        this.notify();
+      });
+    }
+    return this._models;
+  }
+  set models(v) { this._models = v; }
+
+  private _assets: Asset[] = [];
+  private _assetsLoading = false;
+  get assets(): Asset[] {
+    if (this._assets.length === 0 && !this._assetsLoading) {
+      this._assetsLoading = true;
+      request<any[]>('/assets').then(res => {
+        this._assets = (res || []).map(mapAsset);
+        this.notify();
+      });
+    }
+    return this._assets;
+  }
+  set assets(v) { this._assets = v; }
+
+  private _rentalConfigs: RentalConfiguration[] = [];
+  private _rentalConfigsLoading = false;
+  get rentalConfigs(): RentalConfiguration[] {
+    if (this._rentalConfigs.length === 0 && !this._rentalConfigsLoading) {
+      this._rentalConfigsLoading = true;
+      request<any[]>('/rental-configs').then(res => {
+        this._rentalConfigs = (res || []).map(mapRentalConfig);
+        this.notify();
+      });
+    }
+    return this._rentalConfigs;
+  }
+  set rentalConfigs(v) { this._rentalConfigs = v; }
+
+  private _customers: Customer[] = [];
+  private _customersLoading = false;
+  get customers(): Customer[] {
+    if (this._customers.length === 0 && !this._customersLoading) {
+      this._customersLoading = true;
+      request<any[]>('/customers').then(res => {
+        this._customers = (res || []).map((c: any) => ({
+          id: c.id, fullName: c.fullName, phone: c.phone, email: c.email, address: c.address, aadhaarNumber: c.aadhaarNumber, gstNumber: c.gstNumber, tier: c.tier === 2 ? 'TIER_2_VERIFIED' : 'TIER_1_BASIC', verified: Boolean(c.verified), notes: c.notes, hubId: c.hub?.id || c.hubId, cityId: c.hub?.cityId || c.cityId, stateId: c.hub?.city?.stateId || c.stateId
+        }));
+        this.notify();
+      });
+    }
+    return this._customers;
+  }
+  set customers(v) { this._customers = v; }
+
+  private _dealers: Dealer[] = [];
+  private _dealersLoading = false;
+  get dealers(): Dealer[] {
+    if (this._dealers.length === 0 && !this._dealersLoading) {
+      this._dealersLoading = true;
+      request<any[]>('/dealers').then(res => {
+        this._dealers = (res || []).map((d: any) => ({
+          id: d.id, name: d.name, tradeName: d.tradeName, phone: d.phone, location: d.location, commissionRate: Number(d.commissionRate || 0.06), totalCommissionEarned: Number(d.totalCommissionEarned || 0), totalReferrals: Number(d.totalReferrals || 0), active: Boolean(d.active ?? true)
+        }));
+        this.notify();
+      });
+    }
+    return this._dealers;
+  }
+  set dealers(v) { this._dealers = v; }
+
+  private _bookings: Booking[] = [];
+  private _bookingsLoading = false;
+  get bookings(): Booking[] {
+    if (this._bookings.length === 0 && !this._bookingsLoading) {
+      this._bookingsLoading = true;
+      request<any[]>('/bookings').then(res => {
+        this._bookings = (res || []).map(mapBooking);
+        this.notify();
+      });
+    }
+    return this._bookings;
+  }
+  set bookings(v) { this._bookings = v; }
+
+  private _payments: Payment[] = [];
+  private _paymentsLoading = false;
+  get payments(): Payment[] {
+    if (this._payments.length === 0 && !this._paymentsLoading) {
+      this._paymentsLoading = true;
+      request<any[]>('/payments').then(res => {
+        this._payments = (res || []).map(mapPayment);
+        this.notify();
+      });
+    }
+    return this._payments;
+  }
+  set payments(v) { this._payments = v; }
   dashboardSummary: DashboardSummary = {
     totalAssets: 0,
     availableAssets: 0,
@@ -422,15 +549,6 @@ export class ApiStore {
         request<any[]>('/locations/states'),
         request<any[]>('/locations/cities'),
         request<any[]>('/locations/hubs'),
-        request<any[]>('/masters/types'),
-        request<any[]>('/masters/manufacturers'),
-        request<any[]>('/masters/models'),
-        request<any[]>('/assets'),
-        request<any[]>('/rental-configs'),
-        request<any[]>('/customers'),
-        request<any[]>('/dealers'),
-        request<any[]>('/bookings'),
-        request<any[]>('/payments'),
         request<any>('/reports/dashboard-summary'),
       ]);
 
@@ -469,92 +587,11 @@ export class ApiStore {
       }
 
       if (results[3].status === 'fulfilled') {
-        this.types = (results[3].value || []).map((t) => ({
-          id: t.id,
-          name: t.name,
-          code: t.code,
-          category: mapCategory(t.category),
-          description: t.description,
-          active: Boolean(t.active ?? true),
-        }));
-      }
-
-      if (results[4].status === 'fulfilled') {
-        this.manufacturers = (results[4].value || []).map((m) => ({
-          id: m.id,
-          name: m.name,
-          code: m.code,
-          country: m.country || 'India',
-          active: Boolean(m.active ?? true),
-        }));
-      }
-
-      if (results[5].status === 'fulfilled') {
-        this.models = (results[5].value || []).map((m) => ({
-          id: m.id,
-          typeId: m.type?.id || m.typeId,
-          manufacturerId: m.manufacturer?.id || m.manufacturerId,
-          name: m.name,
-          modelNumber: m.modelNumber,
-          specs: m.specs,
-          active: Boolean(m.active ?? true),
-        }));
-      }
-
-      if (results[6].status === 'fulfilled') {
-        this.assets = (results[6].value || []).map(mapAsset);
-      }
-
-      if (results[7].status === 'fulfilled') {
-        this.rentalConfigs = (results[7].value || []).map(mapRentalConfig);
-      }
-
-      if (results[8].status === 'fulfilled') {
-        this.customers = (results[8].value || []).map((c) => ({
-          id: c.id,
-          fullName: c.fullName,
-          phone: c.phone,
-          email: c.email,
-          address: c.address,
-          aadhaarNumber: c.aadhaarNumber,
-          gstNumber: c.gstNumber,
-          tier: c.tier === 2 ? 'TIER_2_VERIFIED' : 'TIER_1_BASIC',
-          verified: Boolean(c.verified),
-          notes: c.notes,
-          hubId: c.hub?.id || c.hubId,
-          cityId: c.hub?.cityId || c.cityId,
-          stateId: c.hub?.city?.stateId || c.stateId,
-        }));
-      }
-
-      if (results[9].status === 'fulfilled') {
-        this.dealers = (results[9].value || []).map((d) => ({
-          id: d.id,
-          name: d.name,
-          tradeName: d.tradeName,
-          phone: d.phone,
-          location: d.location,
-          commissionRate: Number(d.commissionRate || 0.06),
-          totalCommissionEarned: Number(d.totalCommissionEarned || 0),
-          totalReferrals: Number(d.totalReferrals || 0),
-          active: Boolean(d.active ?? true),
-        }));
-      }
-
-      if (results[10].status === 'fulfilled') {
-        this.bookings = (results[10].value || []).map(mapBooking);
-      }
-
-      if (results[11].status === 'fulfilled') {
-        this.payments = (results[11].value || []).map(mapPayment);
-      }
-
-      if (results[12].status === 'fulfilled') {
-        const sum = results[12].value;
+        const sum = results[3].value;
         if (sum) {
           this.dashboardSummary = {
-            totalAssets: Number(sum.totalAssets || this.assets.length),
-            availableAssets: Number(sum.availableAssets || this.assets.filter(a => a.status === 'AVAILABLE').length),
+            totalAssets: Number(sum.totalAssets || this._assets?.length || 0),
+            availableAssets: Number(sum.availableAssets || this._assets?.filter((a: any) => a.status === 'AVAILABLE').length || 0),
             activeRentals: Number(sum.activeRentals || 0),
             pendingDispatch: Number(sum.pendingDispatch || 0),
             todayGrossRevenue: Number(sum.todayGrossRevenue || 0),
@@ -772,7 +809,7 @@ export class ApiStore {
       body: JSON.stringify({
         name: data.name,
         code: data.code.toUpperCase(),
-        category: data.category === 'AGRICULTURE' ? 2 : 1,
+        category: data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1,
         description: data.description,
       }),
     }).then((raw) => {
@@ -1001,7 +1038,7 @@ export class ApiStore {
     const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : (matchingConfig?.baseDailyRate || 1000);
     const resolvedDepositAmount = data.depositAmount !== undefined ? data.depositAmount : (matchingConfig?.depositAmount || 3000);
 
-    const prefix = type?.category === 'AGRICULTURE' ? 'A' : 'C';
+    const prefix = type?.category === 'MULTIPURPOSE_FLEET' ? 'M' : type?.category === 'AGRICULTURE' ? 'A' : 'C';
     const subCode = type?.code?.split('-')[1] || 'MCH';
     const tag = data.assetTag || `${prefix}-${subCode}-${String(this.assets.length + 1).padStart(3, '0')}`;
 
@@ -1009,13 +1046,13 @@ export class ApiStore {
       id: Date.now(),
       assetTag: tag,
       name: data.name,
-      category: type?.category || 'CONSTRUCTION',
+      category: type!.category,
       typeId: data.typeId,
       typeName: type?.name,
       manufacturerId: data.manufacturerId,
       manufacturerName: mfg?.name,
       modelId: data.modelId,
-      modelName: model?.name || 'Standard Model',
+      modelName: model?.name,
       hubId: data.hubId,
       hubName: hub?.name,
       cityName: city?.name,
@@ -1047,7 +1084,7 @@ export class ApiStore {
       body: JSON.stringify({
         assetTag: tag,
         name: data.name,
-        category: type?.category === 'AGRICULTURE' ? 2 : 1,
+        category: type?.category === 'MULTIPURPOSE_FLEET' ? 3 : type?.category === 'AGRICULTURE' ? 2 : 1,
         typeId: data.typeId,
         manufacturerId: data.manufacturerId,
         modelId: data.modelId,
