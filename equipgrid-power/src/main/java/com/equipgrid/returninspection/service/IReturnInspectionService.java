@@ -8,6 +8,8 @@ import java.util.List;
 
 public interface IReturnInspectionService {
     List<ReturnInspection> getInspectionsByBooking(Long bookingId);
+
     ReturnInspection executeInspection(CreateInspectionRequest request, String performedBy);
+
     SettlementCalculationResponse calculateDepositSettlement(Long bookingId);
 }

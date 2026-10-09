@@ -24,13 +24,19 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "aws.s3")
 public class AwsProperties {
 
-    /** AWS IAM access key. Use environment variable {@code AWS_S3_ACCESS_KEY} in production. */
+    /**
+     * AWS IAM access key. Use environment variable {@code AWS_S3_ACCESS_KEY} in production.
+     */
     private String accessKey;
 
-    /** AWS IAM secret key. Use environment variable {@code AWS_S3_SECRET_KEY} in production. */
+    /**
+     * AWS IAM secret key. Use environment variable {@code AWS_S3_SECRET_KEY} in production.
+     */
     private String secretKey;
 
-    /** AWS region, e.g. {@code ap-south-1}. */
+    /**
+     * AWS region, e.g. {@code ap-south-1}.
+     */
     private String region;
 
     /**
@@ -45,7 +51,9 @@ public class AwsProperties {
      */
     private String commonBucketName;
 
-    /** Expiry duration (minutes) for presigned GET / PUT URLs. Defaults to 60. */
+    /**
+     * Expiry duration (minutes) for presigned GET / PUT URLs. Defaults to 60.
+     */
     private Integer signedUrlExpiryMinutes = 60;
 
     /**

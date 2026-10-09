@@ -6,11 +6,7 @@ import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.whatsapp.dto.request.WhatsAppInboundRequest;
 import com.equipgrid.whatsapp.dto.request.WhatsAppNotificationRequest;
 import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
-import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
-import com.equipgrid.whatsapp.service.IWhatsAppBotService;
-import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
-import com.equipgrid.whatsapp.service.MetaWhatsAppClientService;
-import com.equipgrid.whatsapp.service.WhatsAppNotificationServiceImpl;
+import com.equipgrid.whatsapp.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -53,7 +49,7 @@ public class WhatsAppWebhookController {
         WhatsAppInboundRequest request = parseInboundPayload(payload);
         if (request == null) {
             log.info("[WhatsApp Webhook] Received non-message event (e.g. delivery/status receipt), acknowledged with 200 OK");
-            return ResponseEntity.ok(ApiResponse.<WhatsAppMessageResponse>buildSuccess("EVENT_ACK", "Event acknowledged", null));
+            return ResponseEntity.ok(ApiResponse.buildSuccess("EVENT_ACK", "Event acknowledged", null));
         }
         log.info("Received WhatsApp webhook message from {}", request.getFrom());
         WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
@@ -146,9 +142,9 @@ public class WhatsAppWebhookController {
                         if (msg.has("location")) {
                             com.fasterxml.jackson.databind.JsonNode loc = msg.path("location");
                             builder.latitude(loc.path("latitude").asDouble())
-                                   .longitude(loc.path("longitude").asDouble())
-                                   .locationName(loc.path("name").asText(null))
-                                   .locationAddress(loc.path("address").asText(null));
+                                    .longitude(loc.path("longitude").asDouble())
+                                    .locationName(loc.path("name").asText(null))
+                                    .locationAddress(loc.path("address").asText(null));
                         }
 
                         return builder.build();

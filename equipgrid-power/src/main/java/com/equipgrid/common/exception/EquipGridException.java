@@ -18,13 +18,6 @@ public class EquipGridException extends RuntimeException {
         this.exceptionEnum = null;
     }
 
-    public EquipGridException(String message) {
-        super(message);
-        this.code = EquipGridExceptionEnum.SGO_500.name();
-        this.message = message;
-        this.exceptionEnum = EquipGridExceptionEnum.SGO_500;
-    }
-
     public EquipGridException(EquipGridExceptionEnum exceptionEnum) {
         super(exceptionEnum.getMessage());
         this.code = exceptionEnum.name();

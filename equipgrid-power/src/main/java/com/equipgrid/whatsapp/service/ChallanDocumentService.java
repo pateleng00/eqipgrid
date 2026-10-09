@@ -2,8 +2,6 @@ package com.equipgrid.whatsapp.service;
 
 import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.dispatch.entity.DispatchRecord;
-import com.equipgrid.returninspection.entity.ReturnInspection;
-import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -11,7 +9,6 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Base64;
 import java.util.List;
 
 /**
@@ -43,21 +40,21 @@ public class ChallanDocumentService {
      * This is the primary "Handover Document" sent to the customer.
      */
     public String buildOutwardChallanWhatsAppText(Booking booking, DispatchRecord dispatch) {
-        String challanNo   = dispatch.getChallanNumber();
-        String bookingNo   = booking.getBookingNumber();
+        String challanNo = dispatch.getChallanNumber();
+        String bookingNo = booking.getBookingNumber();
         String machineName = booking.getAsset().getName();
-        String machineTag  = booking.getAsset().getAssetTag();
-        String customer    = booking.getCustomer().getFullName();
-        String phone       = booking.getCustomer().getPhone();
-        String delivery    = booking.getDeliveryAddress();
-        String driver      = dispatch.getDriverName() != null ? dispatch.getDriverName() : "EquipGrid Logistics";
-        String fuel        = dispatch.getFuelLevel() != null ? dispatch.getFuelLevel() : "100%";
-        String hours       = dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut().toPlainString() : "0.00";
-        String timestamp   = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
+        String machineTag = booking.getAsset().getAssetTag();
+        String customer = booking.getCustomer().getFullName();
+        String phone = booking.getCustomer().getPhone();
+        String delivery = booking.getDeliveryAddress();
+        String driver = dispatch.getDriverName() != null ? dispatch.getDriverName() : "EquipGrid Logistics";
+        String fuel = dispatch.getFuelLevel() != null ? dispatch.getFuelLevel() : "100%";
+        String hours = dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut().toPlainString() : "0.00";
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
         boolean accessories = Boolean.TRUE.equals(dispatch.getAccessoriesVerified());
 
         // Resolve hub and city
-        String hub  = booking.getAsset().getHub() != null ? booking.getAsset().getHub().getName() : "Central Hub";
+        String hub = booking.getAsset().getHub() != null ? booking.getAsset().getHub().getName() : "Central Hub";
         String city = booking.getAsset().getHub() != null && booking.getAsset().getHub().getCity() != null
                 ? booking.getAsset().getHub().getCity().getName() : "Uttar Pradesh";
 
@@ -123,26 +120,26 @@ public class ChallanDocumentService {
     public List<ChecklistItem> getDamageChecklist(String assetCategory) {
         if ("AGRICULTURE".equalsIgnoreCase(assetCategory)) {
             return List.of(
-                    new ChecklistItem("FUEL_LEVEL",       "⛽ Fuel Level",       "Is the fuel level same as when dispatched?"),
-                    new ChecklistItem("ENGINE_CONDITION",  "🔧 Engine / Motor",   "Engine starts normally and runs without issues?"),
-                    new ChecklistItem("BLADES_CUTTERS",   "⚙️ Blades / Cutters", "All blades/cutters intact, not broken or bent?"),
-                    new ChecklistItem("BODY_FRAME",       "🛡️ Body & Frame",     "No major dents, cracks, or broken parts on body?"),
-                    new ChecklistItem("ACCESSORIES",      "🧰 Accessories",      "All standard accessories present (as per challan)?"),
-                    new ChecklistItem("CLEANING",         "🧹 Cleanliness",      "Machine drum/body cleaned of mud/crop residue?"),
-                    new ChecklistItem("TYRES_WHEELS",     "🔘 Tyres / Wheels",   "Tyres intact, no punctures or missing wheels?"),
-                    new ChecklistItem("SAFETY_GUARD",     "🦺 Safety Guards",    "All protective safety guards in place?")
+                    new ChecklistItem("FUEL_LEVEL", "⛽ Fuel Level", "Is the fuel level same as when dispatched?"),
+                    new ChecklistItem("ENGINE_CONDITION", "🔧 Engine / Motor", "Engine starts normally and runs without issues?"),
+                    new ChecklistItem("BLADES_CUTTERS", "⚙️ Blades / Cutters", "All blades/cutters intact, not broken or bent?"),
+                    new ChecklistItem("BODY_FRAME", "🛡️ Body & Frame", "No major dents, cracks, or broken parts on body?"),
+                    new ChecklistItem("ACCESSORIES", "🧰 Accessories", "All standard accessories present (as per challan)?"),
+                    new ChecklistItem("CLEANING", "🧹 Cleanliness", "Machine drum/body cleaned of mud/crop residue?"),
+                    new ChecklistItem("TYRES_WHEELS", "🔘 Tyres / Wheels", "Tyres intact, no punctures or missing wheels?"),
+                    new ChecklistItem("SAFETY_GUARD", "🦺 Safety Guards", "All protective safety guards in place?")
             );
         } else {
             // CONSTRUCTION
             return List.of(
-                    new ChecklistItem("FUEL_LEVEL",       "⛽ Fuel Level",       "Is the fuel level same as when dispatched?"),
-                    new ChecklistItem("ENGINE_CONDITION",  "🔧 Engine / Motor",   "Engine/motor starts and runs without issues?"),
-                    new ChecklistItem("DRUM_BARREL",      "🥁 Drum / Barrel",    "Drum/barrel clean, no concrete buildup?"),
-                    new ChecklistItem("VIBRATOR_NEEDLE",  "📳 Vibrator Needle",  "Vibrator needle/poker intact and functional?"),
-                    new ChecklistItem("HOSES_CABLES",     "🔌 Hoses & Cables",   "All hoses and cables present and undamaged?"),
-                    new ChecklistItem("BODY_FRAME",       "🛡️ Body & Frame",     "No major dents, cracks on main body/frame?"),
-                    new ChecklistItem("ACCESSORIES",      "🧰 Accessories",      "All accessories present (as per dispatch challan)?"),
-                    new ChecklistItem("CLEANLINESS",      "🧹 Cleanliness",      "Machine cleaned of concrete/mortar residue?")
+                    new ChecklistItem("FUEL_LEVEL", "⛽ Fuel Level", "Is the fuel level same as when dispatched?"),
+                    new ChecklistItem("ENGINE_CONDITION", "🔧 Engine / Motor", "Engine/motor starts and runs without issues?"),
+                    new ChecklistItem("DRUM_BARREL", "🥁 Drum / Barrel", "Drum/barrel clean, no concrete buildup?"),
+                    new ChecklistItem("VIBRATOR_NEEDLE", "📳 Vibrator Needle", "Vibrator needle/poker intact and functional?"),
+                    new ChecklistItem("HOSES_CABLES", "🔌 Hoses & Cables", "All hoses and cables present and undamaged?"),
+                    new ChecklistItem("BODY_FRAME", "🛡️ Body & Frame", "No major dents, cracks on main body/frame?"),
+                    new ChecklistItem("ACCESSORIES", "🧰 Accessories", "All accessories present (as per dispatch challan)?"),
+                    new ChecklistItem("CLEANLINESS", "🧹 Cleanliness", "Machine cleaned of concrete/mortar residue?")
             );
         }
     }
@@ -151,7 +148,7 @@ public class ChallanDocumentService {
      * Generates the WhatsApp text for a single checklist step prompt.
      */
     public String buildChecklistItemPrompt(ChecklistItem item, int currentIdx, int totalItems,
-                                            String machineName, String bookingNo) {
+                                           String machineName, String bookingNo) {
         return """
                 📋 *Return Inspection Checklist — Item %d of %d*
                 ━━━━━━━━━━━━━━━━━━━━━━
@@ -178,8 +175,8 @@ public class ChallanDocumentService {
      * Builds the completion summary after all checklist items processed.
      */
     public String buildChecklistCompletionSummary(Booking booking, List<ChecklistItem> items,
-                                                   java.util.Map<String, String> statuses,
-                                                   java.util.Map<String, String> photos) {
+                                                  java.util.Map<String, String> statuses,
+                                                  java.util.Map<String, String> photos) {
         StringBuilder sb = new StringBuilder();
         sb.append("✅ *Return Inspection Checklist — Complete*\n");
         sb.append("━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -190,10 +187,10 @@ public class ChallanDocumentService {
         int okCount = 0, damageCount = 0, missingCount = 0;
         for (ChecklistItem item : items) {
             String status = statuses.getOrDefault(item.key(), "OK");
-            String icon   = switch (status) {
-                case "DAMAGED"  -> "❌";
-                case "MISSING"  -> "⚠️";
-                default         -> "✅";
+            String icon = switch (status) {
+                case "DAMAGED" -> "❌";
+                case "MISSING" -> "⚠️";
+                default -> "✅";
             };
             sb.append(String.format("%s %s %s\n", icon, item.icon(), item.label()));
             if (photos.containsKey(item.key())) {
@@ -233,16 +230,16 @@ public class ChallanDocumentService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     public String buildInwardReturnChallanWhatsAppText(Booking booking,
-                                                        List<ChecklistItem> items,
-                                                        java.util.Map<String, String> statuses) {
-        String bookingNo   = booking.getBookingNumber();
+                                                       List<ChecklistItem> items,
+                                                       java.util.Map<String, String> statuses) {
+        String bookingNo = booking.getBookingNumber();
         String machineName = booking.getAsset().getName();
-        String machineTag  = booking.getAsset().getAssetTag();
-        String customer    = booking.getCustomer().getFullName();
-        String timestamp   = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
+        String machineTag = booking.getAsset().getAssetTag();
+        String customer = booking.getCustomer().getFullName();
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
 
-        long okCount      = statuses.values().stream().filter("OK"::equals).count();
-        long damageCount  = statuses.values().stream().filter("DAMAGED"::equals).count();
+        long okCount = statuses.values().stream().filter("OK"::equals).count();
+        long damageCount = statuses.values().stream().filter("DAMAGED"::equals).count();
         long missingCount = statuses.values().stream().filter("MISSING"::equals).count();
 
         return """
@@ -279,8 +276,8 @@ public class ChallanDocumentService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     public String buildSettlementStatementText(Booking booking, BigDecimal depositPaid,
-                                                BigDecimal damageDeduction, BigDecimal fuelDeduction,
-                                                BigDecimal netRefund, String upiRef) {
+                                               BigDecimal damageDeduction, BigDecimal fuelDeduction,
+                                               BigDecimal netRefund, String upiRef) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
         return """
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -326,7 +323,9 @@ public class ChallanDocumentService {
      * @param prompt Question shown to customer
      */
     public record ChecklistItem(String key, String label, String prompt) {
-        /** Emoji icon prefix derived from the label */
+        /**
+         * Emoji icon prefix derived from the label
+         */
         public String icon() {
             if (label.startsWith("⛽")) return "⛽";
             if (label.startsWith("🔧")) return "🔧";

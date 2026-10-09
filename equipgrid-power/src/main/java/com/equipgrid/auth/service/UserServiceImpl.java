@@ -61,8 +61,7 @@ public class UserServiceImpl implements IUserService {
     @Override
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id, User caller) {
-        User user = userQueryRepository.fetchById(id)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("User not found with id: " + id));
+        User user = userQueryRepository.fetchById(id).orElseThrow(() -> new Exceptions.ResourceNotFoundException("User not found with id: " + id));
 
         validateManagerHubAccess(caller, user);
         return mapToResponse(user);
@@ -94,9 +93,7 @@ public class UserServiceImpl implements IUserService {
         }
         // ROOT can create any role (Root, Admin, Manager, Operator)
 
-        String username = (request.getUsername() != null && !request.getUsername().trim().isEmpty())
-                ? request.getUsername().trim()
-                : request.getEmail().trim();
+        String username = (request.getUsername() != null && !request.getUsername().trim().isEmpty()) ? request.getUsername().trim() : request.getEmail().trim();
 
         if (userQueryRepository.existsByUsername(username)) {
             throw new Exceptions.BusinessRuleViolationException("Username or email already in use: " + username);
@@ -107,8 +104,7 @@ public class UserServiceImpl implements IUserService {
 
         Hub hub = null;
         if (request.getHubId() != null) {
-            hub = hubRepository.findById(request.getHubId())
-                    .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Hub not found with id: " + request.getHubId()));
+            hub = hubRepository.findById(request.getHubId()).orElseThrow(() -> new Exceptions.ResourceNotFoundException("Hub not found with id: " + request.getHubId()));
         } else if (targetRole == Role.MANAGER) {
             throw new Exceptions.BusinessRuleViolationException("A Hub Yard must be assigned when creating a Manager");
         }
@@ -265,7 +261,7 @@ public class UserServiceImpl implements IUserService {
                 .hubId(user.getHub() != null ? user.getHub().getId() : null)
                 .hubName(user.getHub() != null ? user.getHub().getName() : null)
                 .hubCode(user.getHub() != null ? user.getHub().getCode() : null)
-                .active(user.getActive() != null ? user.getActive() : true)
+                .active(user.getActive() == null || user.getActive())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

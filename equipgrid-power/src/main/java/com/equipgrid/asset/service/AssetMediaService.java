@@ -38,7 +38,7 @@ public class AssetMediaService {
     private static final int MAX_VIDEOS = 1;
     private static final int MAX_VIDEO_DURATION_SECONDS = 30;
     private static final long MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024L;   // 10 MB
-    private static final long MAX_VIDEO_SIZE_BYTES  = 100 * 1024 * 1024L; // 100 MB
+    private static final long MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024L; // 100 MB
 
     private static final Set<String> ALLOWED_IMAGE_TYPES = Set.of(
             "image/jpeg", "image/png", "image/webp", "image/gif"
@@ -159,7 +159,7 @@ public class AssetMediaService {
                 .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Media not found: " + mediaId));
 
         if (!media.getAsset().getId().equals(assetId)) {
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_403);
+            throw new EquipGridException(EquipGridExceptionEnum.EG_403);
         }
 
         storageService.deleteFileFromPermanentStorage(media.getS3Key());
@@ -189,21 +189,21 @@ public class AssetMediaService {
 
     private void validateImageFile(MultipartFile file) {
         if (file == null || file.isEmpty())
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400, "Image file is empty");
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400, "Image file is empty");
         if (file.getSize() > MAX_IMAGE_SIZE_BYTES)
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400, "Image exceeds 10 MB limit");
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400, "Image exceeds 10 MB limit");
         if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType()))
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400,
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400,
                     "Unsupported image type: " + file.getContentType());
     }
 
     private void validateVideoFile(MultipartFile file) {
         if (file == null || file.isEmpty())
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400, "Video file is empty");
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400, "Video file is empty");
         if (file.getSize() > MAX_VIDEO_SIZE_BYTES)
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400, "Video exceeds 100 MB limit");
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400, "Video exceeds 100 MB limit");
         if (!ALLOWED_VIDEO_TYPES.contains(file.getContentType()))
-            throw new EquipGridException(EquipGridExceptionEnum.SGO_400,
+            throw new EquipGridException(EquipGridExceptionEnum.EG_400,
                     "Unsupported video type: " + file.getContentType() + ". Allowed: mp4, webm, mov");
     }
 }

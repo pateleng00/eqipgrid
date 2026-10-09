@@ -17,11 +17,11 @@ import lombok.*;
  */
 @Entity
 @Table(name = "asset_media",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uq_asset_media_order",
-        columnNames = {"asset_id", "media_type", "display_order"}
-    ),
-    indexes = @Index(name = "idx_asset_media_asset_id", columnList = "asset_id")
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_asset_media_order",
+                columnNames = {"asset_id", "media_type", "display_order"}
+        ),
+        indexes = @Index(name = "idx_asset_media_asset_id", columnList = "asset_id")
 )
 @Getter
 @Setter
@@ -46,32 +46,46 @@ public class AssetMedia extends BaseEntity {
     @Column(name = "media_type", nullable = false, length = 16)
     private String mediaType; // "IMAGE" | "VIDEO"
 
-    /** Permanent S3 object key in the common bucket (used to generate presigned URLs). */
+    /**
+     * Permanent S3 object key in the common bucket (used to generate presigned URLs).
+     */
     @Column(name = "s3_key", nullable = false, length = 512)
     private String s3Key;
 
-    /** Public or presigned URL — populated at response time, not stored permanently. */
+    /**
+     * Public or presigned URL — populated at response time, not stored permanently.
+     */
     @Transient
     private String url;
 
-    /** 0-based carousel position within the same {@code mediaType} for this asset. */
+    /**
+     * 0-based carousel position within the same {@code mediaType} for this asset.
+     */
     @Builder.Default
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
 
-    /** Original filename as uploaded — stored for UI display and downloads. */
+    /**
+     * Original filename as uploaded — stored for UI display and downloads.
+     */
     @Column(name = "file_name", length = 255)
     private String fileName;
 
-    /** MIME type (e.g. {@code image/jpeg}, {@code video/mp4}). */
+    /**
+     * MIME type (e.g. {@code image/jpeg}, {@code video/mp4}).
+     */
     @Column(name = "content_type", length = 64)
     private String contentType;
 
-    /** File size in bytes — used for UI progress display. */
+    /**
+     * File size in bytes — used for UI progress display.
+     */
     @Column(name = "file_size_bytes")
     private Long fileSizeBytes;
 
-    /** Duration in seconds (applicable for VIDEO type only). */
+    /**
+     * Duration in seconds (applicable for VIDEO type only).
+     */
     @Column(name = "duration_seconds")
     private Integer durationSeconds;
 }

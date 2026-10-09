@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/auth")
-@Tag(name = "Authentication & Access", description = "User authentication and JWT issuance")
+@Tag(name = "Authentication & Access", description = "User authentication.")
 public class AuthController {
 
     private final IAuthService authService;

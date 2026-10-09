@@ -32,21 +32,18 @@ public class CustomerServiceImpl implements ICustomerService {
 
     @Override
     public Customer getCustomerById(Long id) {
-        return customerQueryRepository.fetchById(id)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer not found with ID: " + id));
+        return customerQueryRepository.fetchById(id).orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer not found with ID: " + id));
     }
 
     @Override
     public Customer getCustomerByPhone(String phone) {
-        return customerQueryRepository.fetchByPhone(phone)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer not found with phone: " + phone));
+        return customerQueryRepository.fetchByPhone(phone).orElseThrow(() -> new Exceptions.ResourceNotFoundException("Customer not found with phone: " + phone));
     }
 
     @Override
     @Transactional
     public Customer createOrUpdateCustomer(CreateCustomerRequest request, String performedBy) {
-        Customer customer = customerQueryRepository.fetchByPhone(request.getPhone())
-                .orElseGet(() -> Customer.builder().phone(request.getPhone()).build());
+        Customer customer = customerQueryRepository.fetchByPhone(request.getPhone()).orElseGet(() -> Customer.builder().phone(request.getPhone()).build());
 
         customer.setFullName(request.getFullName());
         customer.setEmail(request.getEmail());
@@ -61,9 +58,7 @@ public class CustomerServiceImpl implements ICustomerService {
         }
 
         Customer saved = customerRepository.save(customer);
-        auditService.log("CUSTOMER", saved.getId().toString(), "SAVE_CUSTOMER",
-                performedBy != null ? performedBy : "SYSTEM",
-                "Customer profile created/updated: " + saved.getFullName());
+        auditService.log("CUSTOMER", saved.getId().toString(), "SAVE_CUSTOMER", performedBy != null ? performedBy : "SYSTEM", "Customer profile created/updated: " + saved.getFullName());
         return saved;
     }
 
@@ -76,9 +71,7 @@ public class CustomerServiceImpl implements ICustomerService {
         if (request.getNotes() != null) customer.setNotes(request.getNotes());
 
         Customer updated = customerRepository.save(customer);
-        auditService.log("CUSTOMER", updated.getId().toString(), "VERIFY_CUSTOMER",
-                performedBy != null ? performedBy : "SYSTEM",
-                "Customer tier updated to: " + updated.getTier() + ", verified: " + updated.getVerified());
+        auditService.log("CUSTOMER", updated.getId().toString(), "VERIFY_CUSTOMER", performedBy != null ? performedBy : "SYSTEM", "Customer tier updated to: " + updated.getTier() + ", verified: " + updated.getVerified());
         return updated;
     }
 }

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 @AllArgsConstructor
 public class DispatchServiceImpl implements IDispatchService {
 
+    private static final AtomicLong CHALLAN_SEQ = new AtomicLong(100);
     private final DispatchRepository dispatchRepository;
     private final DispatchQueryRepository dispatchQueryRepository;
     private final BookingRepository bookingRepository;
@@ -35,8 +36,6 @@ public class DispatchServiceImpl implements IDispatchService {
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
     private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
-
-    private static final AtomicLong CHALLAN_SEQ = new AtomicLong(100);
 
     @Override
     public DispatchRecord getByBookingId(Long bookingId) {
@@ -58,8 +57,8 @@ public class DispatchServiceImpl implements IDispatchService {
         if (totalCollected.compareTo(requiredBarrier) < 0) {
             throw new Exceptions.BusinessRuleViolationException(
                     "ZERO-OPEN-CREDIT VIOLATION: Dispatch blocked! Required initial collection is INR " + requiredBarrier +
-                    " (Deposit: INR " + booking.getDepositAmount() + " + Advance Rent: INR " + booking.getBaseRent() +
-                    "), but only INR " + totalCollected + " was paid.");
+                            " (Deposit: INR " + booking.getDepositAmount() + " + Advance Rent: INR " + booking.getBaseRent() +
+                            "), but only INR " + totalCollected + " was paid.");
         }
 
         Asset asset = booking.getAsset();
@@ -72,11 +71,11 @@ public class DispatchServiceImpl implements IDispatchService {
                 .asset(asset)
                 .fuelLevel(request.getFuelLevel() != null ? request.getFuelLevel() : "100%")
                 .engineHoursOut(request.getEngineHoursOut() != null ? request.getEngineHoursOut() : asset.getEngineHours())
-                .accessoriesVerified(request.getAccessoriesVerified() != null ? request.getAccessoriesVerified() : true)
+                .accessoriesVerified(request.getAccessoriesVerified() == null || request.getAccessoriesVerified())
                 .conditionNotes(request.getConditionNotes())
                 .photoUrls(request.getPhotoUrls())
                 .driverName(request.getDriverName())
-                .customerSignatureConfirmed(request.getCustomerSignatureConfirmed() != null ? request.getCustomerSignatureConfirmed() : true)
+                .customerSignatureConfirmed(request.getCustomerSignatureConfirmed() == null || request.getCustomerSignatureConfirmed())
                 .dispatchTimestamp(LocalDateTime.now())
                 .build();
 

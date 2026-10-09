@@ -11,7 +11,8 @@ public enum AssetCategory {
     NA((short) 0),
     CONSTRUCTION((short) 1),
     AGRICULTURE((short) 2),
-    MULTIPURPOSE_FLEET((short) 3),;
+    MULTIPURPOSE_FLEET((short) 3),
+    ;
 
     @JsonValue
     private final Short value;

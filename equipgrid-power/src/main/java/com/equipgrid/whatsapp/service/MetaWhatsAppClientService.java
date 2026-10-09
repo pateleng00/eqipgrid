@@ -16,16 +16,13 @@ import java.util.Map;
 @Service
 public class MetaWhatsAppClientService {
 
+    private final RestTemplate restTemplate = new RestTemplate();
     @Value("${equipgrid.whatsapp.meta.phone-number-id:1450975934758555}")
     private String phoneNumberId;
-
     @Value("${equipgrid.whatsapp.meta.access-token:}")
     private String accessToken;
-
     @Value("${equipgrid.whatsapp.meta.api-version:v21.0}")
     private String apiVersion;
-
-    private final RestTemplate restTemplate = new RestTemplate();
 
     /**
      * Dispatches a free-form text message via Meta WhatsApp Cloud API.

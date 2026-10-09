@@ -84,5 +84,6 @@ public class MachineMasterController {
         return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Machine model created"), saved, null));
     }
 
-    public record ModelRequest(Long typeId, Long manufacturerId, String name, String modelNumber, String specs) {}
+    public record ModelRequest(Long typeId, Long manufacturerId, String name, String modelNumber, String specs) {
+    }
 }

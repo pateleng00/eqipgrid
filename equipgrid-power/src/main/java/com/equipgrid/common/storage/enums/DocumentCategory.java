@@ -17,6 +17,8 @@ public enum DocumentCategory {
     RETURN("return"),
     CUSTOMER("customer");
 
-    /** S3 path segment for this category (e.g. {@code "asset"}, {@code "inspection"}). */
+    /**
+     * S3 path segment for this category (e.g. {@code "asset"}, {@code "inspection"}).
+     */
     private final String fileStorageName;
 }

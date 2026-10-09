@@ -1,12 +1,14 @@
 package com.equipgrid.asset.service;
 
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
+import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.audit.service.IAuditService;
+import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
@@ -142,36 +144,21 @@ public class AssetServiceImpl implements IAssetService {
         String tmpUrl = tmpResult.get("url");
 
         // 2. Promote tmp → permanent via S3-to-S3 copy (no data through server)
-        String permanentKey = storageService.copyToPermanentStorage(
-                DocumentType.ASSET_IMAGE,
-                tmpUrl,
-                asset.getAssetTag().toLowerCase() + "_" + System.currentTimeMillis());
+        String permanentKey = storageService.copyToPermanentStorage(DocumentType.ASSET_IMAGE, tmpUrl, asset.getAssetTag().toLowerCase() + "_" + asset.getId());
 
         // 3. Build the public permanent URL and persist
         String permanentUrl = storageService.createPreSignedFileUrl(permanentKey);
         asset.setImageUrl(permanentUrl != null ? permanentUrl : tmpUrl);
         Asset saved = assetRepository.save(asset);
 
-        auditService.log("ASSET", asset.getAssetTag(), "IMAGE_UPLOAD",
-                performedBy != null ? performedBy : "SYSTEM",
-                "Image uploaded to S3: " + permanentKey);
+        auditService.log("ASSET", asset.getAssetTag(), "IMAGE_UPLOAD", performedBy != null ? performedBy : "SYSTEM", "Image uploaded to S3: " + permanentKey);
 
         log.info("[Asset] Image updated for {} -> {}", asset.getAssetTag(), permanentKey);
         return saved;
     }
 
-    private String resolveExtension(String contentType) {
-        if (contentType == null) return "jpg";
-        return switch (contentType) {
-            case "image/png"  -> "png";
-            case "image/webp" -> "webp";
-            case "image/gif"  -> "gif";
-            default           -> "jpg";
-        };
-    }
-
     @Override
-    public List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId) {
+    public List<WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId) {
         List<Asset> all = assetQueryRepository.fetchAssets(category, null);
         all.forEach(this::populateMedia);
 
@@ -183,7 +170,7 @@ public class AssetServiceImpl implements IAssetService {
                         java.util.stream.Collectors.toList()
                 ));
 
-        List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> result = new java.util.ArrayList<>();
+        List<WebsiteMachineModelResponse> result = new java.util.ArrayList<>();
 
         for (Map.Entry<String, List<Asset>> entry : grouped.entrySet()) {
             List<Asset> units = entry.getValue();
@@ -226,7 +213,7 @@ public class AssetServiceImpl implements IAssetService {
                         .orElse(null);
             }
 
-            result.add(com.equipgrid.asset.dto.response.WebsiteMachineModelResponse.builder()
+            result.add(WebsiteMachineModelResponse.builder()
                     .id(rep.getId())
                     .assetTag(rep.getAssetTag())
                     .name(rep.getName())
@@ -254,27 +241,30 @@ public class AssetServiceImpl implements IAssetService {
         String upper = name.toUpperCase();
         if (upper.contains("MIX")) return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
         if (upper.contains("VIBRAT")) return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
-        if (upper.contains("COMPACT") || upper.contains("RAMMER")) return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
-        if (upper.contains("JACKHAMMER") || upper.contains("BREAKER")) return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
-        if (upper.contains("PUMP") || upper.contains("TRASH")) return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
+        if (upper.contains("COMPACT") || upper.contains("RAMMER"))
+            return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
+        if (upper.contains("JACKHAMMER") || upper.contains("BREAKER"))
+            return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
+        if (upper.contains("PUMP") || upper.contains("TRASH"))
+            return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
         if (upper.contains("GEN") || upper.contains("POWER")) return "बिजली जनरेटर (Portable Power Generator)";
-        if (upper.contains("WEED") || upper.contains("ROTARY")) return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
-        if (upper.contains("REAP") || upper.contains("HARVEST")) return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
-        if (upper.contains("AUGER") || upper.contains("HOLE")) return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
+        if (upper.contains("WEED") || upper.contains("ROTARY"))
+            return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
+        if (upper.contains("REAP") || upper.contains("HARVEST"))
+            return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
+        if (upper.contains("AUGER") || upper.contains("HOLE"))
+            return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
         return name;
     }
 
     @Override
     @Transactional
     public void deleteAsset(Long id, com.equipgrid.auth.entity.User caller) {
-        if (caller != null && caller.getRole() != null && caller.getRole() != com.equipgrid.auth.enums.Role.ROOT) {
-            throw new Exceptions.BusinessRuleViolationException(
-                    "Forbidden: Only Root administrators can delete machinery from the fleet. Admins and Managers cannot delete machines.");
+        if (caller != null && caller.getRole() != null && caller.getRole() != Role.ROOT) {
+            throw new Exceptions.BusinessRuleViolationException("Forbidden: You are not allowed to perform this operation");
         }
 
-        Asset asset = assetRepository.findById(id)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Asset not found with ID: " + id));
-
+        Asset asset = assetRepository.findById(id).orElseThrow(() -> new Exceptions.ResourceNotFoundException("Asset not found with ID: " + id));
         assetRepository.delete(asset);
         log.info("Asset {} (Tag: {}) deleted by actor: {}", id, asset.getAssetTag(), caller != null ? caller.getUsername() : "ROOT");
     }

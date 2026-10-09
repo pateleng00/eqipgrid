@@ -17,7 +17,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/dealers")
-@Tag(name = "Dealer & Channel Partners", description = "SOP-006 Channel partner network and 6% commission tracking")
+@Tag(name = "Dealer & Channel Partners", description = "Channel partner network.")
 public class DealerController {
 
     private final IDealerService dealerService;
@@ -46,9 +46,7 @@ public class DealerController {
 
     @PostMapping
     @Operation(summary = "Onboard a new dealer / shop partner")
-    public ResponseEntity<ApiResponse<Dealer>> createDealer(
-            @Valid @RequestBody CreateDealerRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<Dealer>> createDealer(@Valid @RequestBody CreateDealerRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "ADMIN";
         Dealer saved = dealerService.createDealer(request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Dealer onboarded successfully", saved));
@@ -56,9 +54,7 @@ public class DealerController {
 
     @PatchMapping("/commissions/{commissionId}/settle")
     @Operation(summary = "Mark referral commission as settled/paid")
-    public ResponseEntity<ApiResponse<DealerCommission>> settleCommission(
-            @PathVariable Long commissionId,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<DealerCommission>> settleCommission(@PathVariable Long commissionId, Principal principal) {
         String actor = principal != null ? principal.getName() : "ACCOUNTS";
         DealerCommission settled = dealerService.settleCommission(commissionId, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Commission settled", settled));

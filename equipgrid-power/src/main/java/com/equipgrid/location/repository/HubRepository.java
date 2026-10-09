@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface HubRepository extends JpaRepository<Hub, Long> {
     List<Hub> findByCityIdAndActiveTrueOrderByNameAsc(Long cityId);
+
     List<Hub> findByActiveTrueOrderByNameAsc();
+
     Optional<Hub> findByCodeIgnoreCase(String code);
 }

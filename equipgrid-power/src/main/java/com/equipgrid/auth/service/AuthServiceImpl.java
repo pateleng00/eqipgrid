@@ -27,15 +27,12 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        User user = userQueryRepository.fetchByUsernameOrEmail(request.getUsername())
-                .orElseThrow(() -> new Exceptions.BusinessRuleViolationException("Invalid username or password"));
+        User user = userQueryRepository.fetchByUsernameOrEmail(request.getUsername()).orElseThrow(() -> new Exceptions.BusinessRuleViolationException("Invalid username or password"));
 
-        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash())
-                || request.getPassword().equals("password123")
-                || request.getPassword().equals("admin123");
+        boolean matches = passwordEncoder.matches(request.getPassword(), user.getPasswordHash());
 
         if (!matches) {
-            throw new Exceptions.BusinessRuleViolationException("Invalid username or password");
+            throw new Exceptions.BusinessRuleViolationException("Invalid Login Credentials");
         }
 
         String token = tokenProvider.generateToken(user);

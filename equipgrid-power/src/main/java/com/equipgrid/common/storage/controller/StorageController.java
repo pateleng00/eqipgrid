@@ -16,16 +16,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
-/**
- * REST controller exposing storage endpoints.
- * Mirrors the Stride Observatory StorageController structure.
- *
- * <ul>
- *   <li>{@code POST /common/storage/upload}          — multipart upload to tmp bucket</li>
- *   <li>{@code POST /common/storage/signed-url}      — presigned GET URL for common bucket</li>
- *   <li>{@code POST /common/storage/presigned-upload} — presigned PUT URL for direct client upload</li>
- * </ul>
- */
 @RestController
 @RequestMapping("/common/storage")
 @AllArgsConstructor
@@ -36,9 +26,9 @@ public class StorageController {
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Upload file to temporary bucket",
-        description = "Uploads a file (image: jpeg/png/webp/gif, max 10 MB) to the staging bucket. " +
-                      "Use the returned URL when creating an asset, then the backend promotes it to permanent storage."
+            summary = "Upload file to temporary bucket",
+            description = "Uploads a file (image: jpeg/png/webp/gif, max 10 MB) to the staging bucket. " +
+                    "Use the returned URL when creating an asset, then the backend promotes it to permanent storage."
     )
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadFile(
             @RequestParam("file") MultipartFile file) {
@@ -47,20 +37,19 @@ public class StorageController {
 
     @PostMapping("/signed-url")
     @Operation(
-        summary = "Generate presigned GET URL",
-        description = "Returns a time-limited download URL for a file in the common (permanent) bucket."
+            summary = "Generate presigned GET URL",
+            description = "Returns a time-limited download URL for a file in the common (permanent) bucket."
     )
     public ResponseEntity<ApiResponse<Map<String, String>>> getPreSignedDownloadUrl(
             @Valid @RequestBody DownloadRequest request) {
-        return ResponseEntity.ok(
-                ApiResponse.buildSuccess(storageService.getPreSignedDownloadUrlFromCommonBucket(request)));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(storageService.getPreSignedDownloadUrlFromCommonBucket(request)));
     }
 
     @PostMapping("/presigned-upload")
     @Operation(
-        summary = "Generate presigned PUT URL for direct client upload",
-        description = "Returns a presigned S3 PUT URL. The client uploads directly to S3 (bypassing the server), " +
-                      "then passes the returned tempUrl back to the domain endpoint to trigger promotion to permanent storage."
+            summary = "Generate presigned PUT URL for direct client upload",
+            description = "Returns a presigned S3 PUT URL. The client uploads directly to S3 (bypassing the server), " +
+                    "then passes the returned tempUrl back to the domain endpoint to trigger promotion to permanent storage."
     )
     public ResponseEntity<ApiResponse<PresignedUploadResponse>> getPresignedUploadUrl(
             @Valid @RequestBody PresignedUploadRequest request) {

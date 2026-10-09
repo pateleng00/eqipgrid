@@ -93,7 +93,9 @@ public class LocationController {
         return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Hub yard created successfully"), saved, null));
     }
 
-    public record CityRequest(Long stateId, String name, String pinCode) {}
+    public record CityRequest(Long stateId, String name, String pinCode) {
+    }
+
     public record HubRequest(
             Long cityId,
             String name,
@@ -103,5 +105,6 @@ public class LocationController {
             java.math.BigDecimal operatingRadiusKm,
             java.math.BigDecimal latitude,
             java.math.BigDecimal longitude
-    ) {}
+    ) {
+    }
 }

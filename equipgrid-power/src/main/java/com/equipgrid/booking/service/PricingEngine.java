@@ -10,6 +10,8 @@ import java.time.temporal.ChronoUnit;
 public class PricingEngine {
 
     public static final BigDecimal OPERATOR_DAILY_RATE = new BigDecimal("500.00");
+    public static final BigDecimal DEFAULT_FREE_DISTANCE_KM = new BigDecimal("5.00");
+    public static final BigDecimal DEFAULT_RATE_PER_KM = new BigDecimal("10.00");
 
     public CommercialQuote calculate(BigDecimal dailyRate, BigDecimal depositAmount,
                                      LocalDate startDate, LocalDate endDate,
@@ -39,9 +41,6 @@ public class PricingEngine {
 
         return quote;
     }
-
-    public static final BigDecimal DEFAULT_FREE_DISTANCE_KM = new BigDecimal("5.00");
-    public static final BigDecimal DEFAULT_RATE_PER_KM = new BigDecimal("10.00");
 
     public BigDecimal calculateDeliveryFee(BigDecimal distanceKm) {
         return calculateDeliveryFee(distanceKm, DEFAULT_FREE_DISTANCE_KM, DEFAULT_RATE_PER_KM);

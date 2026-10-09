@@ -17,13 +17,19 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class VoiceBookingIntent {
 
-    /** Raw transcribed text (in original language, e.g. Hindi) */
+    /**
+     * Raw transcribed text (in original language, e.g. Hindi)
+     */
     private String transcript;
 
-    /** English translation of the transcript (if different from original) */
+    /**
+     * English translation of the transcript (if different from original)
+     */
     private String transcriptEnglish;
 
-    /** ISO 639-1 language code detected ("hi", "en", "bho", etc.) */
+    /**
+     * ISO 639-1 language code detected ("hi", "en", "bho", etc.)
+     */
     private String detectedLanguage;
 
     /**
@@ -32,24 +38,38 @@ public class VoiceBookingIntent {
      */
     private String intent;
 
-    /** Equipment category if mentioned: "AGRICULTURE" or "CONSTRUCTION" */
+    /**
+     * Equipment category if mentioned: "AGRICULTURE" or "CONSTRUCTION"
+     */
     private String assetCategory;
 
-    /** Specific machine name if mentioned (e.g. "reaper", "concrete mixer") */
+    /**
+     * Specific machine name if mentioned (e.g. "reaper", "concrete mixer")
+     */
     private String machineNameHint;
 
-    /** Number of rental days if explicitly mentioned */
+    /**
+     * Number of rental days if explicitly mentioned
+     */
     private Integer rentalDays;
 
-    /** Hub/city name if mentioned (e.g. "Hardoi", "Lucknow") */
+    /**
+     * Hub/city name if mentioned (e.g. "Hardoi", "Lucknow")
+     */
     private String hubNameHint;
 
-    /** Delivery type if mentioned: "HOME", "FARM", or "SITE" */
+    /**
+     * Delivery type if mentioned: "HOME", "FARM", or "SITE"
+     */
     private String deliveryType;
 
-    /** Whether transcription was successfully performed */
+    /**
+     * Whether transcription was successfully performed
+     */
     private boolean transcriptionSucceeded;
 
-    /** Reason for failure if transcription did not succeed */
+    /**
+     * Reason for failure if transcription did not succeed
+     */
     private String fallbackReason;
 }

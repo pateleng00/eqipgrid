@@ -50,7 +50,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -79,6 +78,42 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private final ObjectMapper objectMapper;
     private final VoiceNoteProcessingService voiceNoteProcessingService;
     private final ChallanDocumentService challanDocumentService;
+
+    public static String getEquipmentHindiName(String name, String tag) {
+        if (name == null) return "उपकरण (Equipment)";
+        String lower = name.toLowerCase();
+        String upperTag = tag != null ? tag.toUpperCase() : "";
+
+        if (lower.contains("concrete mixer") || upperTag.contains("MIX")) {
+            return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
+        } else if (lower.contains("vibrator") || upperTag.contains("VIB")) {
+            return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
+        } else if (lower.contains("compactor") || lower.contains("rammer") || upperTag.contains("CMP")) {
+            return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
+        } else if (lower.contains("jackhammer") || lower.contains("demolition") || upperTag.contains("JKH")) {
+            return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
+        } else if (lower.contains("trash pump") || lower.contains("pump") || upperTag.contains("PMP")) {
+            return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
+        } else if (lower.contains("generator") || upperTag.contains("GEN")) {
+            return "बिजली जनरेटर (Portable Power Generator)";
+        } else if (lower.contains("weeder") || upperTag.contains("WED")) {
+            return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
+        } else if (lower.contains("reaper") || lower.contains("harvester") || upperTag.contains("REP")) {
+            return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
+        } else if (lower.contains("auger") || lower.contains("post-hole") || upperTag.contains("AUG")) {
+            return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
+        } else if (lower.contains("tractor") || upperTag.contains("TRAC")) {
+            return "खेत जुताई ट्रैक्टर (Farm Tractor)";
+        } else if (lower.contains("rotavator")) {
+            return "रोटावेटर (Rotavator)";
+        } else if (lower.contains("sprayer")) {
+            return "कीटनाशक छिड़कने की मशीन (Power Sprayer)";
+        } else if (lower.contains("thresher")) {
+            return "अनाज निकालने का थ्रेशर (Crop Thresher)";
+        } else {
+            return name;
+        }
+    }
 
     @Override
     @Transactional
@@ -141,13 +176,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             case SELECTING_CATEGORY -> response = handleCategorySelection(messageText, conversation, customer, context);
             case SELECTING_ASSET -> response = handleAssetSelection(messageText, conversation, customer, context);
             case ENTERING_DATES -> response = handleDateInput(messageText, conversation, customer, context);
-            case SELECTING_DELIVERY_DESTINATION -> response = handleDeliveryDestinationSelection(messageText, conversation, customer, context);
-            case ENTERING_LOCATION -> response = handleLocationInput(request, messageText, conversation, customer, context);
-            case CONFIRMING_BOOKING -> response = handleBookingConfirmation(messageText, conversation, customer, context);
+            case SELECTING_DELIVERY_DESTINATION ->
+                    response = handleDeliveryDestinationSelection(messageText, conversation, customer, context);
+            case ENTERING_LOCATION ->
+                    response = handleLocationInput(request, messageText, conversation, customer, context);
+            case CONFIRMING_BOOKING ->
+                    response = handleBookingConfirmation(messageText, conversation, customer, context);
             case AWAITING_PAYMENT -> response = handlePaymentFlow(messageText, conversation, customer, context);
             case TRACKING_ORDER -> response = handleTracking(conversation, customer);
             case REQUESTING_RETURN -> response = handleReturnRequest(messageText, conversation, customer, context);
-            case DAMAGE_CHECKLIST_ACTIVE -> response = handleDamageChecklistStep(request, messageText, conversation, customer, context);
+            case DAMAGE_CHECKLIST_ACTIVE ->
+                    response = handleDamageChecklistStep(request, messageText, conversation, customer, context);
             case PROCESSING_VOICE -> response = handleMainMenuSelection(messageText, conversation, customer, context);
             default -> response = resetAndShowMainMenu(conversation, customer);
         }
@@ -181,42 +220,6 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     @Transactional(readOnly = true)
     public Optional<WhatsAppConversation> getConversationByPhone(String phoneNumber) {
         return conversationQueryRepository.fetchByPhone(normalizePhoneNumber(phoneNumber));
-    }
-
-    public static String getEquipmentHindiName(String name, String tag) {
-        if (name == null) return "उपकरण (Equipment)";
-        String lower = name.toLowerCase();
-        String upperTag = tag != null ? tag.toUpperCase() : "";
-
-        if (lower.contains("concrete mixer") || upperTag.contains("MIX")) {
-            return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
-        } else if (lower.contains("vibrator") || upperTag.contains("VIB")) {
-            return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
-        } else if (lower.contains("compactor") || lower.contains("rammer") || upperTag.contains("CMP")) {
-            return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
-        } else if (lower.contains("jackhammer") || lower.contains("demolition") || upperTag.contains("JKH")) {
-            return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
-        } else if (lower.contains("trash pump") || lower.contains("pump") || upperTag.contains("PMP")) {
-            return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
-        } else if (lower.contains("generator") || upperTag.contains("GEN")) {
-            return "बिजली जनरेटर (Portable Power Generator)";
-        } else if (lower.contains("weeder") || upperTag.contains("WED")) {
-            return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
-        } else if (lower.contains("reaper") || lower.contains("harvester") || upperTag.contains("REP")) {
-            return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
-        } else if (lower.contains("auger") || lower.contains("post-hole") || upperTag.contains("AUG")) {
-            return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
-        } else if (lower.contains("tractor") || upperTag.contains("TRAC")) {
-            return "खेत जुताई ट्रैक्टर (Farm Tractor)";
-        } else if (lower.contains("rotavator")) {
-            return "रोटावेटर (Rotavator)";
-        } else if (lower.contains("sprayer")) {
-            return "कीटनाशक छिड़कने की मशीन (Power Sprayer)";
-        } else if (lower.contains("thresher")) {
-            return "अनाज निकालने का थ्रेशर (Crop Thresher)";
-        } else {
-            return name;
-        }
     }
 
     @Override
@@ -410,7 +413,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         int choice = -1;
         try {
             choice = Integer.parseInt(input.trim());
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+        }
 
         if (choice >= 1 && choice <= hubs.size()) {
             Hub chosen = hubs.get(choice - 1);
@@ -455,15 +459,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String hubStr = context.getSelectedHubName() != null ? " at *" + context.getSelectedHubName() + "*" : "";
 
         String msg = String.format("""
-                📅 *Select Rental Duration for %s%s:*
-                _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
-                
-                • For how many days do you need the machinery?
-                • Available starting from tomorrow (*%s*)
-                
-                👉 *Reply with number of days* (e.g. *1*, *2*, *3*, *5*, or *7*):
-                _(उदाहरण: *2* दिन के लिए *2* या *3* दिन के लिए *3* लिखकर भेजें)_
-                """,
+                        📅 *Select Rental Duration for %s%s:*
+                        _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
+                        
+                        • For how many days do you need the machinery?
+                        • Available starting from tomorrow (*%s*)
+                        
+                        👉 *Reply with number of days* (e.g. *1*, *2*, *3*, *5*, or *7*):
+                        _(उदाहरण: *2* दिन के लिए *2* या *3* दिन के लिए *3* लिखकर भेजें)_
+                        """,
                 catStr,
                 hubStr,
                 LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
@@ -600,7 +604,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             if (choice >= 1 && choice <= availableAssets.size()) {
                 selected = availableAssets.get(choice - 1);
             }
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) {
+        }
 
         // Try tag or name match
         if (selected == null) {
@@ -694,21 +699,21 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             if (isAgri) {
                 conv.setState(WhatsAppState.SELECTING_DELIVERY_DESTINATION);
                 sb.append(String.format("""
-                        🗓️ Rental Period: *%d Days* (%s to %s)%s
-                        
-                        🌾 *Where do you need this equipment delivered?*
-                        _(उपकरण कहाँ डिलीवर करवाना चाहते हैं?)_
-                        
-                        *1.* 🏠 *Home / Village Address* (घर या गाँव का पता)
-                        *2.* 🚜 *Direct Farm / Field (Khet) Geo-Tag* (खेत पर डिलीवरी - सटीक लोकेशन पिन)
-                        
-                        💡 *Kisan Tip:*
-                        _Selecting *Farm (2)* ensures our delivery trailer reaches right to your field gate without getting stuck in narrow village lanes._
-                        
-                        👉 *Reply with 1 or 2:*
-                        • Reply *1* for Home / Village
-                        • Reply *2* for Farm Field Geo-Tag
-                        """,
+                                🗓️ Rental Period: *%d Days* (%s to %s)%s
+                                
+                                🌾 *Where do you need this equipment delivered?*
+                                _(उपकरण कहाँ डिलीवर करवाना चाहते हैं?)_
+                                
+                                *1.* 🏠 *Home / Village Address* (घर या गाँव का पता)
+                                *2.* 🚜 *Direct Farm / Field (Khet) Geo-Tag* (खेत पर डिलीवरी - सटीक लोकेशन पिन)
+                                
+                                💡 *Kisan Tip:*
+                                _Selecting *Farm (2)* ensures our delivery trailer reaches right to your field gate without getting stuck in narrow village lanes._
+                                
+                                👉 *Reply with 1 or 2:*
+                                • Reply *1* for Home / Village
+                                • Reply *2* for Farm Field Geo-Tag
+                                """,
                         context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote
                 ));
 
@@ -727,17 +732,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 context.setDeliveryDestinationType("SITE");
                 conv.setState(WhatsAppState.ENTERING_LOCATION);
                 sb.append(String.format("""
-                        🗓️ Rental Period: *%d Days* (%s to %s)%s
-                        
-                        🏗️ *Construction Site Delivery Location:*
-                        _(निर्माण स्थल का पता या लोकेशन)_
-                        
-                        You can provide the site location in either of 2 ways:
-                        📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
-                        ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
-                        
-                        👉 Please send your location pin or type the address below:
-                        """,
+                                🗓️ Rental Period: *%d Days* (%s to %s)%s
+                                
+                                🏗️ *Construction Site Delivery Location:*
+                                _(निर्माण स्थल का पता या लोकेशन)_
+                                
+                                You can provide the site location in either of 2 ways:
+                                📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
+                                ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
+                                
+                                👉 Please send your location pin or type the address below:
+                                """,
                         context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote
                 ));
 
@@ -1047,27 +1052,27 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String hindiName = getEquipmentHindiName(context.getSelectedAssetName(), context.getSelectedAssetTag());
 
         String summary = String.format("""
-                📋 *EquipGrid Booking Quotation Summary*
-                ━━━━━━━━━━━━━━━━━━━━━━
-                🚜 Machine: *%s* (`%s`)
-                   👉 *%s*
-                %s📅 Duration: *%d Days* (%s to %s)
-                📍 Delivery Type: %s
-                📍 Destination: *%s*
-                %s━━━━━━━━━━━━━━━━━━━━━━
-                • Base Rent (%d Days): ₹%,.2f
-                • Logistics & Transport: ₹%,.2f
-                • *Security Deposit (100%% Refundable)*: ₹%,.2f
-                ━━━━━━━━━━━━━━━━━━━━━━
-                💰 *Total Advance Due*: *₹%,.2f*
-                _(Includes ₹%,.2f 100%% Refundable Deposit)_
-                
-                🛡️ *Zero-Credit Guarantee*:
-                Full deposit is credited back to your UPI within 2 hours of machine return inspection.
-                
-                👉 Reply *CONFIRM* (या *HAAN*) to finalize and generate UPI QR!
-                Or reply *CANCEL* to restart.
-                """,
+                        📋 *EquipGrid Booking Quotation Summary*
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        🚜 Machine: *%s* (`%s`)
+                           👉 *%s*
+                        %s📅 Duration: *%d Days* (%s to %s)
+                        📍 Delivery Type: %s
+                        📍 Destination: *%s*
+                        %s━━━━━━━━━━━━━━━━━━━━━━
+                        • Base Rent (%d Days): ₹%,.2f
+                        • Logistics & Transport: ₹%,.2f
+                        • *Security Deposit (100%% Refundable)*: ₹%,.2f
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        💰 *Total Advance Due*: *₹%,.2f*
+                        _(Includes ₹%,.2f 100%% Refundable Deposit)_
+                        
+                        🛡️ *Zero-Credit Guarantee*:
+                        Full deposit is credited back to your UPI within 2 hours of machine return inspection.
+                        
+                        👉 Reply *CONFIRM* (या *HAAN*) to finalize and generate UPI QR!
+                        Or reply *CANCEL* to restart.
+                        """,
                 context.getSelectedAssetName(),
                 context.getSelectedAssetTag() != null ? context.getSelectedAssetTag() : "",
                 hindiName,
@@ -1141,29 +1146,29 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             String hindiName = getEquipmentHindiName(context.getSelectedAssetName(), context.getSelectedAssetTag());
 
             String confirmationText = String.format("""
-                    ✅ *Booking Reserved Successfully!*
-                    ━━━━━━━━━━━━━━━━━━━━━━
-                    🔖 Booking ID: *%s*
-                    🚜 Machine: *%s*
-                       👉 *%s*
-                    %s📅 Dates: *%s to %s*
-                    📍 Location: *%s*
-                    %s━━━━━━━━━━━━━━━━━━━━━━
-                    💰 Total Amount: *₹%,.2f*
-                    _(Deposit: ₹%,.2f + Rent & Logistics: ₹%,.2f)_
-                    
-                    📲 *Scan Dynamic UPI QR Code to Pay:*
-                    Compatible with PhonePe, Google Pay, Paytm, or BHIM.
-                    
-                    🔗 *Click to Open UPI App directly:*
-                    %s
-                    
-                    🖼️ *View / Download UPI QR Code:*
-                    /equipgrid/whatsapp/qr/%s
-                    
-                    💡 After completing UPI payment, please reply:
-                    *PAID* (or enter your 12-digit UPI UTR Number)
-                    """,
+                            ✅ *Booking Reserved Successfully!*
+                            ━━━━━━━━━━━━━━━━━━━━━━
+                            🔖 Booking ID: *%s*
+                            🚜 Machine: *%s*
+                               👉 *%s*
+                            %s📅 Dates: *%s to %s*
+                            📍 Location: *%s*
+                            %s━━━━━━━━━━━━━━━━━━━━━━
+                            💰 Total Amount: *₹%,.2f*
+                            _(Deposit: ₹%,.2f + Rent & Logistics: ₹%,.2f)_
+                            
+                            📲 *Scan Dynamic UPI QR Code to Pay:*
+                            Compatible with PhonePe, Google Pay, Paytm, or BHIM.
+                            
+                            🔗 *Click to Open UPI App directly:*
+                            %s
+                            
+                            🖼️ *View / Download UPI QR Code:*
+                            /equipgrid/whatsapp/qr/%s
+                            
+                            💡 After completing UPI payment, please reply:
+                            *PAID* (or enter your 12-digit UPI UTR Number)
+                            """,
                     booking.getBookingNumber(),
                     context.getSelectedAssetName(),
                     hindiName,
@@ -1257,19 +1262,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             conv.setContextData(null);
 
             String responseMessage = String.format("""
-                    🎉 *Payment Received & Verified!*
-                    ━━━━━━━━━━━━━━━━━━━━━━
-                    🔖 Booking: *%s*
-                    💳 Payment Mode: *UPI*
-                    📝 Reference ID: *%s*
-                    💰 Amount Paid: *₹%,.2f*
-                    ━━━━━━━━━━━━━━━━━━━━━━
-                    Status: *CONFIRMED & READY FOR DISPATCH* 🚜
-                    
-                    Yard technicians are conducting pre-dispatch maintenance inspection. Outward challan will be issued shortly.
-                    
-                    👉 Type *4* or *TRACK* anytime to view delivery driver & vehicle details!
-                    """,
+                            🎉 *Payment Received & Verified!*
+                            ━━━━━━━━━━━━━━━━━━━━━━
+                            🔖 Booking: *%s*
+                            💳 Payment Mode: *UPI*
+                            📝 Reference ID: *%s*
+                            💰 Amount Paid: *₹%,.2f*
+                            ━━━━━━━━━━━━━━━━━━━━━━
+                            Status: *CONFIRMED & READY FOR DISPATCH* 🚜
+                            
+                            Yard technicians are conducting pre-dispatch maintenance inspection. Outward challan will be issued shortly.
+                            
+                            👉 Type *4* or *TRACK* anytime to view delivery driver & vehicle details!
+                            """,
                     booking.getBookingNumber(),
                     payment.getTransactionRef(),
                     payment.getAmount()
@@ -1341,19 +1346,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         );
 
         String text = String.format("""
-                💳 *UPI Payment QR Code for Booking %s*
-                ━━━━━━━━━━━━━━━━━━━━━━
-                🚜 Machine: *%s*
-                💰 Amount Due: *₹%,.2f*
-                
-                📲 *Scan Dynamic UPI QR Code*
-                Supports PhonePe, Google Pay, Paytm, or BHIM.
-                
-                🔗 *Direct Payment Link:*
-                %s
-                
-                Reply *PAID* after making the payment.
-                """,
+                        💳 *UPI Payment QR Code for Booking %s*
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        🚜 Machine: *%s*
+                        💰 Amount Due: *₹%,.2f*
+                        
+                        📲 *Scan Dynamic UPI QR Code*
+                        Supports PhonePe, Google Pay, Paytm, or BHIM.
+                        
+                        🔗 *Direct Payment Link:*
+                        %s
+                        
+                        Reply *PAID* after making the payment.
+                        """,
                 pendingBooking.getBookingNumber(),
                 pendingBooking.getAsset().getName(),
                 pendingBooking.getTotalAmount(),
@@ -1452,24 +1457,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         conv.setState(WhatsAppState.REQUESTING_RETURN);
 
         String message = String.format("""
-                🔄 *Request Equipment Return & Security Deposit Refund*
-                *(मशीन वापसी व जमानत राशि वापस पाएं)*
-                ━━━━━━━━━━━━━━━━━━━━━━
-                🔖 Booking: *%s*
-                🚜 Equipment: *%s* (`%s`)
-                💰 Security Deposit Held: *₹%,.2f*
-                
-                📋 *WhatsApp Return Inspection Process:*
-                └ 1. Confirm return pickup below
-                └ 2. Our bot will guide you through a *quick 8-point damage checklist* 📋
-                └ 3. Photo uploads supported for any damage evidence 📷
-                └ 4. Instant deposit refund via UPI within 2 hours 💳
-                
-                🚚 Our recovery vehicle will be dispatched to your site.
-                
-                👉 Reply *YES* (या *HAAN*) to begin the return & damage inspection process.
-                Or reply *MENU* to cancel.
-                """,
+                        🔄 *Request Equipment Return & Security Deposit Refund*
+                        *(मशीन वापसी व जमानत राशि वापस पाएं)*
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        🔖 Booking: *%s*
+                        🚜 Equipment: *%s* (`%s`)
+                        💰 Security Deposit Held: *₹%,.2f*
+                        
+                        📋 *WhatsApp Return Inspection Process:*
+                        └ 1. Confirm return pickup below
+                        └ 2. Our bot will guide you through a *quick 8-point damage checklist* 📋
+                        └ 3. Photo uploads supported for any damage evidence 📷
+                        └ 4. Instant deposit refund via UPI within 2 hours 💳
+                        
+                        🚚 Our recovery vehicle will be dispatched to your site.
+                        
+                        👉 Reply *YES* (या *HAAN*) to begin the return & damage inspection process.
+                        Or reply *MENU* to cancel.
+                        """,
                 activeOnRent.getBookingNumber(),
                 activeOnRent.getAsset().getName(),
                 activeOnRent.getAsset().getAssetTag(),
@@ -1701,7 +1706,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     }
 
     private WhatsAppMessageResponse buildVoiceRetryPrompt(WhatsAppConversation conv, Customer customer,
-                                                            String reason, int retryCount) {
+                                                          String reason, int retryCount) {
         conv.setState(WhatsAppState.MAIN_MENU);
         String msg = """
                 🎤 *आवाज़ सन्देश नहीं समझ आया* (Could not process voice note)
@@ -1780,10 +1785,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         }
     }
 
-    /** Returns a combined acknowledgment + next-step response */
+    /**
+     * Returns a combined acknowledgment + next-step response
+     */
     private WhatsAppMessageResponse ackResponseThenState(WhatsAppConversation conv, Customer customer,
-                                                          WhatsAppConversationContext context,
-                                                          String ackText, WhatsAppMessageResponse nextStep) {
+                                                         WhatsAppConversationContext context,
+                                                         String ackText, WhatsAppMessageResponse nextStep) {
         // In a real BSP integration, you'd send ackText first then nextStep.
         // Here we merge them so the bot returns a single rich message.
         String combined = ackText + "\n\n" + nextStep.getMessage();
@@ -1805,9 +1812,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     /**
      * Handles a single step of the interactive damage checklist.
      * The checklist is a sequential WhatsApp conversation:
-     *   - Bot shows one checklist item at a time
-     *   - Customer replies OK / DAMAGED / MISSING / sends a photo
-     *   - After all items, generates a completion summary
+     * - Bot shows one checklist item at a time
+     * - Customer replies OK / DAMAGED / MISSING / sends a photo
+     * - After all items, generates a completion summary
      */
     private WhatsAppMessageResponse handleDamageChecklistStep(
             WhatsAppInboundRequest request,
@@ -1839,8 +1846,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         boolean photoReceived = isImageMessage(request);
         if (photoReceived && currentIdx < items.size()) {
             ChallanDocumentService.ChecklistItem currentItem = items.get(currentIdx);
-            String photoUrl = request.getMediaUrl() != null ? request.getMediaUrl() : "[photo-received]"
-                    ;
+            String photoUrl = request.getMediaUrl() != null ? request.getMediaUrl() : "[photo-received]";
             context.getChecklistItemPhotos().put(currentItem.key(), photoUrl);
             context.getChecklistItemStatuses().put(currentItem.key(), "DAMAGED");
             log.info("[DamageChecklist] Photo received for item {} from {}", currentItem.key(), conv.getPhoneNumber());
@@ -1954,24 +1960,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         conv.setState(WhatsAppState.DAMAGE_CHECKLIST_ACTIVE);
 
         String intro = String.format("""
-                🔄 *Equipment Return — Damage Checklist*
-                *(मशीन वापसी — क्षति जाँच सूची)*
-                ━━━━━━━━━━━━━━━━━━━━━━
-                🚜 Machine: *%s* (`%s`)
-                📋 Booking: *%s*
-                💰 Security Deposit: *₹%,.0f*
-                
-                अब मैं आपसे मशीन के %d बिंदुओं की जाँच करूँगा।
-                _(I will now check %d inspection points with you.)_
-                
-                👉 प्रत्येक प्रश्न के लिए उत्तर दें:
-                ✅ *OK* — ठीक है
-                ❌ *DAMAGED* — क्षतिग्रस्त है  
-                ⚠️ *MISSING* — गायब है
-                📷 क्षति की *फोटो भेजें*
-                
-                चलिए शुरू करते हैं! 👇
-                """,
+                        🔄 *Equipment Return — Damage Checklist*
+                        *(मशीन वापसी — क्षति जाँच सूची)*
+                        ━━━━━━━━━━━━━━━━━━━━━━
+                        🚜 Machine: *%s* (`%s`)
+                        📋 Booking: *%s*
+                        💰 Security Deposit: *₹%,.0f*
+                        
+                        अब मैं आपसे मशीन के %d बिंदुओं की जाँच करूँगा।
+                        _(I will now check %d inspection points with you.)_
+                        
+                        👉 प्रत्येक प्रश्न के लिए उत्तर दें:
+                        ✅ *OK* — ठीक है
+                        ❌ *DAMAGED* — क्षतिग्रस्त है  
+                        ⚠️ *MISSING* — गायब है
+                        📷 क्षति की *फोटो भेजें*
+                        
+                        चलिए शुरू करते हैं! 👇
+                        """,
                 booking.getAsset().getName(), booking.getAsset().getAssetTag(),
                 booking.getBookingNumber(),
                 booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO,
@@ -2011,7 +2017,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         try {
             String presigned = storageService.createPreSignedFileUrl(s3Key);
             if (presigned != null && !presigned.isBlank()) return presigned;
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
         return S3_FALLBACK_BASE + "/" + s3Key;
     }
 

@@ -73,16 +73,6 @@ public class BookingQueryRepository {
                 .fetch();
     }
 
-    public List<Booking> fetchByAssetId(Long assetId) {
-        if (assetId == null) {
-            return List.of();
-        }
-        return queryFactory.selectFrom(qBooking)
-                .where(qBooking.asset.id.eq(assetId))
-                .orderBy(qBooking.id.desc())
-                .fetch();
-    }
-
     public long countByStatus(BookingStatus status) {
         if (status == null) {
             return 0;
@@ -130,8 +120,4 @@ public class BookingQueryRepository {
                 .fetch();
     }
 
-    public long countConflictingBookingsForType(Long typeId, String name, Long hubId, LocalDate startDate, LocalDate endDate) {
-        List<Long> lockedIds = fetchConflictingAssetIdsForType(typeId, name, hubId, startDate, endDate);
-        return lockedIds.size();
-    }
 }

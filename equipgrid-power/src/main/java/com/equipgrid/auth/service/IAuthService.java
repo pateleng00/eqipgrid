@@ -6,5 +6,6 @@ import com.equipgrid.auth.dto.response.AuthResponse;
 
 public interface IAuthService {
     AuthResponse login(LoginRequest request);
+
     AuthResponse register(RegisterRequest request);
 }

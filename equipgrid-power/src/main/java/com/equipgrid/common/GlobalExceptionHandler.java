@@ -44,8 +44,8 @@ public class GlobalExceptionHandler {
         }
 
         MessageApiResponse message = new MessageApiResponse(
-                EquipGridExceptionEnum.SGO_400.name(),
-                EquipGridExceptionEnum.SGO_400.getMessage()
+                EquipGridExceptionEnum.EG_400.name(),
+                EquipGridExceptionEnum.EG_400.getMessage()
         );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -56,8 +56,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleGeneric(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.buildFail(
-                        EquipGridExceptionEnum.SGO_500.name(),
-                        ex.getMessage() != null ? ex.getMessage() : EquipGridExceptionEnum.SGO_500.getMessage()
+                        EquipGridExceptionEnum.EG_500.name(),
+                        ex.getMessage() != null ? ex.getMessage() : EquipGridExceptionEnum.EG_500.getMessage()
                 ));
     }
 }

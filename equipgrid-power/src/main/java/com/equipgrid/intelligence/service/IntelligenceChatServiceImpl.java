@@ -35,19 +35,16 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
 
-    private final AssetQueryRepository assetQueryRepository;
-    private final HubRepository hubRepository;
-    private final ObjectMapper objectMapper;
-
-    @Value("${equipgrid.intelligence.gemini.api-key:}")
-    private String configuredGeminiApiKey;
-
-    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
-    private String geminiModel;
-
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
+    private final AssetQueryRepository assetQueryRepository;
+    private final HubRepository hubRepository;
+    private final ObjectMapper objectMapper;
+    @Value("${equipgrid.intelligence.gemini.api-key:}")
+    private String configuredGeminiApiKey;
+    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
+    private String geminiModel;
 
     @Override
     public IntelligenceChatResponse chat(IntelligenceChatRequest request) {
@@ -267,14 +264,22 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
 
             boolean match = false;
             if (lower.contains("weeder") && (name.contains("weeder") || tag.contains("wed"))) match = true;
-            else if ((lower.contains("reaper") || lower.contains("harvest") || lower.contains("crop") || lower.contains("paddy") || lower.contains("wheat")) && (name.contains("reaper") || tag.contains("rep"))) match = true;
-            else if ((lower.contains("auger") || lower.contains("hole") || lower.contains("digger") || lower.contains("gaddha")) && (name.contains("auger") || tag.contains("aug"))) match = true;
-            else if ((lower.contains("mixer") || lower.contains("concrete mixer") || lower.contains("cement")) && (name.contains("mixer") || tag.contains("mix"))) match = true;
-            else if ((lower.contains("vibrator") || lower.contains("needle")) && (name.contains("vibrator") || tag.contains("vib"))) match = true;
-            else if ((lower.contains("compactor") || lower.contains("roller") || lower.contains("plate")) && (name.contains("compactor") || tag.contains("cmp"))) match = true;
-            else if ((lower.contains("hammer") || lower.contains("jackhammer") || lower.contains("demolition") || lower.contains("breaker")) && (name.contains("jackhammer") || tag.contains("jck"))) match = true;
-            else if ((lower.contains("pump") || lower.contains("dewater") || lower.contains("water") || lower.contains("trash")) && (name.contains("pump") || tag.contains("pmp"))) match = true;
-            else if ((lower.contains("generator") || lower.contains("power") || lower.contains("genset")) && (name.contains("generator") || tag.contains("gen"))) match = true;
+            else if ((lower.contains("reaper") || lower.contains("harvest") || lower.contains("crop") || lower.contains("paddy") || lower.contains("wheat")) && (name.contains("reaper") || tag.contains("rep")))
+                match = true;
+            else if ((lower.contains("auger") || lower.contains("hole") || lower.contains("digger") || lower.contains("gaddha")) && (name.contains("auger") || tag.contains("aug")))
+                match = true;
+            else if ((lower.contains("mixer") || lower.contains("concrete mixer") || lower.contains("cement")) && (name.contains("mixer") || tag.contains("mix")))
+                match = true;
+            else if ((lower.contains("vibrator") || lower.contains("needle")) && (name.contains("vibrator") || tag.contains("vib")))
+                match = true;
+            else if ((lower.contains("compactor") || lower.contains("roller") || lower.contains("plate")) && (name.contains("compactor") || tag.contains("cmp")))
+                match = true;
+            else if ((lower.contains("hammer") || lower.contains("jackhammer") || lower.contains("demolition") || lower.contains("breaker")) && (name.contains("jackhammer") || tag.contains("jck")))
+                match = true;
+            else if ((lower.contains("pump") || lower.contains("dewater") || lower.contains("water") || lower.contains("trash")) && (name.contains("pump") || tag.contains("pmp")))
+                match = true;
+            else if ((lower.contains("generator") || lower.contains("power") || lower.contains("genset")) && (name.contains("generator") || tag.contains("gen")))
+                match = true;
             else if (lower.contains("agri") && a.getCategory() == AssetCategory.AGRICULTURE) match = true;
             else if (lower.contains("construction") && a.getCategory() == AssetCategory.CONSTRUCTION) match = true;
 

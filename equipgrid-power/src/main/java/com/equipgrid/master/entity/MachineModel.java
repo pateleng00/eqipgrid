@@ -6,7 +6,7 @@ import lombok.*;
 
 @Entity
 @Table(name = "machine_models", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"type_id", "manufacturer_id", "model_number"})
+        @UniqueConstraint(columnNames = {"type_id", "manufacturer_id", "model_number"})
 })
 @Getter
 @Setter

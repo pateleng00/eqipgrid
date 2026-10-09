@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/bookings")
-@Tag(name = "Booking & Quotation", description = "SOP-002 Booking desk, instant quotation and reservation lifecycle")
+@Tag(name = "Booking & Quotation", description = "Booking desk, instant quotation and reservation lifecycle")
 public class BookingController {
 
     private final IBookingService bookingService;

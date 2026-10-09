@@ -2,6 +2,8 @@ package com.equipgrid.booking.service;
 
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetStatus;
+import com.equipgrid.asset.repository.AssetQueryRepository;
+import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.asset.service.IAssetService;
 import com.equipgrid.audit.service.IAuditService;
 import com.equipgrid.booking.dto.request.CreateBookingRequest;
@@ -11,8 +13,6 @@ import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.repository.BookingRepository;
-import com.equipgrid.asset.repository.AssetQueryRepository;
-import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.service.ICustomerService;
@@ -123,15 +123,15 @@ public class BookingServiceImpl implements IBookingService {
             String yardName = asset.getHub() != null ? asset.getHub().getName() : "Central Yard";
             throw new Exceptions.BusinessRuleViolationException(
                     "FLEET INVENTORY CAPACITY EXCEEDED: All " + totalCapacity + " units of " + typeName +
-                    " at " + yardName + " are already booked and locked for dates " +
-                    request.getStartDate() + " to " + request.getEndDate() + ". " +
-                    "Cannot accept booking beyond actual fleet count of " + totalCapacity + " machines."
+                            " at " + yardName + " are already booked and locked for dates " +
+                            request.getStartDate() + " to " + request.getEndDate() + ". " +
+                            "Cannot accept booking beyond actual fleet count of " + totalCapacity + " machines."
             );
         }
 
         // 3. If requested specific unit is locked or unavailable, auto-allocate an available sister unit of the same type
         if (lockedAssetIds.contains(asset.getId()) || asset.getStatus() == AssetStatus.MAINTENANCE ||
-            asset.getStatus() == AssetStatus.RETIRED || asset.getStatus() == AssetStatus.DAMAGED) {
+                asset.getStatus() == AssetStatus.RETIRED || asset.getStatus() == AssetStatus.DAMAGED) {
 
             Asset availableSister = fleetUnits.stream()
                     .filter(u -> !lockedAssetIds.contains(u.getId()))

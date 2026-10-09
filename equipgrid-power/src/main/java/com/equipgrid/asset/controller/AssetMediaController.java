@@ -31,9 +31,9 @@ public class AssetMediaController {
 
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Upload a machine image",
-        description = "Uploads an image (JPEG/PNG/WebP, max 10 MB) to the asset gallery. " +
-                      "Maximum 4 images allowed per machine. Field name: 'file'."
+            summary = "Upload a machine image",
+            description = "Uploads an image (JPEG/PNG/WebP, max 10 MB) to the asset gallery. " +
+                    "Maximum 4 images allowed per machine. Field name: 'file'."
     )
     public ResponseEntity<ApiResponse<AssetMediaResponse>> uploadImage(
             @PathVariable Long id,
@@ -46,10 +46,10 @@ public class AssetMediaController {
 
     @PostMapping(value = "/video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(
-        summary = "Upload the machine showcase video",
-        description = "Uploads a short video (MP4/WebM, max 30 seconds, max 100 MB). " +
-                      "Only 1 video allowed per machine — replaces previous if you delete first. " +
-                      "Pass optional 'durationSeconds' as form field."
+            summary = "Upload the machine showcase video",
+            description = "Uploads a short video (MP4/WebM, max 30 seconds, max 100 MB). " +
+                    "Only 1 video allowed per machine — replaces previous if you delete first. " +
+                    "Pass optional 'durationSeconds' as form field."
     )
     public ResponseEntity<ApiResponse<AssetMediaResponse>> uploadVideo(
             @PathVariable Long id,

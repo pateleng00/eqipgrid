@@ -49,7 +49,6 @@ public class Asset extends BaseEntity {
     private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
 
 
-
     @Column(name = "serial_number", length = 128)
     private String serialNumber;
 
@@ -79,6 +78,11 @@ public class Asset extends BaseEntity {
 
     @Column(name = "accessories_included", columnDefinition = "TEXT")
     private String accessoriesIncluded;
+    /**
+     * Associated media items (images and video) populated dynamically.
+     */
+    @Transient
+    private java.util.List<AssetMedia> mediaItems;
 
     public String getName() {
         return this.model != null ? this.model.getName() : null;
@@ -87,10 +91,4 @@ public class Asset extends BaseEntity {
     public AssetCategory getCategory() {
         return this.type != null ? this.type.getCategory() : null;
     }
-
-    /**
-     * Associated media items (images and video) populated dynamically.
-     */
-    @Transient
-    private java.util.List<AssetMedia> mediaItems;
 }

@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 public interface IReportingService {
     DailyCashReconciliationResponse getDailyCashReconciliation(LocalDate date);
+
     FleetUtilizationResponse getFleetUtilization();
+
     DashboardSummaryResponse getDashboardSummary();
 }

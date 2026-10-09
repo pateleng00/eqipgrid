@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/customers")
-@Tag(name = "Customer Management", description = "Customer onboarding and Tier-1/Tier-2 ID verification (SOP-001)")
+@Tag(name = "Customer Management", description = "Customer onboarding and Tier-1/Tier-2 ID verification.")
 public class CustomerController {
 
     private final ICustomerService customerService;
@@ -45,9 +45,7 @@ public class CustomerController {
 
     @PostMapping
     @Operation(summary = "Register or update customer profile")
-    public ResponseEntity<ApiResponse<Customer>> createCustomer(
-            @Valid @RequestBody CreateCustomerRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<Customer>> createCustomer(@Valid @RequestBody CreateCustomerRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "BOOKING_DESK";
         Customer saved = customerService.createOrUpdateCustomer(request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Customer profile saved", saved));
@@ -55,10 +53,7 @@ public class CustomerController {
 
     @PatchMapping("/{id}/verify")
     @Operation(summary = "Update customer verification tier and KYC approval")
-    public ResponseEntity<ApiResponse<Customer>> verifyCustomer(
-            @PathVariable Long id,
-            @RequestBody VerifyCustomerRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<Customer>> verifyCustomer(@PathVariable Long id, @RequestBody VerifyCustomerRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "ADMIN";
         Customer updated = customerService.verifyCustomer(id, request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Customer verification updated", updated));

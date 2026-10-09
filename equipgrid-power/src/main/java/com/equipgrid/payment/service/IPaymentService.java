@@ -7,6 +7,8 @@ import java.util.List;
 
 public interface IPaymentService {
     List<Payment> getPaymentsByBooking(Long bookingId);
+
     List<Payment> getAllPayments();
+
     Payment recordPayment(RecordPaymentRequest request, String performedBy);
 }

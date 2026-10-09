@@ -81,7 +81,8 @@ public class RentalConfigController {
         if (request.baseDailyRate() != null) config.setBaseDailyRate(request.baseDailyRate());
         if (request.depositAmount() != null) config.setDepositAmount(request.depositAmount());
         if (request.operatorDailyRate() != null) config.setOperatorDailyRate(request.operatorDailyRate());
-        if (request.freeDeliveryDistanceKm() != null) config.setFreeDeliveryDistanceKm(request.freeDeliveryDistanceKm());
+        if (request.freeDeliveryDistanceKm() != null)
+            config.setFreeDeliveryDistanceKm(request.freeDeliveryDistanceKm());
         if (request.ratePerKmAfterFree() != null) config.setRatePerKmAfterFree(request.ratePerKmAfterFree());
         if (request.notes() != null) config.setNotes(request.notes());
 
@@ -108,7 +109,8 @@ public class RentalConfigController {
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
             String notes
-    ) {}
+    ) {
+    }
 
     public record UpdateRentalConfigRequest(
             BigDecimal baseDailyRate,
@@ -117,5 +119,6 @@ public class RentalConfigController {
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
             String notes
-    ) {}
+    ) {
+    }
 }

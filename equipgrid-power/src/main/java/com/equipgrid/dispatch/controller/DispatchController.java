@@ -14,7 +14,7 @@ import java.security.Principal;
 
 @RestController
 @RequestMapping("/dispatch")
-@Tag(name = "Yard Dispatch & Outward Challan", description = "SOP-005 Outward challan, checklists, zero-credit barrier check")
+@Tag(name = "Yard Dispatch & Outward Challan", description = "Outward challan, checklists, zero-credit barrier check")
 public class DispatchController {
 
     private final IDispatchService dispatchService;
@@ -31,9 +31,7 @@ public class DispatchController {
 
     @PostMapping
     @Operation(summary = "Execute yard dispatch, issue challan, and transition asset to ON_RENT (Enforces Zero-Credit Rule)")
-    public ResponseEntity<ApiResponse<DispatchRecord>> executeDispatch(
-            @Valid @RequestBody CreateDispatchRequest request,
-            Principal principal) {
+    public ResponseEntity<ApiResponse<DispatchRecord>> executeDispatch(@Valid @RequestBody CreateDispatchRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "YARD_DISPATCH";
         DispatchRecord record = dispatchService.executeDispatch(request, actor);
         return ResponseEntity.ok(ApiResponse.buildSuccess("Asset dispatched and outward challan issued", record));

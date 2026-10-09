@@ -10,9 +10,14 @@ import java.util.Optional;
 @Repository
 public interface RentalConfigurationRepository extends JpaRepository<RentalConfiguration, Long> {
     List<RentalConfiguration> findByActiveTrueOrderByIdDesc();
+
     List<RentalConfiguration> findByHubIdAndActiveTrue(Long hubId);
+
     List<RentalConfiguration> findByAssetIdAndActiveTrue(Long assetId);
+
     Optional<RentalConfiguration> findFirstByAssetIdAndHubIdAndActiveTrue(Long assetId, Long hubId);
+
     Optional<RentalConfiguration> findFirstByAssetIdAndActiveTrue(Long assetId);
+
     Optional<RentalConfiguration> findFirstByHubIdAndActiveTrue(Long hubId);
 }

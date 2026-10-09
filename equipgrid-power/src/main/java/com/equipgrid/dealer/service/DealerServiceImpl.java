@@ -68,9 +68,7 @@ public class DealerServiceImpl implements IDealerService {
                 .build();
 
         Dealer saved = dealerRepository.save(dealer);
-        auditService.log("DEALER", saved.getId().toString(), "CREATE_DEALER",
-                performedBy != null ? performedBy : "ADMIN",
-                "New dealer onboarded: " + saved.getName() + " (" + saved.getTradeName() + ")");
+        auditService.log("DEALER", saved.getId().toString(), "CREATE_DEALER", performedBy != null ? performedBy : "ADMIN", "New dealer onboarded: " + saved.getName() + " (" + saved.getTradeName() + ")");
         return saved;
     }
 

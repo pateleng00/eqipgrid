@@ -30,9 +30,13 @@ public enum DocumentType {
     CUSTOMER_ID_PROOF("id-proof", DocumentCategory.CUSTOMER),
     CUSTOMER_AGREEMENT("agreements", DocumentCategory.CUSTOMER);
 
-    /** S3 folder name for this specific document type. */
+    /**
+     * S3 folder name for this specific document type.
+     */
     private final String fileStorageName;
 
-    /** Parent category — determines the top-level folder in the object key. */
+    /**
+     * Parent category — determines the top-level folder in the object key.
+     */
     private final DocumentCategory documentCategory;
 }

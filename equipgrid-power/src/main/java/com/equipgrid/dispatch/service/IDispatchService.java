@@ -5,5 +5,6 @@ import com.equipgrid.dispatch.entity.DispatchRecord;
 
 public interface IDispatchService {
     DispatchRecord getByBookingId(Long bookingId);
+
     DispatchRecord executeDispatch(CreateDispatchRequest request, String performedBy);
 }
