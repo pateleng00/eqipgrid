@@ -6,6 +6,9 @@ services:
       dockerfile: Dockerfile
     container_name: equipgrid-power-backend
     restart: always
+    env_file:
+      - path: ${CONFIG_DIR:-/opt/equipgrid/config}/.env.prod
+        required: false
     environment:
       SERVER_PORT: 8081
       SERVER_SERVLET_CONTEXT_PATH: /equipgrid

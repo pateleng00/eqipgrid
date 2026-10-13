@@ -46,9 +46,17 @@ sync_production_config() {
         exit 1
     fi
 
-    # Ensure directory is traversable and file is readable by Docker non-root container user
+    # Ensure directory is traversable and files are readable by Docker
     chmod 755 "$CONFIG_DIR" 2>/dev/null || true
     chmod 644 "$CONFIG_DIR/application-prod.properties" 2>/dev/null || true
+
+    if [ -f "$CONFIG_DIR/.env.prod" ]; then
+        chmod 644 "$CONFIG_DIR/.env.prod" 2>/dev/null || true
+        echo "✅ Production environment variables (.env.prod) found and secured."
+    else
+        echo "ℹ️  Note: '$CONFIG_DIR/.env.prod' not found in config repo (optional)."
+    fi
+
     echo "✅ Production configuration is secured and ready at $CONFIG_DIR."
 }
 
