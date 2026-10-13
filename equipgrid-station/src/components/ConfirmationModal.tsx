@@ -93,14 +93,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-4 sm:p-6 bg-black/55 backdrop-blur-md"
+      className="fixed inset-0 z-[200] flex items-center justify-center overflow-y-auto p-2 sm:p-3 bg-black/55 backdrop-blur-md"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div
         className={cn(
-          'w-full max-w-lg min-h-64 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border shadow-2xl p-7 sm:p-8 space-y-5 transition-colors animate-in fade-in zoom-in-95 duration-150',
+          'w-full max-w-lg min-h-64 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border shadow-2xl p-4 sm:p-5 space-y-3.5 transition-colors animate-in fade-in zoom-in-95 duration-150',
           isDaylight
             ? `bg-white text-slate-950 ${cfg.accent}`
             : `bg-[#242424] text-slate-100 ${cfg.accentDark}`

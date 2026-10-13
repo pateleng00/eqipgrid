@@ -80,7 +80,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
       <div
         className={cn(
           'w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl transition-all',
@@ -90,7 +90,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
         {/* Header */}
         <div
           className={cn(
-            'flex items-center justify-between px-6 py-4 border-b',
+            'flex items-center justify-between px-4 py-3 border-b',
             isDaylight ? 'border-slate-100 bg-slate-50' : 'border-slate-800 bg-slate-900/40'
           )}
         >
@@ -123,7 +123,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
         {/* Content */}
         {issuedChallan ? (
           /* Success Challan State */
-          <div className="p-6 space-y-5">
+          <div className="p-4 sm:p-5 space-y-3.5">
             <div className={cn('flex items-center gap-3 p-4 rounded-xl border', isDaylight ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400')}>
               <CheckCircle2 className="h-7 w-7 shrink-0 text-emerald-500" />
               <div>
@@ -195,7 +195,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
           </div>
         ) : (
           /* Handover Checklist Form */
-          <form onSubmit={handleExecuteDispatch} className="p-6 space-y-5">
+          <form onSubmit={handleExecuteDispatch} className="p-4 sm:p-5 space-y-3.5">
             {/* Payment Cleared Pill */}
             <div
               className={cn(

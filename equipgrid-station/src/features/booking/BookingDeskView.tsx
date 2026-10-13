@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 import {
   CalendarCheck,
   Calculator,
@@ -23,6 +24,11 @@ import {
   FileText,
   Clock,
   Filter,
+  PhoneCall,
+  Check,
+  Compass,
+  Edit2,
+  Tag,
 } from 'lucide-react';
 import { cn, formatINR, formatDate } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -33,10 +39,21 @@ import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
 import { HandoverChecklistModal } from '../../components/HandoverChecklistModal';
 import { CollectPaymentModal } from '../../components/CollectPaymentModal';
+import { UpsertFarmLocationModal } from '../../components/UpsertFarmLocationModal';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
 import { api } from '../../services/api';
-import { Asset, Booking, Customer, CustomerTier, QuoteCalculation } from '../../types';
+import {
+  Asset,
+  Booking,
+  Customer,
+  CustomerTier,
+  FarmLocation,
+  QuoteCalculation,
+  BookingSource,
+  EquipmentRecommendationResponse,
+  getFarmerFriendlyStatus,
+} from '../../types';
 import { printBookingConfirmationPdf, printDispatchChallanPdf } from '../../services/voucherPdfService';
 import { getBookingWhatsAppMessage } from '../../services/whatsappCirculation';
 
@@ -48,6 +65,16 @@ interface BookingDeskViewProps {
   openCreateModal?: boolean;
   onCreateModalOpened?: () => void;
 }
+
+const estimateDistanceKm = (fromLat?: number, fromLng?: number, toLat?: number, toLng?: number): number | null => {
+  if ([fromLat, fromLng, toLat, toLng].some((value) => value == null)) return null;
+  const radians = (value: number) => value * Math.PI / 180;
+  const deltaLat = radians((toLat as number) - (fromLat as number));
+  const deltaLng = radians((toLng as number) - (fromLng as number));
+  const a = Math.sin(deltaLat / 2) ** 2
+    + Math.cos(radians(fromLat as number)) * Math.cos(radians(toLat as number)) * Math.sin(deltaLng / 2) ** 2;
+  return Math.round(6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
+};
 
 export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   preselectedAsset,
@@ -76,10 +103,16 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   }, []);
 
   // Modal states for creating new booking, WhatsApp notice, yard handover, payment collection
-  const [showCreateModal, setShowCreateModal] = useState<boolean>(!!preselectedAsset);
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(
+    () => getUrlParam('modal') === 'create' || !!preselectedAsset
+  );
   const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
   const [dispatchModalBooking, setDispatchModalBooking] = useState<Booking | null>(null);
   const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
+
+  useEffect(() => {
+    setUrlParam('modal', showCreateModal ? 'create' : null);
+  }, [showCreateModal]);
 
   // SubView filter tab: 'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'
   const [subView, setSubView] = useState<'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'>(
@@ -251,6 +284,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     preselectedAsset ? preselectedAsset.id : 0
   );
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(0);
+  const [farmLocations, setFarmLocations] = useState<FarmLocation[]>([]);
+  const [selectedFarmLocationId, setSelectedFarmLocationId] = useState<number>(0);
   const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '') : '');
   const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '');
   const [bookingHubId, setBookingHubId] = useState<string>(
@@ -282,37 +317,131 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     message: '',
   });
 
+  // Assisted booking channel & callback toggle
+  const [bookingSource, setBookingSource] = useState<BookingSource>('STATION');
+  const [callbackRequested, setCallbackRequested] = useState<boolean>(false);
+
+  // Farm Location modal for creating/editing from booking desk
+  const [farmModalOpen, setFarmModalOpen] = useState(false);
+  const [farmLocationToEdit, setFarmLocationToEdit] = useState<FarmLocation | null>(null);
+
+  // Task-based machine recommendations assistant
+  const [selectedTask, setSelectedTask] = useState<string>('');
+  const [taskAcreage, setTaskAcreage] = useState<number>(2);
+  const [taskRecommendations, setTaskRecommendations] = useState<EquipmentRecommendationResponse[]>([]);
+  const [isTaskLoading, setIsTaskLoading] = useState(false);
+
+  const handleSelectTask = async (task: string, acreage: number = taskAcreage) => {
+    setSelectedTask(task);
+    setIsTaskLoading(true);
+    try {
+      const recs = await api.getEquipmentRecommendations({
+        task,
+        hubId: bookingHubId ? Number(bookingHubId) : undefined,
+        acreage,
+        startDate,
+        endDate,
+      });
+      setTaskRecommendations(recs);
+    } catch {
+      setTaskRecommendations([]);
+    } finally {
+      setIsTaskLoading(false);
+    }
+  };
+
+  const handleApplyRecommendation = (rec: EquipmentRecommendationResponse) => {
+    const targetAsset = assets.find((a) => a.id === rec.assetId);
+    if (targetAsset) {
+      if (targetAsset.category) setBookingCategory(targetAsset.category);
+      if (targetAsset.hubId) {
+        setBookingHubId(String(targetAsset.hubId));
+        const hub = hubs.find((h) => h.id === targetAsset.hubId);
+        if (hub) {
+          const city = cities.find((c) => c.id === hub.cityId);
+          if (city) {
+            setBookingCityId(String(city.id));
+            setBookingStateId(String(city.stateId));
+          }
+        }
+      }
+      setSelectedAssetId(targetAsset.id);
+      if (targetAsset.operatorRequired) setOperatorRequired(true);
+      const taskLabel = selectedTask ? `[Task: ${selectedTask} (${taskAcreage} acres)] ` : '';
+      setNotes((prev) => (prev ? `${taskLabel}${prev}` : `${taskLabel}${rec.reason}`));
+    }
+  };
+
+  const handleFarmLocationSaved = async (saved: FarmLocation) => {
+    if (!selectedCustomerId) return;
+    try {
+      const locs = await api.getFarmLocations(selectedCustomerId);
+      setFarmLocations(locs);
+      setSelectedFarmLocationId(saved.id);
+      setDeliveryAddress([saved.localName, saved.landmark || saved.village].filter(Boolean).join(' — '));
+      const hub = hubs.find((item) => item.id === currentAsset?.hubId);
+      const calculatedDistance = estimateDistanceKm(hub?.latitude, hub?.longitude, saved.latitude, saved.longitude);
+      if (calculatedDistance != null) setDistanceKm(calculatedDistance);
+    } catch (e) {
+      console.warn('Failed to refresh farm locations:', e);
+    }
+  };
+
   const currentAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) || null : null;
+
+  useEffect(() => {
+    let active = true;
+    setFarmLocations([]);
+    setSelectedFarmLocationId(0);
+    if (!selectedCustomerId || selectedCustomerId < 0) return () => { active = false; };
+
+    api.getFarmLocations(selectedCustomerId)
+      .then((locations) => {
+        if (!active) return;
+        setFarmLocations(locations);
+        const preferred = locations.find((location) => location.isDefault) || locations[0];
+        if (preferred) {
+          setSelectedFarmLocationId(preferred.id);
+          setDeliveryAddress([preferred.localName, preferred.landmark || preferred.village].filter(Boolean).join(' — '));
+        }
+      })
+      .catch(() => active && setFarmLocations([]));
+
+    return () => { active = false; };
+  }, [selectedCustomerId]);
+
+  useEffect(() => {
+    const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
+    const hub = hubs.find((item) => item.id === currentAsset?.hubId);
+    const calculatedDistance = estimateDistanceKm(hub?.latitude, hub?.longitude, location?.latitude, location?.longitude);
+    if (calculatedDistance != null) setDistanceKm(calculatedDistance);
+  }, [selectedFarmLocationId, farmLocations, currentAsset?.hubId, hubs]);
 
   const hasSelectedFilters = Boolean(bookingStateId || bookingCityId || bookingHubId || bookingCategory);
 
   const bookingCities = useMemo(() => {
-    if (!bookingStateId || bookingStateId === 'ALL') return cities;
+    if (!bookingStateId || bookingStateId === 'ALL') return [];
     return cities.filter((city) => city.stateId === Number(bookingStateId));
   }, [cities, bookingStateId]);
 
   const bookingHubs = useMemo(() => {
-    if (bookingCityId && bookingCityId !== 'ALL') return hubs.filter((hub) => hub.cityId === Number(bookingCityId));
-    if (bookingStateId && bookingStateId !== 'ALL') {
-      const cityIds = new Set(bookingCities.map((city) => city.id));
-      return hubs.filter((hub) => cityIds.has(hub.cityId));
-    }
-    return hubs;
-  }, [hubs, bookingCities, bookingCityId, bookingStateId]);
+    if (!bookingCityId || bookingCityId === 'ALL') return [];
+    return hubs.filter((hub) => hub.cityId === Number(bookingCityId));
+  }, [hubs, bookingCityId]);
 
   const availableMachines = useMemo(() => {
     if (!hasSelectedFilters) return [];
     return assets.filter((asset) => {
       if (asset.status !== 'AVAILABLE') return false;
-      if (bookingHubId && bookingHubId !== 'ALL' && asset.hubId !== Number(bookingHubId)) return false;
+      if (bookingHubId && bookingHubId !== 'ALL' && (!asset.hubId || asset.hubId !== Number(bookingHubId))) return false;
       if (bookingCityId && bookingCityId !== 'ALL') {
         const hub = hubs.find((h) => h.id === asset.hubId);
-        if (hub && hub.cityId !== Number(bookingCityId)) return false;
+        if (!hub || hub.cityId !== Number(bookingCityId)) return false;
       }
       if (bookingStateId && bookingStateId !== 'ALL') {
         const cityIds = new Set(cities.filter((c) => c.stateId === Number(bookingStateId)).map((c) => c.id));
         const hub = hubs.find((h) => h.id === asset.hubId);
-        if (hub && !cityIds.has(hub.cityId)) return false;
+        if (!hub || !cityIds.has(hub.cityId)) return false;
       }
       if (bookingCategory && bookingCategory !== 'ALL' && asset.category !== bookingCategory) return false;
       return true;
@@ -403,9 +532,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         startDate,
         endDate,
         deliveryAddress,
+        farmLocationId: selectedFarmLocationId || undefined,
         distanceKm,
         operatorRequired: operatorRequired || !!currentAsset.operatorRequired,
         dealerId: selectedDealerId ? Number(selectedDealerId) : undefined,
+        bookingSource,
+        callbackRequested,
         notes,
       });
 
@@ -503,17 +635,34 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreateModal}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto ${
-            isDaylight
-              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-none'
-          }`}
-        >
-          <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>New Deployment</span>
-        </button>
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          <button
+            onClick={() => {
+              handleOpenCreateModal();
+              handleSelectTask('weeding');
+            }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+              isDaylight
+                ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100 shadow-xs'
+                : 'border-amber-500/30 bg-amber-950/30 text-amber-300 hover:bg-amber-900/40'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+            <span>Farmer Task Matcher</span>
+          </button>
+
+          <button
+            onClick={handleOpenCreateModal}
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
+              isDaylight
+                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
+                : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-none'
+            }`}
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" />
+            <span>New Deployment</span>
+          </button>
+        </div>
       </div>
 
       {bookingSuccess && (() => {
@@ -631,16 +780,21 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           {/* City */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Cities' },
-                ...availableCities.map((c) => ({
-                  value: String(c.id),
-                  label: c.name,
-                })),
-              ]}
+              options={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Cities' },
+                      ...availableCities.map((c) => ({
+                        value: String(c.id),
+                        label: c.name,
+                      })),
+                    ]
+              }
               value={selectedCityId}
               onChange={(val) => handleCityChange(val || 'ALL')}
-              placeholder="All Cities"
+              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
           </div>
@@ -648,16 +802,27 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           {/* Hub Yard */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Hubs' },
-                ...availableHubs.map((h) => ({
-                  value: String(h.id),
-                  label: h.name,
-                })),
-              ]}
+              options={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Hubs' },
+                      ...availableHubs.map((h) => ({
+                        value: String(h.id),
+                        label: h.name,
+                      })),
+                    ]
+              }
               value={selectedHubId}
               onChange={(val) => setSelectedHubId(String(val || 'ALL'))}
-              placeholder="All Hubs"
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? 'No cities in this State'
+                  : selectedCityId !== 'ALL' && availableHubs.length === 0
+                  ? 'No hubs in this City'
+                  : 'All Hubs'
+              }
+              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
               isClearable={false}
             />
           </div>
@@ -887,8 +1052,28 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                     {/* Customer */}
                     <td className="py-3.5 px-4">
-                      <div className="font-bold">{b.customer.fullName}</div>
+                      <div className="font-bold flex items-center gap-1.5 flex-wrap">
+                        <span>{b.customer.fullName}</span>
+                        {b.bookingSource && (
+                          <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700 uppercase font-bold">
+                            {b.bookingSource.replace('_', ' ')}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-[10px] text-slate-500 font-mono">{b.customer.phone}</div>
+                      {b.callbackRequested && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                            <PhoneCall className="h-2.5 w-2.5" />
+                            <span>Callback Req</span>
+                          </span>
+                        </div>
+                      )}
+                      {(b.deliveryLocationName || b.farmLocation) && (
+                        <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5">
+                          🌾 {b.deliveryLocationName || b.farmLocation?.localName} {b.farmLocation?.localNameHindi ? `(${b.farmLocation.localNameHindi})` : ''}
+                        </div>
+                      )}
                     </td>
 
                     {/* Rental Window */}
@@ -903,13 +1088,46 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       <div className={`text-[11px] mt-0.5 ${
                         isDaylight ? 'text-amber-800 font-bold' : 'text-slate-400 font-medium'
                       }`}>
-                        Deposit: {formatINR(b.depositAmount)}
+                        Deposit: {b.depositAmount === 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹0 (Zero Scheme)</span>
+                        ) : formatINR(b.depositAmount)}
                       </div>
                     </td>
 
                     {/* Status */}
                     <td className="py-3.5 px-4">
-                      <StatusBadge status={b.status} size="sm" />
+                      <StatusBadge status={b.status} size="sm" showFarmerLabel={true} />
+                      {(() => {
+                        const fInfo = getFarmerFriendlyStatus(b.status);
+                        return (
+                          <div className="mt-1.5 space-y-0.5 max-w-[150px]">
+                            <div className="flex items-center gap-0.5 w-full">
+                              {[1, 2, 3, 4, 5].map((step) => {
+                                const isPast = step < fInfo.step;
+                                const isCurrent = step === fInfo.step;
+                                return (
+                                  <div
+                                    key={step}
+                                    title={`Step ${step} of 5`}
+                                    className={cn(
+                                      'h-1 flex-1 rounded-full transition-all',
+                                      isCurrent
+                                        ? 'bg-amber-500 ring-1 ring-amber-400'
+                                        : isPast
+                                        ? 'bg-emerald-500'
+                                        : 'bg-slate-200 dark:bg-slate-700'
+                                    )}
+                                  />
+                                );
+                              })}
+                            </div>
+                            <div className="text-[9px] text-slate-400 flex justify-between font-mono">
+                              <span className="truncate">{fInfo.farmerLabelHi}</span>
+                              <span className="shrink-0">{fInfo.step}/5</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* Action Button */}
@@ -918,7 +1136,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <button
                           type="button"
                           onClick={() => setWhatsAppModalBooking(b)}
-                          title="Circulate Booking Confirmation on WhatsApp"
+                          data-tooltip="Circulate Booking Confirmation on WhatsApp"
+                          data-tooltip-pos="left"
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
@@ -928,7 +1147,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <button
                           type="button"
                           onClick={() => printBookingConfirmationPdf({ booking: b })}
-                          title="Print / Download Official PDF Voucher"
+                          data-tooltip="Print / Download Official PDF Voucher"
+                          data-tooltip-pos="left"
                           className={cn(
                             'p-1.5 rounded-lg border transition-colors cursor-pointer',
                             isDaylight
@@ -944,7 +1164,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setDispatchModalBooking(b)}
-                            title="Execute Yard Handover & Issue Delivery Challan (DC)"
+                            data-tooltip="Execute Yard Handover & Issue Delivery Challan (DC)"
+                            data-tooltip-pos="left"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm"
                           >
                             <Truck className="h-3.5 w-3.5" />
@@ -956,7 +1177,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           <button
                             type="button"
                             onClick={() => setPaymentModalBooking(b)}
-                            title="Collect Advance / Deposit Payment"
+                            data-tooltip="Collect Advance / Deposit Payment"
+                            data-tooltip-pos="left"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
                           >
                             <Banknote className="h-3.5 w-3.5" />
@@ -984,7 +1206,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 },
                               });
                             }}
-                            title="Print / View Delivery Challan (DC)"
+                            data-tooltip="Print / View Delivery Challan (DC)"
+                            data-tooltip-pos="left"
                             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all border border-blue-500/40 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
                           >
                             <Printer className="h-3.5 w-3.5" />
@@ -1013,13 +1236,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
       {/* New Reservation Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
-            className={`w-full max-w-5xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 space-y-6 shadow-2xl transition-all my-8 ${
+            className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all my-2 ${
               isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-white'
             }`}
           >
-            <div className={`flex items-center justify-between border-b pb-5 ${
+            <div className={`flex items-center justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-700/30'
             }`}>
               <div className="flex items-center gap-3">
@@ -1048,16 +1271,195 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             <form onSubmit={handleCreateReservation} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Booking Inputs */}
               <div className="lg:col-span-2 space-y-5">
+                {/* Farmer Task Recommendation Assistant */}
+                <div className={`rounded-2xl border p-4 transition-all ${
+                  isDaylight ? 'border-amber-300 bg-amber-50/50' : 'border-amber-500/30 bg-amber-950/20'
+                }`}>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      <h4 className="text-xs font-black uppercase tracking-wider">
+                        Task-Based Machine Recommender (कार्य अनुसार मशीन चयन)
+                      </h4>
+                    </div>
+                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold">
+                      Instant Farmer Recommendation
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+                    Select the farmer’s immediate field operation. We’ll find matching machines with zero-deposit eligibility & fuel-efficient specs.
+                  </p>
+
+                  {/* Task Chips */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 mb-3">
+                    {[
+                      { key: 'weeding', label: 'Weeding / निराई', icon: '🌿' },
+                      { key: 'tilling', label: 'Tilling / जुताई', icon: '🚜' },
+                      { key: 'harvesting', label: 'Harvesting / कटाई', icon: '🌾' },
+                      { key: 'spraying', label: 'Spraying / छिड़काव', icon: '💧' },
+                      { key: 'digging', label: 'Digging / गड्ढा', icon: '🕳️' },
+                      { key: 'irrigation', label: 'Irrigation / सिंचाई', icon: '🌊' },
+                    ].map((t) => (
+                      <button
+                        key={t.key}
+                        type="button"
+                        onClick={() => handleSelectTask(t.key)}
+                        className={cn(
+                          'py-2 px-1 text-center rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
+                          selectedTask === t.key
+                            ? 'border-amber-500 bg-amber-500 text-slate-950 shadow-sm'
+                            : 'border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                        )}
+                      >
+                        <span className="text-base">{t.icon}</span>
+                        <span className="truncate w-full text-[10px] leading-tight">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Acreage Slider & Recommendations */}
+                  {selectedTask && (
+                    <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-3">
+                      <div className="flex items-center justify-between text-xs font-bold">
+                        <span className="text-slate-700 dark:text-slate-300">Field Size: {taskAcreage} Acres (बीघा / एकड़)</span>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="15"
+                          step="0.5"
+                          value={taskAcreage}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setTaskAcreage(val);
+                            handleSelectTask(selectedTask, val);
+                          }}
+                          className="w-32 accent-amber-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {isTaskLoading ? (
+                        <div className="text-center py-3 text-xs text-amber-600 font-bold animate-pulse">
+                          Finding best matched equipment...
+                        </div>
+                      ) : taskRecommendations.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                          {taskRecommendations.map((rec) => (
+                            <div
+                              key={rec.assetId}
+                              className={`p-3 rounded-xl border transition-all ${
+                                selectedAssetId === rec.assetId
+                                  ? 'border-emerald-500 bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500'
+                                  : 'border-amber-500/40 bg-white dark:bg-slate-900'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <div>
+                                  <div className="font-black text-xs text-slate-900 dark:text-slate-100">{rec.assetName}</div>
+                                  <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">{rec.assetTag}</div>
+                                </div>
+                                <div className="text-right">
+                                  <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/day</div>
+                                  <div className="text-[10px] text-slate-500 font-semibold">
+                                    {rec.depositAmount === 0 ? 'Zero Deposit' : `Deposit ${formatINR(rec.depositAmount)}`}
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                                {rec.reason}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => handleApplyRecommendation(rec)}
+                                className={cn(
+                                  'mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center justify-center gap-1',
+                                  selectedAssetId === rec.assetId
+                                    ? 'bg-emerald-600 text-white'
+                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                )}
+                              >
+                                {selectedAssetId === rec.assetId ? (
+                                  <>
+                                    <Check className="h-3 w-3" />
+                                    <span>Selected Machine</span>
+                                  </>
+                                ) : (
+                                  <span>Select This Machine</span>
+                                )}
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 text-center py-2">
+                          No specific machines matched this task. Please browse available machines below.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <div className={`rounded-2xl border p-4 ${isDaylight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-700 bg-[#1e1e1e]'}`}>
                   <div className="mb-3 flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-amber-500" />
                     <h4 className="text-xs font-black uppercase tracking-wider">Machine availability filters</h4>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                    <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map((state) => ({ value: String(state.id), label: state.name }))]} value={bookingStateId} onChange={(value) => { setBookingStateId(String(value || '')); setBookingCityId(''); setBookingHubId(''); }} placeholder="State" isClearable={true} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Cities' }, ...bookingCities.map((city) => ({ value: String(city.id), label: city.name }))]} value={bookingCityId} onChange={(value) => { setBookingCityId(String(value || '')); setBookingHubId(''); }} placeholder="City" isClearable={true} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Hubs' }, ...bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))]} value={bookingHubId} onChange={(value) => setBookingHubId(String(value || ''))} placeholder="Hub" isClearable={true} />
-                    <SearchSelect options={[{ value: 'ALL', label: 'All Categories' }, { value: 'CONSTRUCTION', label: 'Construction' }, { value: 'AGRICULTURE', label: 'Agriculture' }]} value={bookingCategory} onChange={(value) => setBookingCategory(String(value || ''))} placeholder="Category" isClearable={true} />
+                    <SearchSelect
+                      options={states.map((state) => ({ value: String(state.id), label: state.name }))}
+                      value={bookingStateId}
+                      onChange={(value) => {
+                        setBookingStateId(String(value || ''));
+                        setBookingCityId('');
+                        setBookingHubId('');
+                      }}
+                      placeholder="Select State *"
+                      isClearable={true}
+                    />
+                    <SearchSelect
+                      options={bookingCities.map((city) => ({ value: String(city.id), label: city.name }))}
+                      value={bookingCityId}
+                      onChange={(value) => {
+                        setBookingCityId(String(value || ''));
+                        setBookingHubId('');
+                      }}
+                      placeholder={
+                        !bookingStateId
+                          ? 'Select State First'
+                          : bookingCities.length === 0
+                          ? 'No cities in this State'
+                          : 'Select City *'
+                      }
+                      isDisabled={!bookingStateId || bookingCities.length === 0}
+                      noOptionsMessage="No cities found in this State"
+                      isClearable={true}
+                    />
+                    <SearchSelect
+                      options={bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))}
+                      value={bookingHubId}
+                      onChange={(value) => setBookingHubId(String(value || ''))}
+                      placeholder={
+                        !bookingStateId
+                          ? 'Select State First'
+                          : !bookingCityId
+                          ? 'Select City First'
+                          : bookingHubs.length === 0
+                          ? 'No hubs in this City'
+                          : 'Select Hub *'
+                      }
+                      isDisabled={!bookingCityId || bookingHubs.length === 0}
+                      noOptionsMessage="No hubs found in this City"
+                      isClearable={true}
+                    />
+                    <SearchSelect
+                      options={[
+                        { value: 'CONSTRUCTION', label: 'Construction' },
+                        { value: 'AGRICULTURE', label: 'Agriculture' },
+                      ]}
+                      value={bookingCategory}
+                      onChange={(value) => setBookingCategory(String(value || ''))}
+                      placeholder="Category (Optional)"
+                      isClearable={true}
+                    />
                   </div>
                 </div>
                 {/* Equipment Selection */}
@@ -1075,12 +1477,24 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     </div>
                   ) : availableMachines.length ? (
                     <SearchSelect
-                      options={availableMachines.map((a) => ({
-                        value: a.id,
-                        label: `[${a.assetTag}] ${a.name}`,
-                        subLabel: `${formatINR(a.dailyRate)}/day • Dep: ${formatINR(a.depositAmount)} • Std: 8h/day (+1h buffer) • Yard: ${a.hubName || 'Hardoi'}`,
-                        badge: 'AVAILABLE',
-                      }))}
+                      options={availableMachines.map((a) => {
+                        const unitSuffix =
+                          a.billingUnit === 'HOURLY' ? '/hr' :
+                          a.billingUnit === 'PER_HOLE' ? '/hole' :
+                          a.billingUnit === 'PER_TRIP' ? '/trip' :
+                          a.billingUnit === 'PER_ACRE' ? '/acre' : '/day';
+                        const depText = a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
+                        const shiftPolicy =
+                          a.billingUnit === 'HOURLY' ? 'Metered Run-Time' :
+                          a.billingUnit === 'PER_HOLE' ? 'Metered Hole Count' :
+                          'Std: 8h/day (+1h buffer)';
+                        return {
+                          value: a.id,
+                          label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,
+                          subLabel: `${formatINR(a.dailyRate)}${unitSuffix} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
+                          badge: 'AVAILABLE',
+                        };
+                      })}
                       value={selectedAssetId}
                       onChange={(val) => val && setSelectedAssetId(Number(val))}
                       placeholder="Search an available machine..."
@@ -1146,6 +1560,75 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   )}
                 </div>
 
+                {selectedCustomerId ? (
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label className="block text-xs font-bold">Saved farm / delivery place</label>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFarmLocationToEdit(null);
+                            setFarmModalOpen(true);
+                          }}
+                          className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                        >
+                          <Plus className="h-3 w-3" />
+                          <span>Add Field</span>
+                        </button>
+                        {selectedFarmLocationId ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const loc = farmLocations.find((l) => l.id === selectedFarmLocationId);
+                              setFarmLocationToEdit(loc || null);
+                              setFarmModalOpen(true);
+                            }}
+                            className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-0.5 cursor-pointer ml-1"
+                          >
+                            <Edit2 className="h-3 w-3" />
+                            <span>Edit</span>
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                    {farmLocations.length ? (
+                      <>
+                        <SearchSelect
+                          options={farmLocations.map((location) => ({
+                            value: location.id,
+                            label: location.localNameHindi
+                              ? `${location.localName} (${location.localNameHindi})`
+                              : location.localName,
+                            subLabel: [location.landmark || location.village, location.accessNotes].filter(Boolean).join(' • '),
+                            badge: location.isDefault ? 'DEFAULT' : location.locationType,
+                          }))}
+                          value={selectedFarmLocationId || ''}
+                          onChange={(value) => {
+                            const location = farmLocations.find((item) => item.id === Number(value));
+                            setSelectedFarmLocationId(Number(value) || 0);
+                            if (location) {
+                              setDeliveryAddress([location.localName, location.landmark || location.village].filter(Boolean).join(' — '));
+                            }
+                          }}
+                          placeholder="Choose the farmer's locally named field..."
+                          isClearable={false}
+                        />
+                        {selectedFarmLocationId ? (() => {
+                          const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
+                          return location?.accessNotes ? (
+                            <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">Access note: {location.accessNotes}</p>
+                          ) : null;
+                        })() : null}
+                      </>
+                    ) : (
+                      <p className="rounded-lg border border-dashed border-slate-300 p-2.5 text-[11px] text-slate-500">
+                        No saved farm yet. Use the farmer’s WhatsApp location pin to save a locally named field, or enter a one-time delivery address below.
+                      </p>
+                    )}
+                  </div>
+                ) : null}
+
                 {/* Rental Dates */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1203,7 +1686,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 </div>
 
                 {/* Operator Checkbox */}
-                <div className="flex items-center justify-between rounded-lg border border-slate-300 p-2.5">
+                <div className="flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-700 p-2.5">
                   <div className="flex items-center gap-2">
                     <UserCheck className="h-4 w-4 text-amber-500" />
                     <span className="text-xs font-bold">EquipGrid Machine Operator</span>
@@ -1213,6 +1696,53 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     checked={operatorRequired || !!currentAsset?.operatorRequired}
                     disabled={!!currentAsset?.operatorRequired}
                     onChange={(e) => setOperatorRequired(e.target.checked)}
+                    className="h-4 w-4 accent-amber-500 cursor-pointer"
+                  />
+                </div>
+
+                {/* Assisted Booking Channel */}
+                <div>
+                  <label className="block text-xs font-bold mb-1">Assisted Booking Channel</label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    {[
+                      { value: 'STATION' as const, label: 'Yard Counter', icon: '🏢' },
+                      { value: 'PHONE_AGENT' as const, label: 'Phone Agent', icon: '📞' },
+                      { value: 'KISAN_MITRA' as const, label: 'Kisan Mitra', icon: '👨‍🌾' },
+                      { value: 'DEALER' as const, label: 'Dealer Net', icon: '🏬' },
+                      { value: 'FPO' as const, label: 'FPO Lead', icon: '🌾' },
+                      { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: '💬' },
+                    ].map((ch) => (
+                      <button
+                        key={ch.value}
+                        type="button"
+                        onClick={() => setBookingSource(ch.value)}
+                        className={cn(
+                          'py-1.5 px-1 rounded-lg border text-[11px] font-bold transition-colors cursor-pointer flex flex-col items-center gap-0.5',
+                          bookingSource === ch.value
+                            ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-extrabold'
+                            : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        )}
+                      >
+                        <span className="text-sm">{ch.icon}</span>
+                        <span className="truncate w-full text-center text-[10px]">{ch.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Farmer Telephone Callback Requested */}
+                <div className="flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-700 p-2.5 bg-amber-500/5">
+                  <div className="flex items-center gap-2">
+                    <PhoneCall className="h-4 w-4 text-amber-500" />
+                    <div>
+                      <span className="text-xs font-bold block">Farmer Telephone Callback</span>
+                      <span className="text-[10px] text-slate-500">Require verbal telephone verification with farmer before driver dispatch</span>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={callbackRequested}
+                    onChange={(e) => setCallbackRequested(e.target.checked)}
                     className="h-4 w-4 accent-amber-500 cursor-pointer"
                   />
                 </div>
@@ -1228,7 +1758,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                   <div className="mt-2.5 flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
                     <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span>Std: 8 hrs/day shift (+ 1 hr buffer) • Extra hrs billed from deposit</span>
+                    <span className="truncate">{currentAsset?.shiftTerms || 'Standard Shift Terms'}</span>
                   </div>
 
                   {currentAsset && quote ? (
@@ -1256,8 +1786,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       <div className={`flex justify-between pt-1 border-t font-medium ${
                         isDaylight ? 'border-slate-200 text-amber-800' : 'border-slate-700/40 text-slate-300'
                       }`}>
-                        <span>Refundable Deposit</span>
-                        <span>{formatINR(quote.depositAmount)}</span>
+                        <span>{quote.depositAmount === 0 ? 'Security Deposit (Zero Scheme)' : 'Refundable Deposit'}</span>
+                        <span className={quote.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
+                          {quote.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(quote.depositAmount)}
+                        </span>
                       </div>
                       <div className={`flex justify-between pt-2 border-t text-sm font-bold ${
                         isDaylight ? 'border-slate-200' : 'border-slate-700/60'
@@ -1272,6 +1804,33 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     <div className="py-8 text-center text-xs text-slate-400 space-y-1">
                       <p className="font-bold text-slate-500">No machine selected</p>
                       <p className="text-[11px]">Select filters and choose a machine to view commercial breakdown.</p>
+                    </div>
+                  )}
+
+                  {/* Bilingual Farmer Summary Slip */}
+                  {currentAsset && (
+                    <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5 text-[11px] mt-3">
+                      <div className="font-bold flex items-center justify-between text-amber-900 dark:text-amber-300">
+                        <span>Farmer Summary / किसान पर्ची</span>
+                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-500/20">{bookingSource}</span>
+                      </div>
+                      <div className="text-slate-600 dark:text-slate-400 space-y-0.5">
+                        <div>
+                          <strong>किसान:</strong> {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
+                        </div>
+                        <div>
+                          <strong>खेत स्थल:</strong> {deliveryAddress || 'Standard Delivery'}
+                        </div>
+                        <div>
+                          <strong>मशीन:</strong> {currentAsset.name} ({currentAsset.assetTag})
+                        </div>
+                        {callbackRequested && (
+                          <div className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 pt-0.5">
+                            <PhoneCall className="h-3 w-3" />
+                            <span>डिस्पैच से पहले किसान से फोन पुष्टि अनिवार्य</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1308,9 +1867,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       )}
 
       {customerDialog && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/55 p-4 sm:p-6 backdrop-blur-md">
-          <div className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 ${isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-slate-100'}`}>
-            <div className={`mb-6 flex items-center justify-between border-b pb-4 ${
+        <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/55 p-2 sm:p-3 backdrop-blur-md">
+          <div className={`w-full max-w-xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 ${isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-slate-100'}`}>
+            <div className={`mb-4 flex items-center justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-700/30'
             }`}>
               <div>
@@ -1340,8 +1899,22 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 <div><label className="mb-1 block text-xs font-bold">Mobile phone</label><input required value={customerForm.phone} onChange={(event) => setCustomerForm({ ...customerForm, phone: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="+91 98765 43210" /></div>
                 <div><label className="mb-1 block text-xs font-bold">Email (optional)</label><input type="email" value={customerForm.email} onChange={(event) => setCustomerForm({ ...customerForm, email: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="contact@example.com" /></div>
               </div>
-              <div><label className="mb-1 block text-xs font-bold">Address</label><input required value={customerForm.address} onChange={(event) => setCustomerForm({ ...customerForm, address: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="Street, locality, city" /></div>
-              <div><label className="mb-1 block text-xs font-bold">Verification tier</label><select value={customerForm.tier} onChange={(event) => setCustomerForm({ ...customerForm, tier: event.target.value as CustomerTier })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none"><option value="TIER_1_BASIC">Basic customer</option><option value="TIER_2_VERIFIED">Verified customer</option></select></div>
+              <div>
+                <label className="mb-1 block text-xs font-bold">Verification tier</label>
+                <SearchSelect
+                  options={[
+                    { value: 'TIER_1_BASIC', label: 'Basic customer', subLabel: 'Standard KYC & deposit requirements' },
+                    { value: 'TIER_2_VERIFIED', label: 'Verified customer', subLabel: 'Priority dispatch & verified Aadhaar' },
+                  ]}
+                  value={customerForm.tier}
+                  onChange={(val) => {
+                    if (!val) return;
+                    setCustomerForm({ ...customerForm, tier: val as CustomerTier });
+                  }}
+                  isClearable={false}
+                  placeholder="Select verification tier..."
+                />
+              </div>
               <div className="flex justify-end gap-3 pt-3">
                 <button
                   type="button"
@@ -1421,6 +1994,21 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             // Immediately chain into handover checklist modal for uninterrupted flow!
             setDispatchModalBooking(updated);
           }}
+        />
+      )}
+      {/* Farm Location Modal from Booking Desk */}
+      {farmModalOpen && selectedCustomerId > 0 && (
+        <UpsertFarmLocationModal
+          isOpen={farmModalOpen}
+          onClose={() => {
+            setFarmModalOpen(false);
+            setFarmLocationToEdit(null);
+          }}
+          customerId={selectedCustomerId}
+          customerName={customerList.find((c) => c.id === selectedCustomerId)?.fullName}
+          customerPhone={customerList.find((c) => c.id === selectedCustomerId)?.phone}
+          locationToEdit={farmLocationToEdit}
+          onSaved={handleFarmLocationSaved}
         />
       )}
     </div>

@@ -15,11 +15,16 @@ import { SearchSelect } from '../../components/SearchSelect';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { api } from '../../services/api';
 import { Dealer } from '../../types';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 
 export const DealerNetworkView: React.FC = () => {
   const { isDaylight } = useTheme();
   const [dealers, setDealers] = useState<Dealer[]>(api.dealers);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(() => getUrlParam('modal') === 'dealer');
+
+  React.useEffect(() => {
+    setUrlParam('modal', showAddModal ? 'dealer' : null);
+  }, [showAddModal]);
 
   // Master location data
   const states = api.getStates();
@@ -52,20 +57,14 @@ export const DealerNetworkView: React.FC = () => {
 
   // Cascading lists for Modal
   const modalAvailableCities = React.useMemo(() => {
-    if (!modalStateId) return cities;
+    if (!modalStateId) return [];
     return cities.filter((c) => c.stateId === Number(modalStateId));
   }, [cities, modalStateId]);
 
   const modalAvailableHubs = React.useMemo(() => {
-    if (modalCityId) {
-      return hubs.filter((h) => h.cityId === Number(modalCityId));
-    }
-    if (modalStateId) {
-      const cityIds = new Set(modalAvailableCities.map((c) => c.id));
-      return hubs.filter((h) => cityIds.has(h.cityId));
-    }
-    return hubs;
-  }, [hubs, modalAvailableCities, modalCityId, modalStateId]);
+    if (!modalCityId) return [];
+    return hubs.filter((h) => h.cityId === Number(modalCityId));
+  }, [hubs, modalCityId]);
 
   // Page filter cascading lists
   const pageAvailableCities = cities.filter((c) =>
@@ -250,15 +249,21 @@ export const DealerNetworkView: React.FC = () => {
         {/* City */}
         <div className="w-40 sm:w-48">
           <SearchSelect
-            options={[
-              { value: 'ALL', label: 'All Cities' },
-              ...pageAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined })),
-            ]}
+            options={
+              filterStateId !== 'ALL' && pageAvailableCities.length === 0
+                ? []
+                : [
+                    { value: 'ALL', label: 'All Cities' },
+                    ...pageAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined })),
+                  ]
+            }
             value={filterCityId === 'ALL' ? 'ALL' : Number(filterCityId)}
             onChange={(val) => {
               setFilterCityId(String(val || 'ALL'));
               setFilterHubId('ALL');
             }}
+            placeholder={filterStateId !== 'ALL' && pageAvailableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+            isDisabled={filterStateId !== 'ALL' && pageAvailableCities.length === 0}
             isClearable={false}
           />
         </div>
@@ -266,12 +271,24 @@ export const DealerNetworkView: React.FC = () => {
         {/* Hub */}
         <div className="w-44 sm:w-56">
           <SearchSelect
-            options={[
-              { value: 'ALL', label: 'All Hubs / Yards' },
-              ...pageAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code })),
-            ]}
+            options={
+              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) || (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
+                ? []
+                : [
+                    { value: 'ALL', label: 'All Hubs / Yards' },
+                    ...pageAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code })),
+                  ]
+            }
             value={filterHubId === 'ALL' ? 'ALL' : Number(filterHubId)}
             onChange={(val) => setFilterHubId(String(val || 'ALL'))}
+            placeholder={
+              filterStateId !== 'ALL' && pageAvailableCities.length === 0
+                ? 'No cities in this State'
+                : filterCityId !== 'ALL' && pageAvailableHubs.length === 0
+                ? 'No hubs in this City'
+                : 'All Hubs / Yards'
+            }
+            isDisabled={(filterCityId !== 'ALL' && pageAvailableHubs.length === 0) || (filterStateId !== 'ALL' && pageAvailableCities.length === 0)}
             isClearable={false}
           />
         </div>
@@ -380,12 +397,12 @@ export const DealerNetworkView: React.FC = () => {
 
       {/* --- ENLARGED ONBOARD CHANNEL PARTNER MODAL (3X SIZE WITH STATE->CITY->HUB CASCADE) --- */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <div className={`w-full max-w-5xl min-h-[580px] max-h-[calc(100vh-2.5rem)] overflow-y-auto rounded-3xl border p-8 sm:p-10 space-y-6 shadow-2xl transition-all ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
+          <div className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
             isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#1e1e1e] text-white'
           }`}>
             {/* Modal Header */}
-            <div className={`flex items-start justify-between border-b pb-5 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+            <div className={`flex items-start justify-between border-b pb-3 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-500 border border-amber-500/30">
                   <Users className="h-6 w-6" />
@@ -460,7 +477,15 @@ export const DealerNetworkView: React.FC = () => {
                         setModalCityId(cid);
                         setModalHubId('');
                       }}
-                      placeholder={modalStateId ? 'Select City...' : 'Select State First'}
+                      placeholder={
+                        !modalStateId
+                          ? 'Select State First'
+                          : modalAvailableCities.length === 0
+                          ? 'No cities in this State'
+                          : 'Select City *'
+                      }
+                      isDisabled={!modalStateId || modalAvailableCities.length === 0}
+                      noOptionsMessage="No cities found in this State"
                       isClearable={false}
                     />
                   </div>
@@ -473,7 +498,17 @@ export const DealerNetworkView: React.FC = () => {
                       options={modalAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code }))}
                       value={modalHubId}
                       onChange={(val) => val && setModalHubId(Number(val))}
-                      placeholder="Select Hub..."
+                      placeholder={
+                        !modalStateId
+                          ? 'Select State First'
+                          : !modalCityId
+                          ? 'Select City First'
+                          : modalAvailableHubs.length === 0
+                          ? 'No hubs in this City'
+                          : 'Select Hub *'
+                      }
+                      isDisabled={!modalCityId || modalAvailableHubs.length === 0}
+                      noOptionsMessage="No hubs found in this City"
                       isClearable={false}
                     />
                   </div>

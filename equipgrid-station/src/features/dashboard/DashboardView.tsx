@@ -267,16 +267,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           {/* City Filter */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Cities' },
-                ...availableCities.map((c) => ({
-                  value: String(c.id),
-                  label: c.name,
-                })),
-              ]}
+              options={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Cities' },
+                      ...availableCities.map((c) => ({
+                        value: String(c.id),
+                        label: c.name,
+                      })),
+                    ]
+              }
               value={selectedCityId}
               onChange={(val) => handleCityChange(val || 'ALL')}
-              placeholder="All Cities"
+              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
           </div>
@@ -284,16 +289,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           {/* Hub Yard Filter */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Hubs' },
-                ...availableHubs.map((h) => ({
-                  value: String(h.id),
-                  label: h.name,
-                })),
-              ]}
+              options={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Hubs' },
+                      ...availableHubs.map((h) => ({
+                        value: String(h.id),
+                        label: h.name,
+                      })),
+                    ]
+              }
               value={selectedHubId}
               onChange={(val) => setSelectedHubId(String(val || 'ALL'))}
-              placeholder="All Hubs"
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? 'No cities in this State'
+                  : selectedCityId !== 'ALL' && availableHubs.length === 0
+                  ? 'No hubs in this City'
+                  : 'All Hubs'
+              }
+              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
               isClearable={false}
             />
           </div>

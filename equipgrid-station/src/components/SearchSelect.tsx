@@ -59,7 +59,14 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
   const customStyles: StylesConfig<SelectOption, false> = {
     control: (provided, state) => ({
       ...provided,
-      backgroundColor: isDaylight ? '#ffffff' : '#121212',
+      backgroundColor: state.isDisabled
+        ? isDaylight
+          ? '#f8fafc'
+          : '#18181b'
+        : isDaylight
+        ? '#ffffff'
+        : '#121212',
+      opacity: state.isDisabled ? 0.7 : 1,
       borderColor: state.isFocused
         ? '#b45309'
         : isDaylight
@@ -208,25 +215,18 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     }),
   };
 
-  // Custom Option rendering with rich labels, secondary tags & badges
+  // Custom Option rendering: ONLY heading label and badge, no second line
   const CustomOption = (props: OptionProps<SelectOption, false>) => {
     const { data } = props;
     return (
       <components.Option {...props}>
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex flex-col min-w-0">
-            <span className={`font-bold text-sm truncate ${isDaylight ? 'text-slate-950' : ''}`}>
-              {data.label}
-            </span>
-            {data.subLabel && (
-              <span className={`text-xs truncate ${isDaylight ? 'text-slate-700 font-semibold' : 'opacity-75'}`}>
-                {data.subLabel}
-              </span>
-            )}
-          </div>
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span className={`font-bold text-xs truncate ${isDaylight ? 'text-slate-950' : 'text-slate-100'}`}>
+            {data.label}
+          </span>
           {data.badge && (
             <span
-              className={`text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0 border ${
+              className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 border ${
                 data.badgeColor ||
                 (isDaylight
                   ? 'bg-amber-100 text-amber-950 border-amber-400'
@@ -241,7 +241,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     );
   };
 
-  // Custom SingleValue rendering
+  // Custom SingleValue rendering: clean single-line heading
   const CustomSingleValue = (props: SingleValueProps<SelectOption, false>) => {
     const { data } = props;
     const isAllOption = data.value === 'ALL' || data.value === '' || data.label.startsWith('All ');
@@ -261,11 +261,6 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
           >
             {data.label}
           </span>
-          {data.subLabel && !isAllOption && (
-            <span className={`text-[11px] truncate shrink min-w-0 ${isDaylight ? 'text-slate-600' : 'opacity-60'}`}>
-              ({data.subLabel})
-            </span>
-          )}
           {data.badge && !isAllOption && (
             <span
               className={`text-[10px] font-medium px-1.5 py-0.2 rounded shrink-0 border ${

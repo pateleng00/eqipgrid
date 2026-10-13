@@ -87,6 +87,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           icon: <CalendarCheck className="h-4 w-4" />,
         },
         {
+          id: 'dispatch',
+          label: 'Fulfillment',
+          icon: <Send className="h-4 w-4" />,
+        },
+        {
           id: 'return',
           label: 'Returns',
           icon: <RotateCcw className="h-4 w-4" />,
@@ -132,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   return (
     <aside
       className={cn(
-        'shrink-0 border-r p-3 flex flex-col justify-between hidden md:flex transition-all duration-300 select-none relative',
+        'shrink-0 border-r p-3 flex flex-col justify-between hidden md:flex transition-all duration-300 select-none relative z-30',
         isCollapsed ? 'w-20' : 'w-45',
         isDaylight
           ? 'border-slate-200 bg-white text-slate-950'
@@ -159,19 +164,38 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "h-8 w-8 shrink-0 rounded-lg",
+              "group relative h-8 w-8 shrink-0 rounded-lg",
               "flex items-center justify-center",
               "border transition-all cursor-pointer",
               isDaylight
                 ? "border-slate-300 hover:bg-slate-100 text-slate-950"
                 : "border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white"
             )}
-            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
             ) : (
               <ChevronLeft className="h-4 w-4" />
+            )}
+            {isCollapsed && (
+              <div
+                className={cn(
+                  "absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-[100] pointer-events-none",
+                  "hidden group-hover:flex items-center",
+                  "whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-xl border",
+                  isDaylight
+                    ? "bg-slate-900 text-white border-slate-700 shadow-slate-900/25"
+                    : "bg-[#222222] text-slate-100 border-slate-700 shadow-black/50"
+                )}
+              >
+                Expand sidebar
+                <span
+                  className={cn(
+                    "absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent",
+                    isDaylight ? "border-r-slate-900" : "border-r-[#222222]"
+                  )}
+                />
+              </div>
             )}
           </button>
         </div>
@@ -193,17 +217,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
         {isGuest && isCollapsed && (
           <div
             className={cn(
-              'flex justify-center py-1',
+              'group relative flex justify-center py-1 cursor-help',
               isDaylight ? 'text-amber-600' : 'text-amber-500'
             )}
-            title="Guest Access — Browse Only"
           >
             <Eye className="h-4 w-4" />
+            <div
+              className={cn(
+                "absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-[100] pointer-events-none",
+                "hidden group-hover:flex items-center",
+                "whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-xl border",
+                isDaylight
+                  ? "bg-slate-900 text-white border-slate-700 shadow-slate-900/25"
+                  : "bg-[#222222] text-slate-100 border-slate-700 shadow-black/50"
+              )}
+            >
+              Guest Access — Browse Only
+              <span
+                className={cn(
+                  "absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent",
+                  isDaylight ? "border-r-slate-900" : "border-r-[#222222]"
+                )}
+              />
+            </div>
           </div>
         )}
 
         {/* Navigation items grouped with category headers */}
-        <nav className="flex-1 overflow-y-auto pr-0.5 space-y-3">
+        <nav
+          className={cn(
+            "flex-1 pr-0.5 space-y-3",
+            isCollapsed ? "overflow-visible" : "overflow-y-auto"
+          )}
+        >
           {navGroups.map((group, groupIdx) => (
             <div key={group.groupName} className="space-y-0.5">
               {/* Category Header */}
@@ -232,11 +278,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     return (
                       <div
                         key={item.id}
-                        title={
-                          isCollapsed
-                            ? `${item.label} — Staff login required`
-                            : 'Staff login required'
-                        }
                         className={cn(
                           'group flex w-full items-center rounded-xl relative cursor-not-allowed opacity-35',
                           isCollapsed
@@ -263,9 +304,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                         )}
 
                         {isCollapsed && (
-                          <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold items-center gap-1.5">
-                            <Lock className="h-3 w-3 text-slate-400" />
-                            {item.label}
+                          <div
+                            className={cn(
+                              "absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-[100] pointer-events-none",
+                              "hidden group-hover:flex items-center gap-1.5",
+                              "whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-xl border",
+                              isDaylight
+                                ? "bg-slate-900 text-white border-slate-700 shadow-slate-900/25"
+                                : "bg-[#222222] text-slate-100 border-slate-700 shadow-black/50"
+                            )}
+                          >
+                            <Lock className="h-3 w-3 text-amber-400" />
+                            <span>{item.label} (Staff login required)</span>
+                            <span
+                              className={cn(
+                                "absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent",
+                                isDaylight ? "border-r-slate-900" : "border-r-[#222222]"
+                              )}
+                            />
                           </div>
                         )}
                       </div>
@@ -276,9 +332,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                     <button
                       key={item.id}
                       onClick={() => onTabChange(item.id)}
-                      title={isCollapsed ? `${group.groupName}: ${item.label}` : undefined}
                       className={cn(
-                        'group flex w-full items-center rounded-xl transition-all cursor-pointer relative overflow-hidden',
+                        'group flex w-full items-center rounded-xl transition-all cursor-pointer relative',
                         isCollapsed ? 'justify-center px-2 py-2.5' : 'justify-start px-3 py-2 text-xs',
                         isActive
                           ? isDaylight
@@ -331,10 +386,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
                         </span>
                       )}
 
-                      {/* Collapsed Tooltip */}
+                      {/* Instant CSS Tooltip for Collapsed Sidebar */}
                       {isCollapsed && (
-                        <div className="absolute left-full ml-2.5 hidden group-hover:flex z-50 whitespace-nowrap rounded-lg bg-[#2c2c2c] border border-slate-700 text-white text-xs px-2.5 py-1.5 shadow-xl font-bold">
-                          {item.label}
+                        <div
+                          className={cn(
+                            "absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 z-[100] pointer-events-none",
+                            "hidden group-hover:flex items-center",
+                            "whitespace-nowrap px-2.5 py-1.5 rounded-lg text-xs font-bold shadow-xl border",
+                            isDaylight
+                              ? "bg-slate-900 text-white border-slate-700 shadow-slate-900/30"
+                              : "bg-[#222222] text-slate-100 border-slate-700/80 shadow-black/50"
+                          )}
+                        >
+                          <span>{item.label}</span>
+                          <span
+                            className={cn(
+                              "absolute right-full top-1/2 -translate-y-1/2 border-[5px] border-transparent",
+                              isDaylight ? "border-r-slate-900" : "border-r-[#222222]"
+                            )}
+                          />
                         </div>
                       )}
                     </button>

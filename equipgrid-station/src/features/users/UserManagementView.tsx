@@ -25,7 +25,9 @@ import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { UserAccount, StaffRole, CreateUserPayload, UpdateUserPayload, Hub } from '../../types';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
+import { SearchSelect } from '../../components/SearchSelect';
 import { cn } from '../../lib/utils';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 
 export const UserManagementView: React.FC = () => {
   const { currentUser } = useAuth();
@@ -45,11 +47,15 @@ export const UserManagementView: React.FC = () => {
   );
 
   // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(() => getUrlParam('modal') === 'user');
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserAccount | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    setUrlParam('modal', isModalOpen ? 'user' : null);
+  }, [isModalOpen]);
 
   // Form State
   const [formData, setFormData] = useState<{
@@ -458,23 +464,7 @@ export const UserManagementView: React.FC = () => {
             <div>
               <h1 className={cn('text-xl font-black tracking-tight flex items-center gap-2', isDaylight ? 'text-slate-900' : 'text-white')}>
                 Staff & User Access Control
-                <span
-                  className={cn(
-                    'text-xs font-mono font-medium px-2 py-0.5 rounded border',
-                    isDaylight ? 'border-slate-300 bg-slate-100 text-slate-700' : 'border-slate-700 bg-slate-800/50 text-slate-300'
-                  )}
-                >
-                  RBAC Matrix Active
-                </span>
               </h1>
-              <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
-                {isRoot &&
-                  'Root Authority: Full command over all roles, admins, managers, hubs & machines.'}
-                {isAdmin &&
-                  'Admin Authority: Full operational management across all hubs. Can create and update managers (manager deletion is restricted).'}
-                {isManager &&
-                  `Hub Manager: Scoped strictly to ${currentUser?.hubLocation || 'assigned yard'}. Can manage yard staff for this hub only.`}
-              </p>
             </div>
           </div>
         </div>
@@ -488,7 +478,8 @@ export const UserManagementView: React.FC = () => {
                 ? 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-sm'
                 : 'border-slate-800 hover:bg-slate-800 text-slate-300'
             )}
-            title="Refresh user list"
+            data-tooltip="Refresh user list"
+            data-tooltip-pos="bottom"
           >
             <RefreshCw className={cn('w-3.5 h-3.5', loading && 'animate-spin')} />
             Refresh
@@ -594,51 +585,41 @@ export const UserManagementView: React.FC = () => {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {/* Role Filter */}
-          <div className={cn('flex items-center gap-1.5 text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
-            <Filter className="w-3.5 h-3.5" />
-            <select
+          <div className="w-44">
+            <SearchSelect
+              options={[
+                { value: 'ALL', label: 'All Roles' },
+                { value: 'ROOT', label: 'Root (Super Admin)' },
+                { value: 'ADMIN', label: 'Operations Admin' },
+                { value: 'MANAGER', label: 'Hub Manager' },
+                { value: 'OPERATOR', label: 'Desk Operator' },
+                { value: 'TECHNICIAN', label: 'Technician' },
+                { value: 'DRIVER', label: 'Driver' },
+              ]}
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className={cn(
-                'px-2.5 py-1.5 rounded-lg border text-xs outline-none',
-                isDaylight
-                  ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
-                  : 'border-slate-800 bg-slate-950 text-white'
-              )}
-            >
-              <option value="ALL">All Roles</option>
-              <option value="ROOT">Root (Super Admin)</option>
-              <option value="ADMIN">Operations Admin</option>
-              <option value="MANAGER">Hub Manager</option>
-              <option value="OPERATOR">Desk Operator</option>
-              <option value="TECHNICIAN">Technician</option>
-              <option value="DRIVER">Driver</option>
-            </select>
+              onChange={(val) => setRoleFilter(String(val || 'ALL'))}
+              isClearable={false}
+              placeholder="All Roles"
+            />
           </div>
 
           {/* Hub Filter */}
-          <div className={cn('flex items-center gap-1.5 text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
-            <MapPin className="w-3.5 h-3.5" />
-            <select
+          <div className="w-48">
+            <SearchSelect
+              options={[
+                ...(!isManager ? [{ value: 'ALL', label: 'All Hub Yards' }, { value: 'HQ', label: 'Central HQ (No Hub)' }] : []),
+                ...hubs.map((h) => ({
+                  value: String(h.id),
+                  label: h.name,
+                  subLabel: h.code,
+                })),
+              ]}
               value={hubFilter}
-              disabled={isManager}
-              onChange={(e) => setHubFilter(e.target.value)}
-              className={cn(
-                'px-2.5 py-1.5 rounded-lg border text-xs outline-none',
-                isManager ? (isDaylight ? 'opacity-70 cursor-not-allowed bg-slate-100' : 'opacity-70 cursor-not-allowed bg-slate-800/40') : '',
-                isDaylight
-                  ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
-                  : 'border-slate-800 bg-slate-950 text-white'
-              )}
-            >
-              {!isManager && <option value="ALL">All Hub Yards</option>}
-              {!isManager && <option value="HQ">Central HQ (No Hub)</option>}
-              {hubs.map((h) => (
-                <option key={h.id} value={h.id}>
-                  {h.name} ({h.code})
-                </option>
-              ))}
-            </select>
+              isDisabled={isManager}
+              onChange={(val) => setHubFilter(String(val || 'ALL'))}
+              isClearable={false}
+              placeholder="All Hub Yards"
+            />
           </div>
         </div>
       </div>
@@ -822,7 +803,8 @@ export const UserManagementView: React.FC = () => {
                                   ? 'border-slate-300 bg-white hover:bg-slate-100 text-slate-700 shadow-sm'
                                   : 'border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-white'
                               )}
-                              title="Edit user details"
+                              data-tooltip="Edit user details"
+                              data-tooltip-pos="left"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
@@ -833,7 +815,8 @@ export const UserManagementView: React.FC = () => {
                                 'p-1.5 rounded-lg border border-transparent opacity-40 cursor-not-allowed',
                                 isDaylight ? 'text-slate-400' : 'text-slate-600'
                               )}
-                              title="Cannot edit higher or peer privilege account"
+                              data-tooltip="Cannot edit higher or peer privilege account"
+                              data-tooltip-pos="left"
                             >
                               <Lock className="w-3.5 h-3.5" />
                             </button>
@@ -848,12 +831,13 @@ export const UserManagementView: React.FC = () => {
                                   ? 'border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 shadow-sm'
                                   : 'border-rose-900/40 text-rose-400 hover:bg-rose-500/10'
                               )}
-                              title="Delete staff account"
+                              data-tooltip="Delete staff account"
+                              data-tooltip-pos="left"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           ) : (
-                            <span title={deleteReason}>
+                            <span data-tooltip={deleteReason} data-tooltip-pos="left">
                               <button
                                 disabled
                                 className={cn(
@@ -880,13 +864,13 @@ export const UserManagementView: React.FC = () => {
       {isModalOpen && (
         <div
           className={cn(
-            'fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm',
+            'fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 backdrop-blur-sm',
             isDaylight ? 'bg-slate-900/40' : 'bg-slate-950/80'
           )}
         >
           <div
             className={cn(
-              'w-full max-w-lg rounded-2xl border p-6 shadow-2xl flex flex-col space-y-4 transition-all',
+              'w-full max-w-lg rounded-2xl border p-3.5 sm:p-4 shadow-2xl flex flex-col space-y-3 transition-all',
               isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
             )}
           >
@@ -1000,53 +984,49 @@ export const UserManagementView: React.FC = () => {
 
                 {/* Role Selector Scoped by RBAC */}
                 <div>
-                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                  <label className={cn('block font-semibold mb-1 text-xs', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Access Role <span className="text-rose-400">*</span>
                   </label>
-                  <select
+                  <SearchSelect
+                    options={[
+                      ...(isRoot ? [{ value: 'ROOT', label: '👑 Root (Super Admin)' }] : []),
+                      ...(isRoot ? [{ value: 'ADMIN', label: '🛡️ Operations Admin' }] : []),
+                      ...(isRoot || isAdmin ? [{ value: 'MANAGER', label: '🏢 Hub Yard Manager' }] : []),
+                      { value: 'OPERATOR', label: '⌨️ Station Desk Operator' },
+                      { value: 'TECHNICIAN', label: '🔧 Yard Technician' },
+                      { value: 'DRIVER', label: '🚚 Logistics Driver' },
+                    ]}
                     value={formData.role}
-                    disabled={isManager} // Managers can only create Operators
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as StaffRole })}
-                    className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
-                      isDaylight
-                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
-                        : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
-                    )}
-                  >
-                    {isRoot && <option value="ROOT">👑 Root (Super Admin)</option>}
-                    {isRoot && <option value="ADMIN">🛡️ Operations Admin</option>}
-                    {(isRoot || isAdmin) && <option value="MANAGER">🏢 Hub Yard Manager</option>}
-                    <option value="OPERATOR">⌨️ Station Desk Operator</option>
-                    <option value="TECHNICIAN">🔧 Yard Technician</option>
-                    <option value="DRIVER">🚚 Logistics Driver</option>
-                  </select>
+                    isDisabled={isManager}
+                    onChange={(val) => {
+                      if (!val) return;
+                      setFormData({ ...formData, role: val as StaffRole });
+                    }}
+                    isClearable={false}
+                    placeholder="Select Role..."
+                  />
                 </div>
 
                 {/* Hub Selector Scoped by RBAC */}
                 <div>
-                  <label className={cn('block font-semibold mb-1', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                  <label className={cn('block font-semibold mb-1 text-xs', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
                     Assigned Hub Yard {formData.role === 'MANAGER' && <span className="text-rose-400">*</span>}
                   </label>
-                  <select
+                  <SearchSelect
+                    options={[
+                      ...(!isManager ? [{ value: '', label: 'Central HQ / Unassigned' }] : []),
+                      ...hubs.map((h) => ({
+                        value: String(h.id),
+                        label: h.name,
+                        subLabel: h.code,
+                      })),
+                    ]}
                     value={formData.hubId}
-                    disabled={isManager} // Managers are permanently locked to their assigned hub
-                    onChange={(e) => setFormData({ ...formData, hubId: e.target.value })}
-                    className={cn(
-                      'w-full px-3 py-2 rounded-lg border text-xs outline-none transition-all',
-                      isManager ? (isDaylight ? 'opacity-70 bg-slate-100 cursor-not-allowed' : 'opacity-70 bg-slate-800/40 cursor-not-allowed') : '',
-                      isDaylight
-                        ? 'border-slate-300 bg-white text-slate-900 focus:border-emerald-600'
-                        : 'border-slate-800 bg-slate-950 text-white focus:border-emerald-500'
-                    )}
-                  >
-                    {!isManager && <option value="">Central HQ / Unassigned</option>}
-                    {hubs.map((h) => (
-                      <option key={h.id} value={h.id}>
-                        {h.name} ({h.code})
-                      </option>
-                    ))}
-                  </select>
+                    isDisabled={isManager}
+                    onChange={(val) => setFormData({ ...formData, hubId: String(val || '') })}
+                    isClearable={!isManager && formData.role !== 'MANAGER'}
+                    placeholder="Select Hub Yard..."
+                  />
                 </div>
 
                 {editingUser && (

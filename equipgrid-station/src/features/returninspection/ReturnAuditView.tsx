@@ -54,7 +54,7 @@ export const ReturnAuditView: React.FC = () => {
   // Only DISPATCHED / ON_RENT machines are eligible for return audit
   const dispatchedBookings = useMemo(() => {
     return allBookings.filter((b) => {
-      const eligible = b.status === 'DISPATCHED' || b.status === 'ON_RENT';
+      const eligible = b.status === 'DISPATCHED' || b.status === 'ON_RENT' || b.status === 'RETURN_REQUESTED';
       if (!eligible) return false;
       const hub = hubs.find((h) => h.id === b.asset.hubId);
       const city = cities.find((c) => c.id === hub?.cityId);
@@ -178,16 +178,34 @@ export const ReturnAuditView: React.FC = () => {
             placeholder="All States" isClearable={false}
           />
           <SearchSelect
-            options={[{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]}
+            options={
+              selectedStateId !== 'ALL' && availableCities.length === 0
+                ? []
+                : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]
+            }
             value={selectedCityId}
             onChange={(v) => { setSelectedCityId(String(v || 'ALL')); setSelectedHubId('ALL'); }}
-            placeholder="All Cities" isClearable={false}
+            placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+            isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
+            isClearable={false}
           />
           <SearchSelect
-            options={[{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]}
+            options={
+              (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                ? []
+                : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]
+            }
             value={selectedHubId}
             onChange={(v) => setSelectedHubId(String(v || 'ALL'))}
-            placeholder="All Hubs" isClearable={false}
+            placeholder={
+              selectedStateId !== 'ALL' && availableCities.length === 0
+                ? 'No cities in this State'
+                : selectedCityId !== 'ALL' && availableHubs.length === 0
+                ? 'No hubs in this City'
+                : 'All Hubs'
+            }
+            isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+            isClearable={false}
           />
         </div>
       </div>
@@ -244,8 +262,16 @@ export const ReturnAuditView: React.FC = () => {
                       </div>
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className={cn('font-extrabold text-sm', isDaylight ? 'text-slate-900' : 'text-white')}>{formatINR(b.depositPaid)}</div>
-                      <div className={cn('text-[10px]', isDaylight ? 'text-slate-500' : 'text-slate-500')}>of {formatINR(b.depositAmount)}</div>
+                      <div className={cn('font-extrabold text-sm', isDaylight ? 'text-slate-900' : 'text-white')}>
+                        {b.depositPaid === 0 && b.depositAmount === 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400">₹0 (Zero Scheme)</span>
+                        ) : (
+                          formatINR(b.depositPaid)
+                        )}
+                      </div>
+                      <div className={cn('text-[10px]', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
+                        {b.depositAmount === 0 ? 'Waiver Scheme' : `of ${formatINR(b.depositAmount)}`}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <StatusBadge status={b.status} size="sm" />
@@ -255,7 +281,8 @@ export const ReturnAuditView: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setWhatsAppModalBooking(b)}
-                          title="Circulate Return / Settlement Notice on WhatsApp"
+                          data-tooltip="Circulate Return / Settlement Notice on WhatsApp"
+                          data-tooltip-pos="left"
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
                         >
                           <MessageSquare className="h-3.5 w-3.5" />
@@ -296,12 +323,12 @@ export const ReturnAuditView: React.FC = () => {
 
       {/* Inspection Panel Modal */}
       {selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-6 bg-black/55 backdrop-blur-md overflow-y-auto">
-          <div className={cn('w-full max-w-3xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border shadow-2xl my-4', isDaylight ? 'bg-white border-slate-200' : 'bg-[#242424] border-slate-800')}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-3 bg-black/55 backdrop-blur-md overflow-y-auto">
+          <div className={cn('w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border shadow-2xl my-2', isDaylight ? 'bg-white border-slate-200' : 'bg-[#242424] border-slate-800')}>
 
             {/* Completed state */}
             {completedInspection ? (
-              <div className="p-6 space-y-4">
+              <div className="p-3.5 space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-purple-500/20 text-purple-400">
                     <CheckCircle className="h-6 w-6" />
@@ -327,7 +354,13 @@ export const ReturnAuditView: React.FC = () => {
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Security Deposit Held in Escrow:</span>
-                    <span className="font-bold font-mono">{formatINR(depositPaid)}</span>
+                    <span className="font-bold font-mono">
+                      {depositPaid === 0 ? (
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹0.00 (Zero-Deposit Scheme)</span>
+                      ) : (
+                        formatINR(depositPaid)
+                      )}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Fuel Delta / Refueling Surcharge:</span>
@@ -347,9 +380,17 @@ export const ReturnAuditView: React.FC = () => {
                     </div>
                   )}
                   <div className="flex justify-between items-center border-t pt-2 font-bold text-sm">
-                    <span className="text-emerald-700 dark:text-emerald-400">Net Refund Credited to Customer:</span>
+                    <span className="text-emerald-700 dark:text-emerald-400">
+                      {depositPaid === 0 ? 'Net Settlement Balance:' : 'Net Refund Credited to Customer:'}
+                    </span>
                     <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                      {formatINR(netRefund)}
+                      {depositPaid === 0 && (fuelDeltaCharge > 0 || (hasDamage && damageCost > 0)) ? (
+                        <span className="text-rose-600 dark:text-rose-400">
+                          {formatINR((hasDamage ? damageCost : 0) + fuelDeltaCharge)} (Due from Customer)
+                        </span>
+                      ) : (
+                        formatINR(netRefund)
+                      )}
                     </span>
                   </div>
                 </div>
@@ -429,7 +470,7 @@ export const ReturnAuditView: React.FC = () => {
             ) : (
               <>
                 {/* Panel Header */}
-                <div className={cn('flex items-center justify-between px-5 py-4 border-b', isDaylight ? 'border-slate-100' : 'border-slate-800')}>
+                <div className={cn('flex items-center justify-between px-4 py-2.5 border-b', isDaylight ? 'border-slate-100' : 'border-slate-800')}>
                   <div className="flex items-center gap-2.5">
                     <div className={cn('p-2 rounded-xl', isDaylight ? 'bg-purple-100 text-purple-700' : 'bg-purple-900/40 text-purple-400')}>
                       <RotateCcw className="h-4 w-4" />
@@ -445,7 +486,7 @@ export const ReturnAuditView: React.FC = () => {
                 </div>
 
                 {/* Booking summary strip */}
-                <div className={cn('px-5 py-3 border-b text-xs', isDaylight ? 'bg-slate-50 border-slate-100 text-slate-700' : 'bg-slate-950/60 border-slate-800 text-slate-400')}>
+                <div className={cn('px-4 py-2 border-b text-xs', isDaylight ? 'bg-slate-50 border-slate-100 text-slate-700' : 'bg-slate-950/60 border-slate-800 text-slate-400')}>
                   <span className="font-bold">{selectedBooking.customer.fullName}</span>
                   {' · '}
                   <span>{selectedBooking.asset.name}</span>
@@ -453,7 +494,7 @@ export const ReturnAuditView: React.FC = () => {
                   <span>Deposit: <strong className={isDaylight ? 'text-emerald-700' : 'text-emerald-400'}>{formatINR(selectedBooking.depositPaid)}</strong></span>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-5 space-y-4">
+                <form onSubmit={handleSubmit} className="p-3.5 space-y-3">
                   {/* Inspector */}
                   <div>
                     <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Inspector / Technician</label>

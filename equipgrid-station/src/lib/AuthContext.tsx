@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { markFreshLogin, clearStationState } from './navigationState';
 
 export type UserRole = 'root' | 'admin' | 'manager' | 'user' | 'guest';
 
@@ -173,6 +174,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         permissions: getRolePermissions('guest'),
       };
       setCurrentUser(guestUser);
+      markFreshLogin();
     }
   };
 
@@ -236,12 +238,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     setCurrentUser(authUser);
+    markFreshLogin();
     return true;
   };
 
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem(AUTH_STORAGE_KEY);
+    clearStationState();
   };
 
   const switchRole = (_role: UserRole) => {

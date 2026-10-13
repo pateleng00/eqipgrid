@@ -15,6 +15,7 @@ import { api } from '../../services/api';
 import { Asset, AssetMedia } from '../../types';
 import { AddMachineModal } from './AddMachineModal';
 import { SkeletonTable } from '../../components/SkeletonTable';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 
 interface EquipmentCatalogViewProps {
   onSelectForBooking: (asset: Asset) => void;
@@ -116,7 +117,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
           alt={asset.name}
           onClick={onExpand}
           className="w-full h-full object-cover transition-opacity duration-300 cursor-pointer"
-          title="Click to view full screen photos and video"
+          data-tooltip="Click to view full screen photos and video"
           onError={(e) => {
             const img = e.target as HTMLImageElement;
             if (img.src && img.src.includes('?')) {
@@ -168,14 +169,14 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
             <button
               onClick={togglePlay}
               className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
-              title={isPlaying ? 'Pause' : 'Play'}
+              data-tooltip={isPlaying ? 'Pause' : 'Play'}
             >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5 fill-current" />}
             </button>
             <button
               onClick={toggleMute}
               className="p-1 rounded-md bg-white/20 hover:bg-white/30 text-white transition-colors cursor-pointer"
-              title={isMuted ? 'Unmute' : 'Mute'}
+              data-tooltip={isMuted ? 'Unmute' : 'Mute'}
             >
               {isMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
             </button>
@@ -205,7 +206,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
                 ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300 hover:scale-105'
                 : 'bg-black/70 hover:bg-black/90 text-white border border-white/20 hover:scale-105'
             }`}
-            title="Previous media"
+            data-tooltip="Previous media"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -216,7 +217,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
                 ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300 hover:scale-105'
                 : 'bg-black/70 hover:bg-black/90 text-white border border-white/20 hover:scale-105'
             }`}
-            title="Next media"
+            data-tooltip="Next media"
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -254,7 +255,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
                         ? 'w-1.5 h-1.5 bg-slate-400/90 hover:bg-slate-700'
                         : 'w-1.5 h-1.5 bg-white/60 hover:bg-white'
                 }`}
-                title={isVid ? 'Play Video Demo' : `Photo ${i + 1}`}
+                data-tooltip={isVid ? 'Play Video Demo' : `Photo ${i + 1}`}
               >
                 {isVid && <Play className="h-2 w-2 fill-current" />}
               </button>
@@ -291,7 +292,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
                     ? 'bg-amber-400 text-slate-950 border-amber-300 ring-2 ring-amber-400/50'
                     : 'bg-amber-500 hover:bg-amber-400 text-slate-950 border-amber-400'
               }`}
-              title="Click to play 10s video demo in place"
+              data-tooltip="Click to play 10s video demo in place"
             >
               <Video className="h-3 w-3 fill-current" />
               {video.durationSeconds ? `${video.durationSeconds}s` : 'Video'}
@@ -308,7 +309,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
             ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300'
             : 'bg-black/70 hover:bg-black/90 text-white border border-white/20'
         }`}
-        title="Click to view full screen photos and video"
+        data-tooltip="Click to view full screen photos and video"
       >
         <Maximize2 className="h-3.5 w-3.5" />
       </button>
@@ -338,7 +339,7 @@ const LightboxModal: React.FC<{ asset: Asset; onClose: () => void }> = ({ asset,
 
   return (
     <div
-      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-2 sm:p-3"
       onClick={onClose}
     >
       <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
@@ -491,14 +492,14 @@ const MachineCard: React.FC<{
           </div>
           {asset.operatorRequired && (
             <div className="flex items-center gap-1.5 col-span-2">
-              <UserCheck className="h-3 w-3 shrink-0 text-amber-500" />
-              <span className={isDaylight ? 'text-amber-800 font-bold' : 'text-amber-400 font-semibold'}>Operator Mandatory</span>
+              <UserCheck className="h-3 w-3 shrink-0 text-amber-700 dark:text-amber-500" />
+              <span className={isDaylight ? 'text-amber-900 font-bold' : 'text-amber-400 font-semibold'}>Operator Mandatory</span>
             </div>
           )}
           {/* Shift Allowance (In short) */}
-          <div className="flex items-center gap-1.5 col-span-2 text-[11px] font-semibold rounded-lg px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400">
-            <Clock className="h-3 w-3 shrink-0 text-amber-500" />
-            <span>Std: 8 hrs/day (+1h buffer) • Extra hrs extra</span>
+          <div className="flex items-center gap-1.5 col-span-2 text-[11px] font-semibold rounded-lg px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-400">
+            <Clock className="h-3 w-3 shrink-0 text-amber-700 dark:text-amber-500" />
+            <span className="truncate">{asset.shiftTerms || 'Standard Shift Terms'}</span>
           </div>
         </div>
 
@@ -508,10 +509,12 @@ const MachineCard: React.FC<{
             <div>
               <div className={`text-xl font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
                 {formatINR(asset.dailyRate)}
-                <span className={`text-xs font-normal ml-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>/day</span>
+                <span className={`text-xs font-normal ml-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
+                  /{asset.billingUnit === 'HOURLY' ? 'hr' : asset.billingUnit === 'PER_TRIP' ? 'trip' : asset.billingUnit === 'PER_HOLE' ? 'hole' : asset.billingUnit === 'PER_ACRE' ? 'acre' : 'day'}
+                </span>
               </div>
-              <div className={`text-[11px] mt-0.5 ${isDaylight ? 'text-amber-700 font-semibold' : 'text-slate-400'}`}>
-                Deposit: {formatINR(asset.depositAmount)}
+              <div className={`text-[11px] mt-0.5 ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400')}`}>
+                Deposit: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}
               </div>
             </div>
             <div className="flex items-center gap-1.5">
@@ -523,7 +526,8 @@ const MachineCard: React.FC<{
                     onDelete();
                   }}
                   className="p-2 rounded-xl border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                  title="Delete Machine from Fleet (Root Authority Only)"
+                  data-tooltip="Delete Machine from Fleet (Root Authority Only)"
+                  data-tooltip-pos="left"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -559,7 +563,12 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const isRoot = currentUser?.role === 'root';
   const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
   const [assetsList, setAssetsList] = useState<Asset[]>([...api.assets]);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(() => getUrlParam('modal') === 'add_machine');
+
+  React.useEffect(() => {
+    setUrlParam('modal', isAddModalOpen ? 'add_machine' : null);
+  }, [isAddModalOpen]);
+
   const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -727,8 +736,36 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map(s => ({ value: String(s.id), label: s.name }))]} value={selectedStateId} onChange={v => handleStateChange(v || 'ALL')} placeholder="All States" isClearable={false} />
-          <SearchSelect options={[{ value: 'ALL', label: 'All Cities' }, ...availableCities.map(c => ({ value: String(c.id), label: c.name }))]} value={selectedCityId} onChange={v => handleCityChange(v || 'ALL')} placeholder="All Cities" isClearable={false} />
-          <SearchSelect options={[{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map(h => ({ value: String(h.id), label: h.name }))]} value={selectedHubId} onChange={v => setSelectedHubId(String(v || 'ALL'))} placeholder="All Hubs" isClearable={false} />
+          <SearchSelect
+            options={
+              selectedStateId !== 'ALL' && availableCities.length === 0
+                ? []
+                : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map(c => ({ value: String(c.id), label: c.name }))]
+            }
+            value={selectedCityId}
+            onChange={v => handleCityChange(v || 'ALL')}
+            placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+            isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
+            isClearable={false}
+          />
+          <SearchSelect
+            options={
+              (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                ? []
+                : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map(h => ({ value: String(h.id), label: h.name }))]
+            }
+            value={selectedHubId}
+            onChange={v => setSelectedHubId(String(v || 'ALL'))}
+            placeholder={
+              selectedStateId !== 'ALL' && availableCities.length === 0
+                ? 'No cities in this State'
+                : selectedCityId !== 'ALL' && availableHubs.length === 0
+                ? 'No hubs in this City'
+                : 'All Hubs'
+            }
+            isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+            isClearable={false}
+          />
           <SearchSelect options={[{ value: 'ALL', label: 'All Categories' }, { value: 'CONSTRUCTION', label: 'Civil Construction' }, { value: 'AGRICULTURE', label: 'Agro-Mechanization' }]} value={selectedCategory} onChange={v => setSelectedCategory(String(v || 'ALL'))} placeholder="Category" isClearable={false} />
           <SearchSelect options={[{ value: 'ALL', label: 'All Statuses' }, { value: 'AVAILABLE', label: 'Available' }, { value: 'ON_RENT', label: 'On Rent' }, { value: 'MAINTENANCE', label: 'Maintenance' }]} value={statusFilter} onChange={v => setStatusFilter(String(v || 'ALL'))} placeholder="Status" isClearable={false} />
           <div className="relative">
@@ -843,8 +880,8 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       </td>
                       <td className="py-3 px-4">
                         <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{formatINR(asset.dailyRate)}<span className="text-[10px] font-normal text-slate-500">/day</span></div>
-                        <div className={`text-[11px] ${isDaylight ? 'text-amber-700 font-semibold' : 'text-slate-400'}`}>Dep: {formatINR(asset.depositAmount)}</div>
-                        <div className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Std: 8h/day (+1h buffer) • Extra billed</div>
+                        <div className={`text-[11px] ${isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}>Dep: {formatINR(asset.depositAmount)}</div>
+                        <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold">Std: 8h/day (+1h buffer) • Extra billed</div>
                       </td>
                       <td className="py-3 px-4"><StatusBadge status={asset.status} size="sm" /></td>
                       <td className="py-3 px-4 text-right">
@@ -853,7 +890,8 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                             <button
                               onClick={() => setAssetToDelete(asset)}
                               className="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                              title="Delete Machine from Fleet (Root Authority Only)"
+                              data-tooltip="Delete Machine from Fleet (Root Authority Only)"
+                              data-tooltip-pos="left"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>

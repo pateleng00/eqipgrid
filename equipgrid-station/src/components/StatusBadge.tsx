@@ -1,15 +1,18 @@
 import React from 'react';
 import { getStatusColor, cn } from '../lib/utils';
 import { useTheme } from '../lib/ThemeContext';
+import { getFarmerFriendlyStatus } from '../types';
 
 interface StatusBadgeProps {
   status: string;
   size?: 'sm' | 'md';
+  showFarmerLabel?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', showFarmerLabel = false }) => {
   const { isDaylight } = useTheme();
   const color = getStatusColor(status, isDaylight);
+  const farmerInfo = getFarmerFriendlyStatus(status);
 
   return (
     <span
@@ -23,7 +26,14 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md' })
       )}
     >
       <span className={cn('w-1.5 h-1.5 rounded-full animate-pulse', color.dot)} />
-      {status.replace(/_/g, ' ')}
+      {showFarmerLabel ? (
+        <span className="flex items-center gap-1">
+          <span>{farmerInfo.farmerLabelEn}</span>
+          <span className="opacity-75 text-[10px] font-normal">({farmerInfo.farmerLabelHi})</span>
+        </span>
+      ) : (
+        status.replace(/_/g, ' ')
+      )}
     </span>
   );
 };

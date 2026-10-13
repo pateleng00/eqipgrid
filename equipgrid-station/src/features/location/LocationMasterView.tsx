@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   MapPin,
   Building2,
@@ -9,33 +9,74 @@ import {
   Phone,
   Search,
   RotateCcw,
+  Compass,
+  Edit2,
+  ExternalLink,
+  Shield,
+  User,
+  Tag,
+  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { City, Hub, State } from '../../types';
+import { City, Hub, State, Customer, FarmLocation } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
+import { UpsertFarmLocationModal } from '../../components/UpsertFarmLocationModal';
+import { cn } from '../../lib/utils';
 
 export const LocationMasterView: React.FC = () => {
   const { isDaylight } = useTheme();
+
+  // Subtab: 'hubs' | 'farms'
+  const [activeTab, setActiveTab] = useState<'hubs' | 'farms'>('hubs');
 
   // Master lists
   const [states, setStates] = useState<State[]>(() => api.getStates());
   const [cities, setCities] = useState<City[]>(() => api.getCities());
   const [hubs, setHubs] = useState<Hub[]>(() => api.getHubs());
+  const [customers, setCustomers] = useState<Customer[]>(() => api.customers);
+  const [allFarmLocations, setAllFarmLocations] = useState<{ customer: Customer; location: FarmLocation }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Farm location specific state
+  const [selectedFarmCustomerId, setSelectedFarmCustomerId] = useState<string>('ALL');
+  const [farmSearchQuery, setFarmSearchQuery] = useState('');
+  const [isFarmModalOpen, setIsFarmModalOpen] = useState(false);
+  const [farmLocationToEdit, setFarmLocationToEdit] = useState<FarmLocation | null>(null);
+  const [farmModalCustomer, setFarmModalCustomer] = useState<Customer | null>(null);
+
+  const refreshFarmLocations = React.useCallback(async () => {
+    const custs = api.customers;
+    setCustomers([...custs]);
+    const items: { customer: Customer; location: FarmLocation }[] = [];
+    for (const c of custs) {
+      try {
+        const locs = await api.getFarmLocations(c.id);
+        for (const loc of locs) {
+          items.push({ customer: c, location: loc });
+        }
+      } catch {}
+    }
+    setAllFarmLocations(items);
+  }, []);
 
   React.useEffect(() => {
     setStates(api.getStates());
     setCities(api.getCities());
     setHubs(api.getHubs());
+    setCustomers([...api.customers]);
+    refreshFarmLocations();
     return api.subscribe(() => {
       setStates(api.getStates());
       setCities(api.getCities());
       setHubs(api.getHubs());
+      setCustomers([...api.customers]);
+      refreshFarmLocations();
     });
-  }, []);
+  }, [refreshFarmLocations]);
 
   // Parent-dependent cascading filters
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
@@ -46,16 +87,23 @@ export const LocationMasterView: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState<number>(7);
 
   // Modals for adding new entries
-  const [showAddState, setShowAddState] = useState(false);
+  const [showAddState, setShowAddState] = useState(() => getUrlParam('modal') === 'state');
   const [newStateName, setNewStateName] = useState('');
   const [newStateCode, setNewStateCode] = useState('');
 
-  const [showAddCity, setShowAddCity] = useState(false);
+  const [showAddCity, setShowAddCity] = useState(() => getUrlParam('modal') === 'city');
   const [newCityName, setNewCityName] = useState('');
   const [newCityPin, setNewCityPin] = useState('');
   const [newCityStateId, setNewCityStateId] = useState<number | ''>(states[0]?.id || '');
 
-  const [showAddHub, setShowAddHub] = useState(false);
+  const [showAddHub, setShowAddHub] = useState(() => getUrlParam('modal') === 'hub');
+
+  useEffect(() => {
+    if (showAddState) setUrlParam('modal', 'state');
+    else if (showAddCity) setUrlParam('modal', 'city');
+    else if (showAddHub) setUrlParam('modal', 'hub');
+    else setUrlParam('modal', null);
+  }, [showAddState, showAddCity, showAddHub]);
   const [newHubStateId, setNewHubStateId] = useState<number | ''>(states[0]?.id || '');
   const [newHubCityId, setNewHubCityId] = useState<number | ''>('');
   const [newHubName, setNewHubName] = useState('');
@@ -138,6 +186,21 @@ export const LocationMasterView: React.FC = () => {
       return true;
     });
   }, [hubs, cities, selectedStateId, selectedCityId, selectedHubId, searchQuery]);
+
+  const filteredFarmLocations = useMemo(() => {
+    return allFarmLocations.filter(({ customer, location }) => {
+      if (selectedFarmCustomerId !== 'ALL' && customer.id !== Number(selectedFarmCustomerId)) return false;
+      if (!farmSearchQuery.trim()) return true;
+      const q = farmSearchQuery.toLowerCase();
+      const matchLocal = (location.localName || '').toLowerCase().includes(q);
+      const matchHindi = (location.localNameHindi || '').toLowerCase().includes(q);
+      const matchAliases = (location.aliases || '').toLowerCase().includes(q);
+      const matchVillage = (location.village || '').toLowerCase().includes(q);
+      const matchLandmark = (location.landmark || '').toLowerCase().includes(q);
+      const matchCustomer = (customer.fullName || '').toLowerCase().includes(q) || (customer.phone || '').includes(q);
+      return matchLocal || matchHindi || matchAliases || matchVillage || matchLandmark || matchCustomer;
+    });
+  }, [allFarmLocations, selectedFarmCustomerId, farmSearchQuery]);
 
   // Reset to initial 7 items when location filters change
   React.useEffect(() => {
@@ -266,45 +329,105 @@ export const LocationMasterView: React.FC = () => {
             }`}
           >
             <MapPin className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Location Master
+            Location & Territory Master
           </h2>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <button
-            onClick={handleOpenAddState}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
-              isDaylight
-                ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
-                : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add State</span>
-          </button>
-          <button
-            onClick={handleOpenAddCity}
-            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
-              isDaylight
-                ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
-                : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
-            }`}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add City</span>
-          </button>
-          <button
-            onClick={handleOpenAddHub}
-            className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none ${
-              isDaylight
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-            }`}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>New Hub Yard</span>
-          </button>
+          {activeTab === 'hubs' ? (
+            <>
+              <button
+                onClick={handleOpenAddState}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
+                  isDaylight
+                    ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
+                    : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add State</span>
+              </button>
+              <button
+                onClick={handleOpenAddCity}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border ${
+                  isDaylight
+                    ? 'border-slate-300 bg-white text-slate-900 hover:bg-slate-50 shadow-xs'
+                    : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>Add City</span>
+              </button>
+              <button
+                onClick={handleOpenAddHub}
+                className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none ${
+                  isDaylight
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                }`}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>New Hub Yard</span>
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => {
+                const targetCustomer =
+                  selectedFarmCustomerId !== 'ALL'
+                    ? customers.find((c) => c.id === Number(selectedFarmCustomerId)) || customers[0]
+                    : customers[0];
+                setFarmLocationToEdit(null);
+                setFarmModalCustomer(targetCustomer || null);
+                setIsFarmModalOpen(true);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-colors shadow-sm ${
+                isDaylight
+                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+              }`}
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add Farmer Field / Delivery Place</span>
+            </button>
+          )}
         </div>
+      </div>
+
+      {/* Subtab Switcher */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab('hubs')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+            activeTab === 'hubs'
+              ? 'bg-amber-500 text-slate-950 shadow-sm'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          )}
+        >
+          <Building2 className="h-3.5 w-3.5" />
+          <span>Hub Yards & Territory</span>
+          <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/10 font-mono">
+            {hubs.length}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('farms')}
+          className={cn(
+            'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
+            activeTab === 'farms'
+              ? 'bg-amber-500 text-slate-950 shadow-sm'
+              : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800'
+          )}
+        >
+          <MapPin className="h-3.5 w-3.5" />
+          <span>Farmer Farm Locations (खेत मास्टर)</span>
+          <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/10 font-mono">
+            {allFarmLocations.length}
+          </span>
+        </button>
       </div>
 
       {successMsg && (
@@ -322,7 +445,10 @@ export const LocationMasterView: React.FC = () => {
         </div>
       )}
 
-      {/* Dependent Cascading Filters: State -> City -> Hub */}
+      {/* --- TAB 1: HUB YARDS DIRECTORY --- */}
+      {activeTab === 'hubs' && (
+        <>
+          {/* Dependent Cascading Filters: State -> City -> Hub */}
       <div
         className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
           isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
@@ -362,17 +488,22 @@ export const LocationMasterView: React.FC = () => {
           {/* City Filter */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Cities' },
-                ...availableCities.map((c) => ({
-                  value: String(c.id),
-                  label: c.name,
-                  subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
-                })),
-              ]}
+              options={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Cities' },
+                      ...availableCities.map((c) => ({
+                        value: String(c.id),
+                        label: c.name,
+                        subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
+                      })),
+                    ]
+              }
               value={selectedCityId}
               onChange={(val) => handleCityChange(val || 'ALL')}
-              placeholder="All Cities"
+              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
           </div>
@@ -380,17 +511,28 @@ export const LocationMasterView: React.FC = () => {
           {/* Hub / Yard Filter */}
           <div>
             <SearchSelect
-              options={[
-                { value: 'ALL', label: 'All Hubs' },
-                ...availableHubs.map((h) => ({
-                  value: String(h.id),
-                  label: h.name,
-                  badge: h.code,
-                })),
-              ]}
+              options={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                  ? []
+                  : [
+                      { value: 'ALL', label: 'All Hubs' },
+                      ...availableHubs.map((h) => ({
+                        value: String(h.id),
+                        label: h.name,
+                        badge: h.code,
+                      })),
+                    ]
+              }
               value={selectedHubId}
               onChange={(val) => setSelectedHubId(String(val || 'ALL'))}
-              placeholder="All Hubs"
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? 'No cities in this State'
+                  : selectedCityId !== 'ALL' && availableHubs.length === 0
+                  ? 'No hubs in this City'
+                  : 'All Hubs'
+              }
+              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
               isClearable={false}
             />
           </div>
@@ -532,16 +674,249 @@ export const LocationMasterView: React.FC = () => {
           />
         )}
       </div>
+        </>
+      )}
+
+      {/* --- TAB 2: FARMER FARM LOCATIONS DIRECTORY --- */}
+      {activeTab === 'farms' && (
+        <div className="flex-1 flex flex-col min-h-0 gap-3">
+          {/* Filters Bar */}
+          <div
+            className={`flex-shrink-0 p-3 rounded-xl border transition-colors space-y-2 ${
+              isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                Filter Registered Farmer Fields & Delivery Locations
+              </span>
+              <button
+                onClick={() => {
+                  setSelectedFarmCustomerId('ALL');
+                  setFarmSearchQuery('');
+                }}
+                className={`text-[11px] flex items-center gap-1 font-medium cursor-pointer ${
+                  isDaylight ? 'text-amber-800 hover:text-amber-950 font-bold' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <RotateCcw className="h-3 w-3" />
+                <span>Reset Filters</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Customer Selector */}
+              <div>
+                <SearchSelect
+                  options={[
+                    { value: 'ALL', label: 'All Registered Farmers' },
+                    ...customers.map((c) => ({
+                      value: String(c.id),
+                      label: c.fullName,
+                      subLabel: c.phone,
+                      badge: c.tier === 'TIER_2_VERIFIED' ? 'VERIFIED' : 'BASIC',
+                    })),
+                  ]}
+                  value={selectedFarmCustomerId}
+                  onChange={(val) => setSelectedFarmCustomerId(String(val || 'ALL'))}
+                  placeholder="Filter by Farmer / Customer..."
+                  isClearable={false}
+                />
+              </div>
+
+              {/* Text Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search field name, Hindi name, alias, village, landmark..."
+                  value={farmSearchQuery}
+                  onChange={(e) => setFarmSearchQuery(e.target.value)}
+                  className={`w-full pl-8 pr-3 py-2 text-xs rounded-lg border transition-colors focus:outline-none focus:border-amber-500 ${
+                    isDaylight
+                      ? 'border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 font-bold'
+                      : 'border-slate-800 bg-slate-900/60 text-slate-200 placeholder:text-slate-500'
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className={`p-2.5 rounded-xl border text-center ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Total Farm Fields</div>
+              <div className="text-lg font-black text-amber-500">{allFarmLocations.length}</div>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-center ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Default / Primary Pins</div>
+              <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                {allFarmLocations.filter((item) => item.location.isDefault).length}
+              </div>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-center ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Villages Documented</div>
+              <div className="text-lg font-black text-sky-600 dark:text-sky-400">
+                {new Set(allFarmLocations.map((item) => item.location.village).filter(Boolean)).size}
+              </div>
+            </div>
+            <div className={`p-2.5 rounded-xl border text-center ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/50'}`}>
+              <div className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Tractor Access Notes</div>
+              <div className="text-lg font-black text-indigo-600 dark:text-indigo-400">
+                {allFarmLocations.filter((item) => item.location.accessNotes).length}
+              </div>
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="flex-1 overflow-y-auto pr-1">
+            {filteredFarmLocations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center text-slate-500 border border-dashed rounded-2xl border-slate-300 dark:border-slate-700">
+                <MapPin className="h-10 w-10 text-slate-400 mb-2 stroke-[1.5]" />
+                <p className="text-sm font-bold">No farmer fields found</p>
+                <p className="text-xs text-slate-400 mt-1 max-w-md">
+                  No farm location matched your search criteria. Click "+ Add Farmer Field / Delivery Place" above to register a field with local spoken names and tractor access instructions.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                {filteredFarmLocations.map(({ customer, location }) => (
+                  <div
+                    key={`${customer.id}-${location.id}`}
+                    className={cn(
+                      'rounded-2xl border p-4 flex flex-col justify-between transition-all hover:border-amber-500/60 shadow-xs',
+                      isDaylight ? 'border-slate-200 bg-white text-slate-950' : 'border-slate-800 bg-slate-900/50 text-slate-100'
+                    )}
+                  >
+                    <div className="space-y-2.5">
+                      {/* Top Row: Local Name & Badges */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black text-sm">{location.localName}</span>
+                            {location.localNameHindi && (
+                              <span className="text-xs text-amber-700 dark:text-amber-400 font-bold">
+                                ({location.localNameHindi})
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <User className="h-3 w-3 text-slate-400" />
+                            <span className="font-semibold">{customer.fullName}</span>
+                            <span>• {customer.phone}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {location.isDefault ? (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-700 border border-emerald-500/30">
+                              DEFAULT
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700">
+                              {location.locationType}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Spoken Aliases */}
+                      {location.aliases && (
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5 bg-slate-100/70 dark:bg-slate-800/60 px-2 py-1 rounded-lg">
+                          <Tag className="h-3 w-3 text-amber-500 shrink-0" />
+                          <span className="truncate">
+                            <strong className="text-slate-700 dark:text-slate-300 font-semibold">Aliases:</strong>{' '}
+                            {location.aliases}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Location Address & Landmark */}
+                      <div className="text-xs text-slate-600 dark:text-slate-400 space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            {[location.village, location.tehsil, location.district].filter(Boolean).join(', ') || 'Rural Field Parcel'}
+                          </span>
+                        </div>
+                        {location.landmark && (
+                          <p className="text-[11px] text-slate-500 pl-5">
+                            Landmark: {location.landmark}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Tractor / Transport Access Notes */}
+                      {location.accessNotes && (
+                        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-900 dark:text-amber-300 font-medium flex items-start gap-1.5">
+                          <Truck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                          <span>
+                            <strong>Road access:</strong> {location.accessNotes}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Receiver Contact */}
+                      {location.deliveryContactName && (
+                        <div className="text-[11px] text-slate-500 flex items-center gap-1.5 pt-0.5">
+                          <Phone className="h-3 w-3 text-slate-400" />
+                          <span>
+                            Receiver: {location.deliveryContactName}{' '}
+                            {location.deliveryContactPhone ? `(${location.deliveryContactPhone})` : ''}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Footer: GPS and Edit Button */}
+                    <div className="mt-3 pt-2.5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+                      <div>
+                        {location.latitude && location.longitude ? (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
+                          >
+                            <Compass className="h-3 w-3" />
+                            <span>{location.latitude.toFixed(4)}°, {location.longitude.toFixed(4)}°</span>
+                            <ExternalLink className="h-2.5 w-2.5" />
+                          </a>
+                        ) : (
+                          <span className="text-[10px] text-slate-400">No GPS coordinates recorded</span>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFarmLocationToEdit(location);
+                          setFarmModalCustomer(customer);
+                          setIsFarmModalOpen(true);
+                        }}
+                        className="px-2.5 py-1 rounded-lg border border-slate-300 dark:border-slate-700 text-[11px] font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                        <span>Edit Field</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* --- ADD STATE MODAL --- */}
       {showAddState && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
-            className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-3xl border p-7 sm:p-8 space-y-6 shadow-2xl transition-all ${
+            className={`w-full max-w-xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
               isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className={`flex items-start justify-between border-b pb-4 ${
+            <div className={`flex items-start justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-800'
             }`}>
               <div className="flex items-center gap-3">
@@ -551,15 +926,9 @@ export const LocationMasterView: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className={`text-base font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-                      Add Regional State
+                      Add State
                     </h3>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
-                      Level 1: State
-                    </span>
                   </div>
-                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Top-level administrative territory for machinery deployment and tax jurisdiction.
-                  </p>
                 </div>
               </div>
               <button
@@ -638,13 +1007,13 @@ export const LocationMasterView: React.FC = () => {
 
       {/* --- ADD CITY MODAL --- */}
       {showAddCity && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
-            className={`w-full max-w-xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-3xl border p-7 sm:p-8 space-y-6 shadow-2xl transition-all ${
+            className={`w-full max-w-xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
               isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className={`flex items-start justify-between border-b pb-4 ${
+            <div className={`flex items-start justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-800'
             }`}>
               <div className="flex items-center gap-3">
@@ -654,15 +1023,9 @@ export const LocationMasterView: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className={`text-base font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-                      Add City / District
+                      Add City
                     </h3>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
-                      Level 2: City
-                    </span>
                   </div>
-                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Select parent state first, then enter the target urban district.
-                  </p>
                 </div>
               </div>
               <button
@@ -682,7 +1045,7 @@ export const LocationMasterView: React.FC = () => {
             <form onSubmit={handleCreateCity} className="space-y-4">
               <div>
                 <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
-                  Parent State *
+                  State *
                 </label>
                 <SearchSelect
                   options={states.map((s) => ({ value: s.id, label: s.name, subLabel: s.code }))}
@@ -754,13 +1117,13 @@ export const LocationMasterView: React.FC = () => {
 
       {/* --- ADD HUB YARD MODAL (BOTH STATE & CITY REQUIRED VIA SEARCHSELECT) --- */}
       {showAddHub && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 lg:p-8 overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
-            className={`w-full max-w-3xl max-h-[calc(100vh-2.5rem)] overflow-y-auto rounded-3xl border p-8 sm:p-10 space-y-6 shadow-2xl transition-all ${
+            className={`w-full max-w-3xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
               isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-white'
             }`}
           >
-            <div className={`flex items-start justify-between border-b pb-5 ${
+            <div className={`flex items-start justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-800'
             }`}>
               <div className="flex items-center gap-3">
@@ -770,15 +1133,9 @@ export const LocationMasterView: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2.5">
                     <h3 className={`text-lg font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-                      Add New Stationed Hub Yard / Depot
+                      Add Stationed Hub
                     </h3>
-                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 font-mono">
-                      Level 3: Yard
-                    </span>
                   </div>
-                  <p className={`mt-0.5 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Both State and City selection are strictly required before configuring the hub facility.
-                  </p>
                 </div>
               </div>
               <button
@@ -800,13 +1157,6 @@ export const LocationMasterView: React.FC = () => {
               <div className={`p-5 rounded-2xl border ${
                 isDaylight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-slate-800'
               } space-y-3`}>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs font-black flex items-center gap-2 text-amber-900 dark:text-amber-400 uppercase tracking-wider">
-                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
-                    <span>Parent Territory (State & City Required) *</span>
-                  </div>
-                </div>
-
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
@@ -837,8 +1187,15 @@ export const LocationMasterView: React.FC = () => {
                       }))}
                       value={newHubCityId}
                       onChange={(val) => setNewHubCityId(val ? Number(val) : '')}
-                      placeholder={newHubStateId ? "Select Parent City *" : "Select State First"}
-                      isDisabled={!newHubStateId}
+                      placeholder={
+                        !newHubStateId
+                          ? 'Select State First'
+                          : hubModalAvailableCities.length === 0
+                          ? 'No cities in this State'
+                          : 'Select Parent City *'
+                      }
+                      isDisabled={!newHubStateId || hubModalAvailableCities.length === 0}
+                      noOptionsMessage="No cities found in this State"
                       isClearable={false}
                     />
                   </div>
@@ -1048,6 +1405,24 @@ export const LocationMasterView: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+      {/* Farmer Farm Location Upsert Modal */}
+      {isFarmModalOpen && farmModalCustomer && (
+        <UpsertFarmLocationModal
+          isOpen={isFarmModalOpen}
+          onClose={() => {
+            setIsFarmModalOpen(false);
+            setFarmLocationToEdit(null);
+          }}
+          customerId={farmModalCustomer.id}
+          customerName={farmModalCustomer.fullName}
+          customerPhone={farmModalCustomer.phone}
+          locationToEdit={farmLocationToEdit}
+          onSaved={async () => {
+            await refreshFarmLocations();
+            setSuccessMsg('Farmer field location saved successfully.');
+          }}
+        />
       )}
     </div>
   );

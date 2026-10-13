@@ -313,11 +313,72 @@ html.daylight [class*="dark:text-slate-500"] {
   color: #475569 !important;
 }
 
-/* Darker Amber accents */
+/* Dark High-Contrast Amber & Yellow accents in Daylight Mode */
+html.daylight [class*="text-amber-100"],
+html.daylight [class*="text-amber-200"],
+html.daylight [class*="text-amber-300"],
 html.daylight [class*="text-amber-400"],
-html.daylight [class*="text-amber-300"] {
-  color: #b45309 !important;
+html.daylight [class*="text-amber-500"],
+html.daylight [class*="text-yellow-100"],
+html.daylight [class*="text-yellow-200"],
+html.daylight [class*="text-yellow-300"],
+html.daylight [class*="text-yellow-400"],
+html.daylight [class*="text-yellow-500"],
+html.daylight [class*="text-orange-200"],
+html.daylight [class*="text-orange-300"],
+html.daylight [class*="text-orange-400"] {
+  color: #78350f !important; /* amber-900: ultra-high contrast on light/white */
+  font-weight: 700;
+}
+
+html.daylight strong[class*="text-amber-"],
+html.daylight b[class*="text-amber-"],
+html.daylight [class*="font-bold"][class*="text-amber-"],
+html.daylight [class*="font-extrabold"][class*="text-amber-"],
+html.daylight [class*="font-black"][class*="text-amber-"] {
+  color: #451a03 !important; /* amber-950 */
   font-weight: 800;
+}
+
+html.daylight svg[class*="text-amber-"],
+html.daylight svg[class*="text-yellow-"] {
+  color: #92400e !important; /* amber-800 */
+}
+
+/* Light Amber Banners & Badges in Daylight */
+html.daylight [class*="bg-amber-500/10"],
+html.daylight [class*="bg-amber-500/15"],
+html.daylight [class*="bg-amber-500/20"],
+html.daylight [class*="bg-amber-900/20"],
+html.daylight [class*="bg-amber-900/25"],
+html.daylight [class*="bg-amber-950/20"],
+html.daylight .bg-amber-50 {
+  background-color: #fef3c7 !important;
+  border-color: #f59e0b !important;
+  color: #78350f !important;
+}
+
+html.daylight [class*="bg-amber-500/10"] *,
+html.daylight [class*="bg-amber-500/15"] *,
+html.daylight [class*="bg-amber-500/20"] *,
+html.daylight [class*="bg-amber-900/20"] *,
+html.daylight [class*="bg-amber-900/25"] *,
+html.daylight [class*="bg-amber-950/20"] *,
+html.daylight .bg-amber-50 * {
+  color: #78350f !important;
+}
+
+html.daylight [class*="bg-amber-500/10"] strong,
+html.daylight [class*="bg-amber-500/10"] b,
+html.daylight .bg-amber-50 strong,
+html.daylight .bg-amber-50 b {
+  color: #451a03 !important;
+}
+
+html.daylight [class*="bg-amber-500/10"] svg,
+html.daylight [class*="bg-amber-500/20"] svg,
+html.daylight .bg-amber-50 svg {
+  color: #92400e !important;
 }
 
 /* Darker Emerald */
@@ -409,3 +470,122 @@ html.daylight input[type="checkbox"] {
 html.daylight tr:hover {
   background-color: rgba(226, 232, 240, 0.5) !important;
 }
+
+/* ==========================================================================
+   INSTANT CSS TOOLTIP SYSTEM (0ms Delay, Hardware Accelerated)
+   ========================================================================== */
+
+[data-tooltip] {
+  position: relative;
+}
+
+[data-tooltip]::before {
+  content: attr(data-tooltip);
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  padding: 6px 10px;
+  border-radius: 0.5rem;
+  z-index: 9999;
+  transition: opacity 0.08s ease, transform 0.08s ease, visibility 0.08s;
+  box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background-color: #1e1e1e;
+  color: #f4f4f5;
+}
+
+/* Arrow notch */
+[data-tooltip]::after {
+  content: '';
+  position: absolute;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+  border: 5px solid transparent;
+  z-index: 9999;
+  transition: opacity 0.08s ease, visibility 0.08s;
+}
+
+html.daylight [data-tooltip]::before {
+  background-color: #0f172a;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.25);
+}
+
+/* Default / Top position */
+[data-tooltip]:not([data-tooltip-pos])::before,
+[data-tooltip][data-tooltip-pos="top"]::before {
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+}
+[data-tooltip]:not([data-tooltip-pos])::after,
+[data-tooltip][data-tooltip-pos="top"]::after {
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-top-color: #1e1e1e;
+}
+html.daylight [data-tooltip]:not([data-tooltip-pos])::after,
+html.daylight [data-tooltip][data-tooltip-pos="top"]::after {
+  border-top-color: #0f172a;
+}
+
+/* Right position (for Sidebar and action buttons) */
+[data-tooltip][data-tooltip-pos="right"]::before {
+  left: calc(100% + 9px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+}
+[data-tooltip][data-tooltip-pos="right"]::after {
+  left: calc(100% + 4px);
+  top: 50%;
+  transform: translateY(-50%);
+  border-right-color: #1e1e1e;
+}
+html.daylight [data-tooltip][data-tooltip-pos="right"]::after {
+  border-right-color: #0f172a;
+}
+
+/* Bottom position */
+[data-tooltip][data-tooltip-pos="bottom"]::before {
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+}
+[data-tooltip][data-tooltip-pos="bottom"]::after {
+  top: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border-bottom-color: #1e1e1e;
+}
+html.daylight [data-tooltip][data-tooltip-pos="bottom"]::after {
+  border-bottom-color: #0f172a;
+}
+
+/* Hover trigger: instant reveal (0ms delay) */
+[data-tooltip]:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+[data-tooltip]:not([data-tooltip-pos]):hover::before,
+[data-tooltip][data-tooltip-pos="top"]:hover::before {
+  transform: translateX(-50%) translateY(0);
+}
+[data-tooltip][data-tooltip-pos="bottom"]:hover::before {
+  transform: translateX(-50%) translateY(0);
+}
+[data-tooltip]:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+

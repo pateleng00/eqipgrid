@@ -57,7 +57,7 @@ export const WhatsAppCirculationModal: React.FC<WhatsAppCirculationModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-3 bg-black/60 backdrop-blur-xs">
       <div
         className={`w-full max-w-xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
           isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white'
@@ -65,7 +65,7 @@ export const WhatsAppCirculationModal: React.FC<WhatsAppCirculationModalProps> =
       >
         {/* Header */}
         <div
-          className={`flex items-center justify-between px-5 py-4 border-b ${
+          className={`flex items-center justify-between px-4 py-3 border-b ${
             isDaylight ? 'border-slate-200 bg-emerald-50/60' : 'border-slate-800 bg-emerald-950/30'
           }`}
         >
@@ -95,7 +95,7 @@ export const WhatsAppCirculationModal: React.FC<WhatsAppCirculationModalProps> =
         </div>
 
         {/* Body */}
-        <div className="p-5 overflow-y-auto space-y-4 text-xs">
+        <div className="p-4 overflow-y-auto space-y-3 text-xs">
           {/* Automated System Status Banner */}
           <div
             className={`rounded-xl border p-3 flex items-start gap-2.5 ${

@@ -97,7 +97,8 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(1)}
           disabled={safeCurrentPage <= 1}
-          title="First page"
+          data-tooltip="First page"
+          data-tooltip-pos="top"
           className={cn(
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed',
             isDaylight
@@ -112,7 +113,8 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(safeCurrentPage - 1)}
           disabled={safeCurrentPage <= 1}
-          title="Previous page"
+          data-tooltip="Previous page"
+          data-tooltip-pos="top"
           className={cn(
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 px-2.5',
             isDaylight
@@ -173,7 +175,8 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(safeCurrentPage + 1)}
           disabled={safeCurrentPage >= totalPages}
-          title="Next page"
+          data-tooltip="Next page"
+          data-tooltip-pos="top"
           className={cn(
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 px-2.5',
             isDaylight
@@ -189,7 +192,8 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={safeCurrentPage >= totalPages}
-          title="Last page"
+          data-tooltip="Last page"
+          data-tooltip-pos="top"
           className={cn(
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed',
             isDaylight

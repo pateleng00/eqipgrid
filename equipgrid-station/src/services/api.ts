@@ -3,10 +3,14 @@ import {
   AssetCategory,
   AssetMedia,
   AssetStatus,
+  BillingUnit,
+  resolveBillingUnitCode,
+  resolveBillingUnitInt,
   Booking,
   BookingStatus,
   City,
   Customer,
+  FarmLocation,
   DailyCashReconciliation,
   DashboardSummary,
   Dealer,
@@ -27,6 +31,19 @@ import {
   StaffRole,
   CreateUserPayload,
   UpdateUserPayload,
+  BookingSource,
+  FarmLocationType,
+  JobStatus,
+  RefundStatus,
+  VerificationStatus,
+  UpsertFarmLocationPayload,
+  PaymentProof,
+  RefundTransaction,
+  DeliveryJob,
+  ReturnPickupJob,
+  UpdateFulfillmentJobPayload,
+  EquipmentRecommendationRequest,
+  EquipmentRecommendationResponse,
 } from '../types';
 
 // Verified AWS S3 assets bucket base URL
@@ -231,6 +248,63 @@ function mapPaymentMode(mode: any): PaymentMode {
   return map[mode] || 'UPI';
 }
 
+function mapBookingSource(source: any): BookingSource {
+  if (typeof source === 'string') return source as BookingSource;
+  const map: Record<number, BookingSource> = {
+    1: 'STATION',
+    2: 'PHONE_AGENT',
+    3: 'DEALER',
+    4: 'FPO',
+    5: 'KISAN_MITRA',
+    6: 'WHATSAPP',
+  };
+  return map[source] || 'STATION';
+}
+
+function mapFarmLocationType(type: any): FarmLocationType {
+  if (typeof type === 'string') return type as FarmLocationType;
+  const map: Record<number, FarmLocationType> = {
+    1: 'FARM',
+    2: 'HOME',
+    3: 'VILLAGE_PICKUP',
+    4: 'SITE',
+  };
+  return map[type] || 'FARM';
+}
+
+function mapJobStatus(status: any): JobStatus {
+  if (typeof status === 'string') return status as JobStatus;
+  const map: Record<number, JobStatus> = {
+    1: 'REQUESTED',
+    2: 'SCHEDULED',
+    3: 'OUT_FOR_DELIVERY',
+    4: 'COMPLETED',
+    5: 'CANCELLED',
+  };
+  return map[status] || 'SCHEDULED';
+}
+
+function mapRefundStatus(status: any): RefundStatus {
+  if (typeof status === 'string') return status as RefundStatus;
+  const map: Record<number, RefundStatus> = {
+    1: 'PENDING',
+    2: 'PROCESSING',
+    3: 'COMPLETED',
+    4: 'FAILED',
+  };
+  return map[status] || 'PENDING';
+}
+
+function mapVerificationStatus(status: any): VerificationStatus {
+  if (typeof status === 'string') return status as VerificationStatus;
+  const map: Record<number, VerificationStatus> = {
+    1: 'PENDING',
+    2: 'VERIFIED',
+    3: 'REJECTED',
+  };
+  return map[status] || 'PENDING';
+}
+
 function mapAsset(a: any): Asset {
   const s3Prefix = resolveAssetS3Key(a.assetTag || 'c_mix_001');
   const defaultImg = `${S3_ASSETS_BASE}/asset/images/${s3Prefix}/photo_1.jpg`;
@@ -261,7 +335,7 @@ function mapAsset(a: any): Asset {
   return {
     id: a.id,
     assetTag: a.assetTag,
-    name: a.name,
+    name: a.name || a.modelName || a.model?.name || a.type?.name || a.assetTag,
     category: mapCategory(a.category),
     typeId: a.type?.id,
     typeName: a.type?.name,
@@ -284,6 +358,9 @@ function mapAsset(a: any): Asset {
     engineHours: Number(a.engineHours || 0),
     accessoriesIncluded: a.accessoriesIncluded || '',
     mediaItems: media,
+    billingUnit: resolveBillingUnitCode(a.billingUnit),
+    workingHoursLimit: a.workingHoursLimit ? Number(a.workingHoursLimit) : undefined,
+    shiftTerms: a.shiftTerms,
   };
 }
 
@@ -299,12 +376,15 @@ function mapRentalConfig(rc: any): RentalConfiguration {
     typeId: rc.type?.id || rc.typeId,
     typeName: rc.type?.name || rc.typeName,
     baseDailyRate: Number(rc.baseDailyRate || 0),
-    depositAmount: Number(rc.depositAmount || 0),
+    depositAmount: Number(rc.depositAmount != null ? rc.depositAmount : 0),
     operatorDailyRate: Number(rc.operatorDailyRate || 500),
     freeDeliveryDistanceKm: Number(rc.freeDeliveryDistanceKm || 5.0),
     ratePerKmAfterFree: Number(rc.ratePerKmAfterFree || 10.0),
     active: Boolean(rc.active ?? true),
     notes: rc.notes,
+    billingUnit: resolveBillingUnitCode(rc.billingUnit),
+    workingHoursLimit: rc.workingHoursLimit ? Number(rc.workingHoursLimit) : undefined,
+    shiftTerms: rc.shiftTerms,
   };
 }
 
@@ -328,6 +408,13 @@ function mapBooking(b: any): Booking {
     startDate: b.startDate,
     endDate: b.endDate,
     deliveryAddress: b.deliveryAddress,
+    farmLocationId: b.farmLocation?.id || b.farmLocationId,
+    deliveryLocationName: b.deliveryLocationName,
+    deliveryLocationSnapshot: b.deliveryLocationSnapshot,
+    deliveryLatitude: b.deliveryLatitude == null ? undefined : Number(b.deliveryLatitude),
+    deliveryLongitude: b.deliveryLongitude == null ? undefined : Number(b.deliveryLongitude),
+    bookingSource: mapBookingSource(b.bookingSource),
+    callbackRequested: Boolean(b.callbackRequested),
     distanceKm: Number(b.distanceKm || 0),
     operatorRequired: Boolean(b.operatorRequired),
     baseRent: Number(b.baseRent || 0),
@@ -915,6 +1002,9 @@ export class ApiStore {
     freeDeliveryDistanceKm?: number;
     ratePerKmAfterFree?: number;
     notes?: string;
+    billingUnit?: BillingUnit;
+    workingHoursLimit?: number;
+    shiftTerms?: string;
   }): RentalConfiguration {
     const hub = this.hubs.find((h) => h.id === data.hubId);
     const asset = data.assetId ? this.assets.find((a) => a.id === data.assetId) : undefined;
@@ -931,19 +1021,25 @@ export class ApiStore {
       typeId: data.typeId,
       typeName: type?.name,
       baseDailyRate: data.baseDailyRate,
-      depositAmount: data.depositAmount,
+      depositAmount: data.depositAmount != null ? data.depositAmount : 0,
       operatorDailyRate: data.operatorDailyRate ?? 500,
       freeDeliveryDistanceKm: data.freeDeliveryDistanceKm ?? 5.0,
       ratePerKmAfterFree: data.ratePerKmAfterFree ?? 10.0,
       active: true,
       notes: data.notes,
+      billingUnit: resolveBillingUnitCode(data.billingUnit),
+      workingHoursLimit: data.workingHoursLimit,
+      shiftTerms: data.shiftTerms,
     };
     this.rentalConfigs.unshift(newConfig);
     this.notify();
 
     request<any>('/rental-configs', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        billingUnit: resolveBillingUnitInt(data.billingUnit),
+      }),
     }).then((raw) => {
       const mapped = mapRentalConfig(raw);
       const idx = this.rentalConfigs.findIndex((c) => c.id === newConfig.id);
@@ -967,11 +1063,19 @@ export class ApiStore {
     if (data.freeDeliveryDistanceKm !== undefined) config.freeDeliveryDistanceKm = data.freeDeliveryDistanceKm;
     if (data.ratePerKmAfterFree !== undefined) config.ratePerKmAfterFree = data.ratePerKmAfterFree;
     if (data.notes !== undefined) config.notes = data.notes;
+    if (data.billingUnit !== undefined) config.billingUnit = resolveBillingUnitCode(data.billingUnit);
+    if (data.workingHoursLimit !== undefined) config.workingHoursLimit = data.workingHoursLimit;
+    if (data.shiftTerms !== undefined) config.shiftTerms = data.shiftTerms;
     this.notify();
+
+    const payload: any = { ...data };
+    if (data.billingUnit !== undefined) {
+      payload.billingUnit = resolveBillingUnitInt(data.billingUnit);
+    }
 
     request<any>(`/rental-configs/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     }).catch((e) => console.error('Failed to update rental config:', e));
 
     return config;
@@ -1024,6 +1128,9 @@ export class ApiStore {
     accessoriesIncluded?: string;
     assetTag?: string;
     videoUrl?: string;
+    billingUnit?: BillingUnit;
+    workingHoursLimit?: number;
+    shiftTerms?: string;
   }): Asset {
     const type = this.types.find((t) => t.id === data.typeId);
     const mfg = this.manufacturers.find((m) => m.id === data.manufacturerId);
@@ -1036,7 +1143,7 @@ export class ApiStore {
       || this.rentalConfigs.find((rc) => rc.typeId === data.typeId)
       || this.rentalConfigs.find((rc) => rc.hubId === data.hubId);
     const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : (matchingConfig?.baseDailyRate || 1000);
-    const resolvedDepositAmount = data.depositAmount !== undefined ? data.depositAmount : (matchingConfig?.depositAmount || 3000);
+    const resolvedDepositAmount = data.depositAmount !== undefined ? data.depositAmount : (matchingConfig?.depositAmount != null ? matchingConfig.depositAmount : 3000);
 
     const prefix = type?.category === 'MULTIPURPOSE_FLEET' ? 'M' : type?.category === 'AGRICULTURE' ? 'A' : 'C';
     const subCode = type?.code?.split('-')[1] || 'MCH';
@@ -1067,6 +1174,9 @@ export class ApiStore {
       engineHours: 0.0,
       conditionNotes: data.conditionNotes || 'Pre-commissioned at yard',
       accessoriesIncluded: data.accessoriesIncluded,
+      billingUnit: resolveBillingUnitCode(data.billingUnit),
+      workingHoursLimit: data.workingHoursLimit,
+      shiftTerms: data.shiftTerms,
       mediaItems: buildMachineMedia(
         Date.now(),
         tag,
@@ -1097,6 +1207,9 @@ export class ApiStore {
         serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
         conditionNotes: data.conditionNotes,
         accessoriesIncluded: data.accessoriesIncluded,
+        billingUnit: resolveBillingUnitInt(data.billingUnit),
+        workingHoursLimit: data.workingHoursLimit,
+        shiftTerms: data.shiftTerms,
       }),
     }).then((raw) => {
       const mapped = mapAsset(raw);
@@ -1106,6 +1219,67 @@ export class ApiStore {
     }).catch((e) => console.error('Failed to persist asset:', e));
 
     return newAsset;
+  }
+
+  async updateAsset(
+    id: number,
+    data: Partial<{
+      name: string;
+      category: AssetCategory;
+      typeId: number;
+      manufacturerId: number;
+      modelId: number;
+      hubId: number;
+      imageUrl: string;
+      serialNumber: string;
+      dailyRate: number;
+      depositAmount: number;
+      purchaseCost: number;
+      operatorRequired: boolean;
+      conditionNotes: string;
+      accessoriesIncluded: string;
+      billingUnit: BillingUnit;
+      workingHoursLimit: number;
+      shiftTerms: string;
+    }>
+  ): Promise<Asset | undefined> {
+    const existing = this.assets.find((a) => a.id === id);
+    if (!existing) return undefined;
+
+    const payload: any = { ...data };
+    if (data.billingUnit !== undefined) {
+      payload.billingUnit = resolveBillingUnitInt(data.billingUnit);
+    }
+    if (data.category !== undefined) {
+      payload.category = data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1;
+    }
+
+    const updatedAsset: Asset = {
+      ...existing,
+      ...data,
+      billingUnit: data.billingUnit !== undefined ? resolveBillingUnitCode(data.billingUnit) : existing.billingUnit,
+    };
+    const idx = this.assets.findIndex((a) => a.id === id);
+    if (idx !== -1) {
+      this.assets[idx] = updatedAsset;
+      this.notify();
+    }
+
+    try {
+      const raw = await request<any>(`/assets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+      const mapped = mapAsset(raw);
+      if (idx !== -1) {
+        this.assets[idx] = mapped;
+        this.notify();
+      }
+      return mapped;
+    } catch (e) {
+      console.error('Failed to update asset on backend:', e);
+      return updatedAsset;
+    }
   }
 
   async updateAssetStatus(id: number, status: AssetStatus): Promise<Asset | undefined> {
@@ -1187,13 +1361,232 @@ export class ApiStore {
     }
   }
 
+  private farmLocationsStore: Record<number, FarmLocation[]> = {
+    1: [
+      {
+        id: 101,
+        localName: 'Bada Khet (West)',
+        localNameHindi: 'बड़ा खेत (पश्चिम)',
+        aliases: 'Tubewell wala khet, Canal side',
+        locationType: 'FARM',
+        latitude: 27.3948,
+        longitude: 80.1287,
+        village: 'Bhatgaon',
+        tehsil: 'Sandila',
+        district: 'Hardoi',
+        landmark: 'Near Govt Primary School & Canal siphon',
+        accessNotes: 'Clear 12ft gravel track, tractor trolley can reach field edge directly.',
+        deliveryContactName: 'Rameshwar Yadav',
+        deliveryContactPhone: '+91 98765 43210',
+        isDefault: true,
+      },
+      {
+        id: 102,
+        localName: 'Purva Bagh & Orchard',
+        localNameHindi: 'पुरवा बाग',
+        aliases: 'Mango orchard, Purani Haveli',
+        locationType: 'FARM',
+        latitude: 27.3985,
+        longitude: 80.1342,
+        village: 'Purva',
+        tehsil: 'Sandila',
+        district: 'Hardoi',
+        landmark: 'Behind Shiv Mandir',
+        accessNotes: 'Narrow mud road after culvert, mini-truck or power weeder easily accessible.',
+        deliveryContactName: 'Rameshwar Yadav',
+        deliveryContactPhone: '+91 98765 43210',
+        isDefault: false,
+      },
+    ],
+    2: [
+      {
+        id: 201,
+        localName: 'Kallu Bhai Borewell Farm',
+        localNameHindi: 'बोरवेल वाला खेत',
+        aliases: 'Nahar ke paar, High school road',
+        locationType: 'FARM',
+        latitude: 26.8521,
+        longitude: 80.9492,
+        village: 'Malihabad',
+        tehsil: 'Malihabad',
+        district: 'Lucknow',
+        landmark: 'Adjacent to Solar Pump Substation',
+        accessNotes: 'Paved tar road up to boundary, all commercial trucks can enter.',
+        deliveryContactName: 'Kallu Ram',
+        deliveryContactPhone: '+91 98112 34567',
+        isDefault: true,
+      },
+    ],
+  };
+
   // --- BOOKING OPERATIONS ---
+  async getFarmLocations(customerId: number): Promise<FarmLocation[]> {
+    try {
+      const rows = await request<any[]>(`/customers/${customerId}/farm-locations`);
+      if (Array.isArray(rows) && rows.length > 0) {
+        const mapped = rows.map((location) => ({
+          id: location.id,
+          localName: location.localName,
+          localNameHindi: location.localNameHindi,
+          aliases: location.aliases,
+          locationType: mapFarmLocationType(location.locationType),
+          latitude: location.latitude == null ? undefined : Number(location.latitude),
+          longitude: location.longitude == null ? undefined : Number(location.longitude),
+          village: location.village,
+          tehsil: location.tehsil,
+          district: location.district,
+          landmark: location.landmark,
+          accessNotes: location.accessNotes,
+          deliveryContactName: location.deliveryContactName,
+          deliveryContactPhone: location.deliveryContactPhone,
+          isDefault: Boolean(location.isDefault),
+          lastUsedAt: location.lastUsedAt,
+        }));
+        this.farmLocationsStore[customerId] = mapped;
+        return mapped;
+      }
+    } catch {
+      // Backend offline or endpoint error; fall through to local store
+    }
+    return this.farmLocationsStore[customerId] || [];
+  }
+
+  async createFarmLocation(customerId: number, data: UpsertFarmLocationPayload): Promise<FarmLocation> {
+    try {
+      const raw = await request<any>(`/customers/${customerId}/farm-locations`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      const created: FarmLocation = {
+        id: raw.id,
+        localName: raw.localName,
+        localNameHindi: raw.localNameHindi,
+        aliases: raw.aliases,
+        locationType: mapFarmLocationType(raw.locationType),
+        latitude: raw.latitude == null ? undefined : Number(raw.latitude),
+        longitude: raw.longitude == null ? undefined : Number(raw.longitude),
+        village: raw.village,
+        tehsil: raw.tehsil,
+        district: raw.district,
+        landmark: raw.landmark,
+        accessNotes: raw.accessNotes,
+        deliveryContactName: raw.deliveryContactName,
+        deliveryContactPhone: raw.deliveryContactPhone,
+        isDefault: Boolean(raw.isDefault),
+        lastUsedAt: raw.lastUsedAt,
+      };
+      if (!this.farmLocationsStore[customerId]) this.farmLocationsStore[customerId] = [];
+      if (created.isDefault) {
+        this.farmLocationsStore[customerId].forEach((l) => (l.isDefault = false));
+      }
+      this.farmLocationsStore[customerId].push(created);
+      this.notify();
+      return created;
+    } catch {
+      // Offline fallback
+      const newId = Date.now();
+      const created: FarmLocation = {
+        id: newId,
+        localName: data.localName,
+        localNameHindi: data.localNameHindi,
+        aliases: data.aliases,
+        locationType: data.locationType || 'FARM',
+        latitude: data.latitude,
+        longitude: data.longitude,
+        village: data.village,
+        tehsil: data.tehsil,
+        district: data.district,
+        landmark: data.landmark,
+        accessNotes: data.accessNotes,
+        deliveryContactName: data.deliveryContactName,
+        deliveryContactPhone: data.deliveryContactPhone,
+        isDefault: Boolean(data.isDefault),
+      };
+      if (!this.farmLocationsStore[customerId]) this.farmLocationsStore[customerId] = [];
+      if (created.isDefault) {
+        this.farmLocationsStore[customerId].forEach((l) => (l.isDefault = false));
+      }
+      this.farmLocationsStore[customerId].push(created);
+      this.notify();
+      return created;
+    }
+  }
+
+  async updateFarmLocation(customerId: number, locationId: number, data: UpsertFarmLocationPayload): Promise<FarmLocation> {
+    try {
+      const raw = await request<any>(`/customers/${customerId}/farm-locations/${locationId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      });
+      const updated: FarmLocation = {
+        id: raw.id,
+        localName: raw.localName,
+        localNameHindi: raw.localNameHindi,
+        aliases: raw.aliases,
+        locationType: mapFarmLocationType(raw.locationType),
+        latitude: raw.latitude == null ? undefined : Number(raw.latitude),
+        longitude: raw.longitude == null ? undefined : Number(raw.longitude),
+        village: raw.village,
+        tehsil: raw.tehsil,
+        district: raw.district,
+        landmark: raw.landmark,
+        accessNotes: raw.accessNotes,
+        deliveryContactName: raw.deliveryContactName,
+        deliveryContactPhone: raw.deliveryContactPhone,
+        isDefault: Boolean(raw.isDefault),
+        lastUsedAt: raw.lastUsedAt,
+      };
+      const list = this.farmLocationsStore[customerId] || [];
+      const idx = list.findIndex((l) => l.id === locationId);
+      if (updated.isDefault) {
+        list.forEach((l) => (l.isDefault = false));
+      }
+      if (idx >= 0) list[idx] = updated;
+      else list.push(updated);
+      this.farmLocationsStore[customerId] = list;
+      this.notify();
+      return updated;
+    } catch {
+      const list = this.farmLocationsStore[customerId] || [];
+      const idx = list.findIndex((l) => l.id === locationId);
+      const existing = list[idx];
+      const updated: FarmLocation = {
+        id: locationId,
+        localName: data.localName || existing?.localName || 'Field',
+        localNameHindi: data.localNameHindi ?? existing?.localNameHindi,
+        aliases: data.aliases ?? existing?.aliases,
+        locationType: data.locationType || existing?.locationType || 'FARM',
+        latitude: data.latitude ?? existing?.latitude,
+        longitude: data.longitude ?? existing?.longitude,
+        village: data.village ?? existing?.village,
+        tehsil: data.tehsil ?? existing?.tehsil,
+        district: data.district ?? existing?.district,
+        landmark: data.landmark ?? existing?.landmark,
+        accessNotes: data.accessNotes ?? existing?.accessNotes,
+        deliveryContactName: data.deliveryContactName ?? existing?.deliveryContactName,
+        deliveryContactPhone: data.deliveryContactPhone ?? existing?.deliveryContactPhone,
+        isDefault: Boolean(data.isDefault),
+      };
+      if (updated.isDefault) {
+        list.forEach((l) => (l.isDefault = false));
+      }
+      if (idx >= 0) list[idx] = updated;
+      else list.push(updated);
+      this.farmLocationsStore[customerId] = list;
+      this.notify();
+      return updated;
+    }
+  }
+
   async createBooking(data: {
     customerId: number;
     assetId: number;
     startDate: string;
     endDate: string;
     deliveryAddress: string;
+    farmLocationId?: number;
+    bookingSource?: BookingSource;
+    callbackRequested?: boolean;
     distanceKm: number;
     operatorRequired: boolean;
     dealerId?: number;
@@ -1283,6 +1676,286 @@ export class ApiStore {
   getPayments(bookingId?: number): Payment[] {
     if (bookingId) return this.payments.filter((p) => p.bookingId === bookingId);
     return this.payments;
+  }
+
+  // --- PAYMENT OPERATIONS & RECONCILIATION QUEUES ---
+  async getPaymentProofs(): Promise<PaymentProof[]> {
+    try {
+      const rows = await request<any[]>('/payment-operations/proofs');
+      return (rows || []).map((p) => ({
+        id: p.id,
+        booking: mapBooking(p.booking),
+        submittedReference: p.submittedReference,
+        status: mapVerificationStatus(p.status),
+        submittedAt: p.submittedAt,
+        verifiedAt: p.verifiedAt,
+        verifiedBy: p.verifiedBy,
+        verificationNotes: p.verificationNotes,
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch payment proofs:', e);
+      return [];
+    }
+  }
+
+  async verifyPaymentProof(
+    id: number,
+    data: { amount?: number; paymentType?: PaymentType; verifiedBy?: string; notes?: string }
+  ): Promise<PaymentProof> {
+    const typeEnumMap: Record<PaymentType, number> = {
+      ADVANCE: 1,
+      DEPOSIT: 2,
+      FINAL_SETTLEMENT: 3,
+      DAMAGE_CHARGE: 4,
+      REFUND: 5,
+    };
+    const raw = await request<any>(`/payment-operations/proofs/${id}/verify`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        ...data,
+        paymentType: data.paymentType ? typeEnumMap[data.paymentType] || 1 : 1,
+      }),
+    });
+    // Refresh local lists
+    await this.refreshAll();
+    return {
+      id: raw.id,
+      booking: mapBooking(raw.booking),
+      submittedReference: raw.submittedReference,
+      status: mapVerificationStatus(raw.status || 2),
+      submittedAt: raw.submittedAt,
+      verifiedAt: raw.verifiedAt,
+      verifiedBy: raw.verifiedBy,
+      verificationNotes: raw.verificationNotes,
+    };
+  }
+
+  async getRefunds(): Promise<RefundTransaction[]> {
+    try {
+      const rows = await request<any[]>('/payment-operations/refunds');
+      return (rows || []).map((r) => ({
+        id: r.id,
+        booking: mapBooking(r.booking),
+        amount: Number(r.amount || 0),
+        status: mapRefundStatus(r.status),
+        paymentReference: r.paymentReference,
+        reason: r.reason,
+        initiatedAt: r.initiatedAt,
+        completedAt: r.completedAt,
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch refunds:', e);
+      return [];
+    }
+  }
+
+  async completeRefund(id: number, data: { paymentReference: string }): Promise<RefundTransaction> {
+    const raw = await request<any>(`/payment-operations/refunds/${id}/complete`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    await this.refreshAll();
+    return {
+      id: raw.id,
+      booking: mapBooking(raw.booking),
+      amount: Number(raw.amount || 0),
+      status: mapRefundStatus(raw.status || 3),
+      paymentReference: raw.paymentReference,
+      reason: raw.reason,
+      initiatedAt: raw.initiatedAt,
+      completedAt: raw.completedAt,
+    };
+  }
+
+  // --- FULFILLMENT & LOGISTICS JOBS ---
+  async getDeliveryJobs(): Promise<DeliveryJob[]> {
+    try {
+      const rows = await request<any[]>('/fulfillment/deliveries');
+      return (rows || []).map((j) => ({
+        id: j.id,
+        booking: mapBooking(j.booking),
+        status: mapJobStatus(j.status),
+        driverName: j.driverName,
+        driverPhone: j.driverPhone,
+        vehicleNumber: j.vehicleNumber,
+        scheduledFor: j.scheduledFor,
+        etaStart: j.etaStart,
+        etaEnd: j.etaEnd,
+        deliveredAt: j.deliveredAt,
+        receiverName: j.receiverName,
+        receiverPhone: j.receiverPhone,
+        deliveryNotes: j.deliveryNotes,
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch delivery jobs:', e);
+      return [];
+    }
+  }
+
+  async getReturnPickupJobs(): Promise<ReturnPickupJob[]> {
+    try {
+      const rows = await request<any[]>('/fulfillment/returns');
+      return (rows || []).map((j) => ({
+        id: j.id,
+        booking: mapBooking(j.booking),
+        status: mapJobStatus(j.status),
+        driverName: j.driverName,
+        driverPhone: j.driverPhone,
+        vehicleNumber: j.vehicleNumber,
+        scheduledFor: j.scheduledFor,
+        collectedAt: j.collectedAt,
+        pickupNotes: j.pickupNotes,
+      }));
+    } catch (e) {
+      console.warn('Failed to fetch return pickup jobs:', e);
+      return [];
+    }
+  }
+
+  async saveDeliveryJob(bookingId: number, data: UpdateFulfillmentJobPayload): Promise<DeliveryJob> {
+    const raw = await request<any>(`/fulfillment/bookings/${bookingId}/delivery`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+    this.notify();
+    return {
+      id: raw.id,
+      booking: mapBooking(raw.booking),
+      status: mapJobStatus(raw.status),
+      driverName: raw.driverName,
+      driverPhone: raw.driverPhone,
+      vehicleNumber: raw.vehicleNumber,
+      scheduledFor: raw.scheduledFor,
+      etaStart: raw.etaStart,
+      etaEnd: raw.etaEnd,
+      deliveredAt: raw.deliveredAt,
+      receiverName: raw.receiverName,
+      receiverPhone: raw.receiverPhone,
+      deliveryNotes: raw.deliveryNotes,
+    };
+  }
+
+  async updateDeliveryJob(id: number, data: UpdateFulfillmentJobPayload): Promise<DeliveryJob> {
+    const raw = await request<any>(`/fulfillment/deliveries/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    this.notify();
+    return {
+      id: raw.id,
+      booking: mapBooking(raw.booking),
+      status: mapJobStatus(raw.status),
+      driverName: raw.driverName,
+      driverPhone: raw.driverPhone,
+      vehicleNumber: raw.vehicleNumber,
+      scheduledFor: raw.scheduledFor,
+      etaStart: raw.etaStart,
+      etaEnd: raw.etaEnd,
+      deliveredAt: raw.deliveredAt,
+      receiverName: raw.receiverName,
+      receiverPhone: raw.receiverPhone,
+      deliveryNotes: raw.deliveryNotes,
+    };
+  }
+
+  async updateReturnPickupJob(id: number, data: UpdateFulfillmentJobPayload): Promise<ReturnPickupJob> {
+    const raw = await request<any>(`/fulfillment/returns/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+    this.notify();
+    return {
+      id: raw.id,
+      booking: mapBooking(raw.booking),
+      status: mapJobStatus(raw.status),
+      driverName: raw.driverName,
+      driverPhone: raw.driverPhone,
+      vehicleNumber: raw.vehicleNumber,
+      scheduledFor: raw.scheduledFor,
+      collectedAt: raw.collectedAt,
+      pickupNotes: raw.pickupNotes,
+    };
+  }
+
+  // --- TASK-BASED MACHINE RECOMMENDATIONS ---
+  async getEquipmentRecommendations(req: EquipmentRecommendationRequest): Promise<EquipmentRecommendationResponse[]> {
+    try {
+      const rows = await request<any[]>('/recommendations/equipment', {
+        method: 'POST',
+        body: JSON.stringify(req),
+      });
+      if (Array.isArray(rows) && rows.length > 0) {
+        return rows.map((r) => ({
+          assetId: r.assetId,
+          assetName: r.assetName,
+          assetTag: r.assetTag,
+          reason: r.reason,
+          dailyRate: Number(r.dailyRate || 0),
+          depositAmount: Number(r.depositAmount || 0),
+        }));
+      }
+    } catch {
+      // Backend offline or endpoint empty; fallback to internal fleet matching
+    }
+
+    const taskLower = (req.task || '').toLowerCase();
+    const isWeeding = taskLower.includes('weed') || taskLower.includes('nirai');
+    const isHarvesting = taskLower.includes('harvest') || taskLower.includes('kata') || taskLower.includes('reap');
+    const isSpraying = taskLower.includes('spray') || taskLower.includes('chhid');
+    const isTilling = taskLower.includes('till') || taskLower.includes('juta') || taskLower.includes('rotavator') || taskLower.includes('plow');
+    const isDigging = taskLower.includes('dig') || taskLower.includes('gaddha') || taskLower.includes('auger') || taskLower.includes('hole');
+    const isWater = taskLower.includes('pump') || taskLower.includes('water') || taskLower.includes('irrigation') || taskLower.includes('sinchai');
+
+    // Filter available assets
+    const available = this.assets.filter((a) => {
+      if (req.hubId && a.hubId !== req.hubId) return false;
+      return a.status === 'AVAILABLE';
+    });
+
+    const candidates = available.length > 0 ? available : this.assets;
+
+    const scored = candidates.map((a) => {
+      const name = (a.name + ' ' + a.assetTag + ' ' + (a.typeName || '')).toLowerCase();
+      let matchScore = 0;
+      let reason = `Recommended machine for ${req.task}: High performance on rural farm terrain.`;
+
+      if (isWeeding && (name.includes('weed') || name.includes('rotary'))) {
+        matchScore = 10;
+        reason = `Recommended for Weeding (निराई): High-torque rotary blades clear inter-row weeds at 1.5 acres/day. Low fuel consumption.`;
+      } else if (isHarvesting && (name.includes('reap') || name.includes('harvest'))) {
+        matchScore = 10;
+        reason = `Recommended for Harvesting (कटाई): Front crop cutter cuts paddy/wheat without grain loss, covering 3–4 acres per day.`;
+      } else if (isSpraying && (name.includes('spray') || name.includes('mist'))) {
+        matchScore = 10;
+        reason = `Recommended for Spraying (छिड़काव): Uniform droplet dispersion with 20L high-pressure tank for rapid orchard & field protection.`;
+      } else if (isTilling && (name.includes('tractor') || name.includes('rotavator') || name.includes('tiller'))) {
+        matchScore = 10;
+        reason = `Recommended for Tilling (जुताई): Excellent seedbed preparation, pulverized soil mixing and ridge formation for ${req.acreage || 2} acres.`;
+      } else if (isDigging && (name.includes('aug') || name.includes('dig') || name.includes('drill'))) {
+        matchScore = 10;
+        reason = `Recommended for Hole Digging (गड्ढा खुदाई): Drills clean 8-12 inch pits in minutes for orchard saplings and fence poles.`;
+      } else if (isWater && (name.includes('pmp') || name.includes('pump') || name.includes('water'))) {
+        matchScore = 10;
+        reason = `Recommended for Irrigation (सिंचाई): 1000 L/min diesel water pump with suction hose for reliable field canal lifting.`;
+      } else if (a.category === 'AGRICULTURE') {
+        matchScore = 5;
+        reason = `Agricultural multi-purpose implement suitable for seasonal farm operations.`;
+      }
+
+      return { asset: a, matchScore, reason };
+    });
+
+    scored.sort((a, b) => b.matchScore - a.matchScore);
+    const top = scored.slice(0, 2);
+
+    return top.map(({ asset, reason }) => ({
+      assetId: asset.id,
+      assetName: asset.name,
+      assetTag: asset.assetTag,
+      reason,
+      dailyRate: asset.dailyRate,
+      depositAmount: asset.depositAmount,
+    }));
   }
 
   // --- DISPATCH OPERATIONS ---
@@ -1604,6 +2277,30 @@ export class ApiStore {
     });
     this.assets = this.assets.filter((a) => a.id !== id);
     this.notify();
+  }
+
+  async getMerchantUpiDetails(amount?: number, note?: string): Promise<{
+    payeeVpa: string;
+    payeeName: string;
+    amount: number;
+    transactionNote: string;
+    upiUri: string;
+    qrCodeBase64: string;
+    qrCodeImageUrl: string;
+  }> {
+    const params = new URLSearchParams();
+    if (amount && amount > 0) params.append('amount', amount.toString());
+    if (note) params.append('note', note);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<{
+      payeeVpa: string;
+      payeeName: string;
+      amount: number;
+      transactionNote: string;
+      upiUri: string;
+      qrCodeBase64: string;
+      qrCodeImageUrl: string;
+    }>(`/whatsapp/qr/merchant/details${qs}`);
   }
 }
 

@@ -171,7 +171,8 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onNewDep
               <button
                 onClick={() => setShowProfile((p) => !p)}
                 aria-label="Open profile menu"
-                title={currentUser.name}
+                data-tooltip={currentUser.name}
+                data-tooltip-pos="bottom"
                 className={cn(
                   'h-8 w-8 rounded-xl flex items-center justify-center text-[11px] font-black tracking-tight transition-all cursor-pointer border-2 select-none',
                   avatarBg,

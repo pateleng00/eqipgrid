@@ -12,12 +12,13 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { RentalConfiguration, AssetCategory } from '../../types';
+import { RentalConfiguration, AssetCategory, BILLING_UNIT_OPTIONS, resolveBillingUnitCode, BillingUnitCode } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { formatINR } from '../../lib/utils';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
+import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 
 export const RentalConfigView: React.FC = () => {
   const { isDaylight } = useTheme();
@@ -89,9 +90,13 @@ export const RentalConfigView: React.FC = () => {
   };
 
   // Modal states
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(() => getUrlParam('modal') === 'rental_config');
   const [editingConfig, setEditingConfig] = useState<RentalConfiguration | null>(null);
   const [configPendingRemoval, setConfigPendingRemoval] = useState<RentalConfiguration | null>(null);
+
+  React.useEffect(() => {
+    setUrlParam('modal', showAddModal ? 'rental_config' : null);
+  }, [showAddModal]);
 
   // Form states - Cascading selection: State -> City -> Hub -> Category -> Model -> Machine Name
   const [formStateId, setFormStateId] = useState<number | ''>('');
@@ -101,28 +106,25 @@ export const RentalConfigView: React.FC = () => {
   const [formModelId, setFormModelId] = useState<number | ''>('');
   const [formAssetId, setFormAssetId] = useState<number | ''>('');
   const [formBaseRate, setFormBaseRate] = useState<string>('');
-  const [formDeposit, setFormDeposit] = useState<string>('');
+  const [formDeposit, setFormDeposit] = useState<string>('0');
   const [formOperatorRate, setFormOperatorRate] = useState<string>('');
   const [formFreeKm, setFormFreeKm] = useState<string>('');
   const [formRatePerKm, setFormRatePerKm] = useState<string>('');
   const [formNotes, setFormNotes] = useState<string>('');
+  const [formBillingUnit, setFormBillingUnit] = useState<BillingUnitCode>('DAILY');
+  const [formWorkingHours, setFormWorkingHours] = useState<string>('');
+  const [formShiftTerms, setFormShiftTerms] = useState<string>('');
 
   // Cascaded lists for form
   const formAvailableCities = React.useMemo(() => {
-    if (!formStateId) return cities;
+    if (!formStateId) return [];
     return cities.filter((c) => c.stateId === Number(formStateId));
   }, [cities, formStateId]);
 
   const formAvailableHubs = React.useMemo(() => {
-    if (formCityId) {
-      return hubs.filter((h) => h.cityId === Number(formCityId));
-    }
-    if (formStateId) {
-      const cityIds = new Set(formAvailableCities.map((c) => c.id));
-      return hubs.filter((h) => cityIds.has(h.cityId));
-    }
-    return hubs;
-  }, [hubs, formAvailableCities, formCityId, formStateId]);
+    if (!formCityId) return [];
+    return hubs.filter((h) => h.cityId === Number(formCityId));
+  }, [hubs, formCityId]);
 
   const formAvailableModels = React.useMemo(() => {
     let list = models;
@@ -164,11 +166,14 @@ export const RentalConfigView: React.FC = () => {
     setFormModelId('');
     setFormAssetId('');
     setFormBaseRate('');
-    setFormDeposit('');
+    setFormDeposit('0');
     setFormOperatorRate('500');
     setFormFreeKm('5.0');
     setFormRatePerKm('10.0');
     setFormNotes('');
+    setFormBillingUnit('DAILY');
+    setFormWorkingHours('');
+    setFormShiftTerms('Full 24-hr day site deployment • Flexible field usage');
     setShowAddModal(true);
   };
 
@@ -187,11 +192,14 @@ export const RentalConfigView: React.FC = () => {
     setFormModelId(model?.id || '');
     setFormAssetId(c.assetId || '');
     setFormBaseRate(String(c.baseDailyRate));
-    setFormDeposit(String(c.depositAmount));
+    setFormDeposit(String(c.depositAmount != null ? c.depositAmount : 0));
     setFormOperatorRate(String(c.operatorDailyRate));
     setFormFreeKm(String(c.freeDeliveryDistanceKm));
     setFormRatePerKm(String(c.ratePerKmAfterFree));
     setFormNotes(c.notes || '');
+    setFormBillingUnit(resolveBillingUnitCode(c.billingUnit));
+    setFormWorkingHours(c.workingHoursLimit ? String(c.workingHoursLimit) : '');
+    setFormShiftTerms(c.shiftTerms || '');
   };
 
   const handleSaveNew = (e: React.FormEvent) => {
@@ -202,11 +210,14 @@ export const RentalConfigView: React.FC = () => {
       assetId: formAssetId ? Number(formAssetId) : undefined,
       typeId: modelObj?.typeId,
       baseDailyRate: parseFloat(formBaseRate) || 1000,
-      depositAmount: parseFloat(formDeposit) || 4000,
+      depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
       operatorDailyRate: parseFloat(formOperatorRate) || 500,
       freeDeliveryDistanceKm: parseFloat(formFreeKm) || 5.0,
       ratePerKmAfterFree: parseFloat(formRatePerKm) || 10.0,
       notes: formNotes,
+      billingUnit: formBillingUnit || 'DAILY',
+      workingHoursLimit: formWorkingHours ? parseFloat(formWorkingHours) : undefined,
+      shiftTerms: formShiftTerms,
     });
     setConfigs([...api.getRentalConfigs()]);
     setShowAddModal(false);
@@ -218,11 +229,14 @@ export const RentalConfigView: React.FC = () => {
     if (!editingConfig) return;
     const updated = api.updateRentalConfig(editingConfig.id, {
       baseDailyRate: parseFloat(formBaseRate) || editingConfig.baseDailyRate,
-      depositAmount: parseFloat(formDeposit) || editingConfig.depositAmount,
+      depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
       operatorDailyRate: parseFloat(formOperatorRate) || editingConfig.operatorDailyRate,
       freeDeliveryDistanceKm: parseFloat(formFreeKm) || editingConfig.freeDeliveryDistanceKm,
       ratePerKmAfterFree: parseFloat(formRatePerKm) || editingConfig.ratePerKmAfterFree,
       notes: formNotes,
+      billingUnit: formBillingUnit,
+      workingHoursLimit: formWorkingHours ? parseFloat(formWorkingHours) : undefined,
+      shiftTerms: formShiftTerms,
     });
     setConfigs([...api.getRentalConfigs()]);
     setEditingConfig(null);
@@ -332,22 +346,38 @@ export const RentalConfigView: React.FC = () => {
           </div>
           <div>
             <SearchSelect
-              options={[{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]}
+              options={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? []
+                  : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]
+              }
               value={selectedCityId}
               onChange={(val) => {
                 setSelectedCityId(String(val || 'ALL'));
                 setSelectedHubId('ALL');
               }}
-              placeholder="All Cities"
+              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
           </div>
           <div>
             <SearchSelect
-              options={[{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]}
+              options={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                  ? []
+                  : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]
+              }
               value={selectedHubId}
               onChange={(val) => setSelectedHubId(String(val || 'ALL'))}
-              placeholder="All Hubs"
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0
+                  ? 'No cities in this State'
+                  : selectedCityId !== 'ALL' && availableHubs.length === 0
+                  ? 'No hubs in this City'
+                  : 'All Hubs'
+              }
+              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
               isClearable={false}
             />
           </div>
@@ -375,60 +405,62 @@ export const RentalConfigView: React.FC = () => {
           <table className="w-full text-left text-xs">
             <thead className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'}`}>
               <tr>
-                <th className="py-3 px-4">Scope (Machine / Hub)</th>
-                <th className="py-3 px-4">Stationed Yard & City</th>
-                <th className="py-3 px-4">Daily Rent</th>
-                <th className="py-3 px-4">Security Deposit</th>
-                <th className="py-3 px-4">Free Pick & Drop</th>
-                <th className="py-3 px-4">Over-Radius Rate</th>
-                <th className="py-3 px-4">Operator DPR</th>
-                <th className="py-3 px-4 text-right">Actions</th>
+                <th className="py-2.5 px-3">Scope (Machine / Hub)</th>
+                <th className="py-2.5 px-3">Yard & City</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Daily Rent</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Security Deposit</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Free Pick & Drop</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Over-Radius</th>
+                <th className="py-2.5 px-3 whitespace-nowrap">Operator DPR</th>
+                <th className="py-2.5 px-3 text-right w-24">Actions</th>
               </tr>
             </thead>
             <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
               {visibleConfigs.map((c) => (
                 <tr key={c.id} className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
-                  <td className="py-3.5 px-4">
+                  <td className="py-2.5 px-3">
                     <div className={`font-bold text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
                       {c.assetName || (c.typeName ? `All ${c.typeName}` : 'All Hub Machines')}
                     </div>
                     {c.notes && (
-                      <div className={`text-[11px] max-w-[220px] truncate ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.notes}</div>
+                      <div className={`text-[11px] max-w-[200px] truncate ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.notes}</div>
                     )}
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-2.5 px-3">
                     <div className="font-bold">{c.hubName || 'Yard'}</div>
                     <div className={`text-[11px] ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.cityName || 'City'}</div>
                   </td>
-                  <td className={`py-3.5 px-4 font-mono font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                  <td className={`py-2.5 px-3 font-mono font-black whitespace-nowrap ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
                     {formatINR(c.baseDailyRate)}/day
                   </td>
-                  <td className={`py-3.5 px-4 font-mono font-bold ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`}>
+                  <td className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`}>
                     {formatINR(c.depositAmount)}
                   </td>
-                  <td className="py-3.5 px-4">
+                  <td className="py-2.5 px-3 whitespace-nowrap">
                     <span className={`font-mono font-black px-2 py-0.5 rounded border border-emerald-400 ${isDaylight ? 'text-emerald-700 bg-emerald-500/10' : 'text-emerald-300 bg-emerald-500/10'}`}>
                       {c.freeDeliveryDistanceKm} KM (₹0)
                     </span>
                   </td>
-                  <td className={`py-3.5 px-4 font-mono font-bold ${isDaylight ? 'text-slate-800' : 'text-slate-300'}`}>
+                  <td className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-slate-800' : 'text-slate-300'}`}>
                     ₹{c.ratePerKmAfterFree}/km
                   </td>
-                  <td className={`py-3.5 px-4 font-mono ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <td className={`py-2.5 px-3 font-mono whitespace-nowrap ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
                     {formatINR(c.operatorDailyRate)}/day
                   </td>
-                  <td className="py-3.5 px-4 text-right">
+                  <td className="py-2.5 px-3 text-right w-24">
                     <div className="flex items-center justify-end gap-1.5">
                       <button
                         onClick={() => handleOpenEdit(c)}
-                        title="Edit Configuration"
+                        data-tooltip="Edit Configuration"
+                        data-tooltip-pos="left"
                         className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${isDaylight ? 'border-slate-300 hover:bg-slate-200/60 text-slate-800' : 'border-slate-700 hover:bg-slate-800 text-slate-300'}`}
                       >
                         <Edit2 className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => setConfigPendingRemoval(c)}
-                        title="Remove Configuration"
+                        data-tooltip="Remove Configuration"
+                        data-tooltip-pos="left"
                         className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
                           isDaylight
                             ? 'border-rose-300 bg-rose-50/70 hover:bg-rose-100 text-rose-700'
@@ -458,9 +490,9 @@ export const RentalConfigView: React.FC = () => {
 
       {/* --- ADD / EDIT RENTAL CONFIG MODAL --- */}
       {(showAddModal || editingConfig) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 lg:p-8 overflow-y-auto">
-          <div className={`w-full max-w-5xl max-h-[calc(100vh-2.5rem)] overflow-y-auto rounded-3xl border p-8 sm:p-10 shadow-2xl space-y-6 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
-            <div className={`flex items-center justify-between border-b pb-4 ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
+          <div className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-3.5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
+            <div className={`flex items-center justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-700/30'
             }`}>
               <h3 className="text-base font-black flex items-center gap-2">
@@ -484,10 +516,6 @@ export const RentalConfigView: React.FC = () => {
             <form onSubmit={editingConfig ? handleUpdate : handleSaveNew} className="space-y-4">
               {/* Step 1: Territory Cascade: State -> City -> Hub */}
               <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
-                <div className="text-xs font-black flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
-                  <span>Territory Location (State → City → Hub)</span>
-                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold mb-1">State *</label>
@@ -517,7 +545,15 @@ export const RentalConfigView: React.FC = () => {
                         setFormHubId('');
                         setFormAssetId('');
                       }}
-                      placeholder={formStateId ? 'Select City...' : 'Select State First'}
+                      placeholder={
+                        !formStateId
+                          ? 'Select State First'
+                          : formAvailableCities.length === 0
+                          ? 'No cities in this State'
+                          : 'Select City *'
+                      }
+                      isDisabled={!formStateId || formAvailableCities.length === 0}
+                      noOptionsMessage="No cities found in this State"
                       isClearable={false}
                     />
                   </div>
@@ -532,7 +568,17 @@ export const RentalConfigView: React.FC = () => {
                         setFormHubId(hid);
                         setFormAssetId('');
                       }}
-                      placeholder="Select Hub..."
+                      placeholder={
+                        !formStateId
+                          ? 'Select State First'
+                          : !formCityId
+                          ? 'Select City First'
+                          : formAvailableHubs.length === 0
+                          ? 'No hubs in this City'
+                          : 'Select Hub *'
+                      }
+                      isDisabled={!formCityId || formAvailableHubs.length === 0}
+                      noOptionsMessage="No hubs found in this City"
                       isClearable={false}
                     />
                   </div>
@@ -541,10 +587,6 @@ export const RentalConfigView: React.FC = () => {
 
               {/* Step 2: Fleet Cascade: Category -> Model -> Machine Name */}
               <div className="p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-900/40 space-y-3">
-                <div className="text-xs font-black flex items-center gap-1.5 text-slate-800 dark:text-slate-200">
-                  <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-mono text-[10px] flex items-center justify-center font-bold">2</span>
-                  <span>Fleet Classification (Category → Model → Machine Name)</span>
-                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold mb-1">Category *</label>
@@ -602,15 +644,41 @@ export const RentalConfigView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Step 3: Commercial Rates & Deposits */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Step 3: Commercial Rates & Deposits (Variable Billing Unit & Customizable Deposit) */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1">Base Daily Rate (₹/day) *</label>
+                  <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
+                  <SearchSelect
+                    options={BILLING_UNIT_OPTIONS.map((opt) => ({
+                      value: opt.code,
+                      label: opt.label,
+                      subLabel: opt.defaultShiftTerms,
+                      badge: opt.unitLabel.toUpperCase(),
+                    }))}
+                    value={formBillingUnit}
+                    onChange={(val) => {
+                      if (!val) return;
+                      const selectedCode = resolveBillingUnitCode(val);
+                      const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === selectedCode);
+                      setFormBillingUnit(selectedCode);
+                      if (opt) {
+                        setFormShiftTerms(opt.defaultShiftTerms);
+                      }
+                    }}
+                    isClearable={false}
+                    placeholder="Select Billing Unit..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">
+                    Base Rate (₹ / {formBillingUnit.toLowerCase().replace('per_', '')}) *
+                  </label>
                   <input
                     type="number"
-                    min="100"
-                    step="50"
-                    placeholder="1200"
+                    min="10"
+                    step="10"
+                    placeholder="Rate"
                     value={formBaseRate}
                     onChange={(e) => setFormBaseRate(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
@@ -619,16 +687,80 @@ export const RentalConfigView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold mb-1">Security Deposit Barrier (₹) *</label>
+                  <label className="block text-xs font-bold mb-1">
+                    Security Deposit (₹) *
+                  </label>
                   <input
                     type="number"
-                    min="500"
-                    step="100"
-                    placeholder="5000"
+                    min="0"
+                    step="50"
+                    placeholder="0, 200, 500, etc."
                     value={formDeposit}
                     onChange={(e) => setFormDeposit(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
                     required
+                  />
+                  {/* Quick Preset Buttons for Internal Team */}
+                  <div className="flex items-center gap-1 mt-1 text-[10px]">
+                    <button
+                      type="button"
+                      onClick={() => setFormDeposit('0')}
+                      className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '0' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      ₹0 (Zero)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDeposit('200')}
+                      className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '200' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      ₹200
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDeposit('500')}
+                      className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '500' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      ₹500
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormDeposit('1000')}
+                      className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '1000' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                    >
+                      ₹1k
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Working Hours Limit & Shift Terms Description */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1">
+                    Shift Terms Description (Customer Facing)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Per hole drilled, Hourly metered, Full 24-hr day"
+                    value={formShiftTerms}
+                    onChange={(e) => setFormShiftTerms(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold mb-1">
+                    Working Hours Limit (optional, blank = no limit)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="e.g. 8, 10, 12, or leave empty"
+                    value={formWorkingHours}
+                    onChange={(e) => setFormWorkingHours(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
                   />
                 </div>
               </div>

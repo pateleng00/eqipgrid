@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { Asset, AssetCategory } from '../../types';
+import { Asset, AssetCategory, BillingUnitCode, BILLING_UNIT_OPTIONS } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 
 interface AddMachineModalProps {
@@ -48,20 +48,14 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   const [selectedHubId, setSelectedHubId] = useState<number | ''>('');
 
   const availableCities = useMemo(() => {
-    if (!selectedStateId) return cities;
+    if (!selectedStateId) return [];
     return cities.filter((c) => c.stateId === Number(selectedStateId));
   }, [cities, selectedStateId]);
 
   const availableHubs = useMemo(() => {
-    if (selectedCityId) {
-      return hubs.filter((h) => h.cityId === Number(selectedCityId));
-    }
-    if (selectedStateId) {
-      const cityIds = new Set(availableCities.map((c) => c.id));
-      return hubs.filter((h) => cityIds.has(h.cityId));
-    }
-    return hubs;
-  }, [hubs, availableCities, selectedCityId, selectedStateId]);
+    if (!selectedCityId) return [];
+    return hubs.filter((h) => h.cityId === Number(selectedCityId));
+  }, [hubs, selectedCityId]);
 
   // 2. Category selection
   const [selectedCategory, setSelectedCategory] = useState<AssetCategory | ''>('CONSTRUCTION');
@@ -96,6 +90,11 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   // 8. CAPEX Purchase Cost only (Deposit and Daily Rent removed, configured in Rental Config)
   const [purchaseCost, setPurchaseCost] = useState<string>('');
 
+  // 9. Billing Unit & Shift Terms
+  const [selectedBillingUnit, setSelectedBillingUnit] = useState<BillingUnitCode>('DAILY');
+  const [workingHoursLimit, setWorkingHoursLimit] = useState<string>('');
+  const [shiftTerms, setShiftTerms] = useState<string>('Full 24-hr day site deployment • Flexible field usage');
+
   // Step 2 Fields: Media & Operations
   const [imageUrl, setImageUrl] = useState<string>(
     'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_mix_001/photo_1.jpg'
@@ -128,7 +127,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
     setSelectedCategory(cat);
     const filtered = types.filter((t) => t.category === cat);
     if (filtered.length > 0) {
-      setSelectedTypeId(filtered[0].id);
+      handleTypeChange(filtered[0].id);
     } else {
       setSelectedTypeId('');
     }
@@ -136,6 +135,22 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
   const handleTypeChange = (typeId: number) => {
     setSelectedTypeId(typeId);
+    const selectedType = types.find((t) => t.id === typeId);
+    const code = (selectedType?.code || '').toUpperCase();
+    const name = (selectedType?.name || '').toUpperCase();
+    if (code.includes('AUG') || name.includes('AUGER') || name.includes('DIGGER')) {
+      setSelectedBillingUnit('PER_HOLE');
+      setShiftTerms('Per hole drilled • Includes 6" & 8" bits • Zero time boundation');
+    } else if (code.includes('PMP') || name.includes('PUMP')) {
+      setSelectedBillingUnit('HOURLY');
+      setShiftTerms('Hourly metered operation • Pay for actual run time');
+    } else if (code.includes('TRL') || name.includes('TROLLEY')) {
+      setSelectedBillingUnit('PER_TRIP');
+      setShiftTerms('Per transport trip • No daily shift restriction');
+    } else {
+      setSelectedBillingUnit('DAILY');
+      setShiftTerms('Full 24-hr day site deployment • Flexible field usage');
+    }
   };
 
   const handleMfgChange = (mfgId: number) => {
@@ -216,6 +231,9 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
         serialNumber: serialNumber.trim() || undefined,
         conditionNotes: conditionNotes.trim() || undefined,
         accessoriesIncluded: accessoriesIncluded.trim() || undefined,
+        billingUnit: selectedBillingUnit,
+        workingHoursLimit: workingHoursLimit ? parseFloat(workingHoursLimit) : undefined,
+        shiftTerms: shiftTerms.trim() || undefined,
       });
 
       onMachineAdded(newAsset);
@@ -226,25 +244,20 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 sm:p-6 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
       <div
-        className={`w-full max-w-4xl max-h-[calc(100vh-3rem)] overflow-y-auto rounded-2xl border p-7 sm:p-8 shadow-2xl space-y-6 my-6 ${
+        className={`w-full max-w-4xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-4 my-2 ${
           isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#242424] text-slate-100'
         }`}
       >
-        {/* Modal Header & Step Indicator */}
-        <div className={`flex items-center justify-between border-b pb-4 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+        {/* Modal Header */}
+        <div className={`flex items-center justify-between border-b pb-3.5 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
           <div className="flex items-center gap-3">
             <div className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-400 border border-slate-700'}`}>
               <Truck className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black">Add New Machine to Fleet</h3>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30">
-                  Step {step} of 2: {step === 1 ? 'Details & Territory' : 'Media & Operations'}
-                </span>
-              </div>
+              <h3 className="text-base font-black">Add New Machine to Fleet</h3>
               <p className={`text-xs mt-0.5 ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
                 {step === 1
                   ? 'Configure territory, manufacturer specs, model, and serial details.'
@@ -260,41 +273,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
           </button>
         </div>
 
-        {/* Step Progress Pill Indicator */}
-        <div className="grid grid-cols-2 gap-3">
-          <div
-            className={`p-2.5 rounded-xl border flex items-center gap-2.5 text-xs font-bold transition-all ${
-              step === 1
-                ? 'border-amber-500 bg-amber-500/10 text-amber-600 shadow-sm'
-                : 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
-            }`}
-          >
-            <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black ${
-              step === 1 ? 'bg-amber-500 text-slate-950' : 'bg-emerald-500 text-white'
-            }`}>
-              {step > 1 ? '✓' : '1'}
-            </div>
-            <span>1. Territory, Model & Chassis</span>
-          </div>
-
-          <div
-            className={`p-2.5 rounded-xl border flex items-center gap-2.5 text-xs font-bold transition-all ${
-              step === 2
-                ? 'border-amber-500 bg-amber-500/10 text-amber-600 shadow-sm'
-                : isDaylight
-                ? 'border-slate-200 bg-slate-50 text-slate-400'
-                : 'border-slate-800 bg-slate-900/40 text-slate-500'
-            }`}
-          >
-            <div className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black ${
-              step === 2 ? 'bg-amber-500 text-slate-950' : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-            }`}>
-              2
-            </div>
-            <span>2. Photos, Videos & Operator</span>
-          </div>
-        </div>
-
         {formError && (
           <div className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-xs text-rose-800 flex items-center gap-2 font-bold">
             <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
@@ -307,10 +285,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
           <form onSubmit={handleProceedToStep2} className="space-y-5">
             {/* 1. Territory Row: State -> City -> Hub */}
             <div className={`rounded-xl border p-4 space-y-3 ${isDaylight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}>
-              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600">
-                <MapPin className="h-4 w-4" />
-                <span>Stationed Territory (State, City, Hub) *</span>
-              </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold mb-1">State *</label>
@@ -336,7 +310,15 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                       setSelectedCityId(val ? Number(val) : '');
                       setSelectedHubId('');
                     }}
-                    placeholder="Select City..."
+                    placeholder={
+                      !selectedStateId
+                        ? 'Select State First'
+                        : availableCities.length === 0
+                        ? 'No cities in this State'
+                        : 'Select City *'
+                    }
+                    isDisabled={!selectedStateId || availableCities.length === 0}
+                    noOptionsMessage="No cities found in this State"
                     isClearable={true}
                   />
                 </div>
@@ -352,7 +334,17 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                     }))}
                     value={selectedHubId}
                     onChange={(val) => setSelectedHubId(val ? Number(val) : '')}
-                    placeholder="Select Hub..."
+                    placeholder={
+                      !selectedStateId
+                        ? 'Select State First'
+                        : !selectedCityId
+                        ? 'Select City First'
+                        : availableHubs.length === 0
+                        ? 'No hubs in this City'
+                        : 'Select Hub *'
+                    }
+                    isDisabled={!selectedCityId || availableHubs.length === 0}
+                    noOptionsMessage="No hubs found in this City"
                     isClearable={false}
                   />
                 </div>
@@ -454,21 +446,57 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               </div>
             </div>
 
-            {/* 5. CAPEX Purchase Cost Only (Rent & Deposit configured in Rental Config) */}
+            {/* 5. CAPEX Purchase Cost & Billing Unit Metric */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold mb-1">CAPEX Purchase Cost (₹) *</label>
+                <input
+                  type="number"
+                  min="1000"
+                  step="1000"
+                  placeholder="55000"
+                  value={purchaseCost}
+                  onChange={(e) => setPurchaseCost(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
+                <SearchSelect
+                  options={BILLING_UNIT_OPTIONS.map((opt) => ({
+                    value: opt.code,
+                    label: opt.label,
+                    subLabel: opt.defaultShiftTerms,
+                    badge: opt.unitLabel.toUpperCase(),
+                  }))}
+                  value={selectedBillingUnit}
+                  onChange={(val) => {
+                    if (!val) return;
+                    const nextUnit = val as BillingUnitCode;
+                    setSelectedBillingUnit(nextUnit);
+                    const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === nextUnit);
+                    if (opt) setShiftTerms(opt.defaultShiftTerms);
+                  }}
+                  isClearable={false}
+                  placeholder="Select Billing Unit..."
+                />
+              </div>
+            </div>
+
+            {/* 6. Shift Terms / Operating Boundation Policy */}
             <div>
-              <label className="block text-xs font-bold mb-1">CAPEX Purchase Cost (₹) *</label>
+              <label className="block text-xs font-bold mb-1">Shift Terms / Operational Boundation</label>
               <input
-                type="number"
-                min="1000"
-                step="1000"
-                placeholder="55000"
-                value={purchaseCost}
-                onChange={(e) => setPurchaseCost(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
-                required
+                type="text"
+                placeholder="e.g. Full 24-hr day site deployment • Flexible field usage"
+                value={shiftTerms}
+                onChange={(e) => setShiftTerms(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
               />
               <p className={`text-[11px] mt-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                ℹ️ Note: Daily rental rates and refundable security deposits are configured separately in the <strong>Rental Config</strong> desk.
+                Generic shift terms for machine work (e.g. per hole drilled for Earth Auger, metered run time for water pump, or full 24-hr day deployment).
               </p>
             </div>
 

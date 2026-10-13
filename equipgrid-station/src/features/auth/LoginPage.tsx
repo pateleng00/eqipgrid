@@ -265,6 +265,45 @@ export const LoginPage: React.FC = () => {
               </p>
             </div>
 
+            {/* Quick Demo Staff Logins */}
+            <div className={`p-3 rounded-xl border text-xs space-y-2 ${
+              isDaylight ? 'bg-amber-50/70 border-amber-200 text-slate-800' : 'bg-slate-900/80 border-slate-800 text-slate-200'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                  ⚡ Staff Credentials (Click to Auto-Fill):
+                </span>
+                <span className="text-[10px] font-mono text-slate-500 font-bold">Pass: admin123</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {[
+                  { label: '👑 Root Super Admin', email: 'root@equipgrid.in' },
+                  { label: '🛡️ Operations Admin', email: 'admin@equipgrid.in' },
+                  { label: '🏢 Hardoi Yard Mgr', email: 'manager.hardoi@equipgrid.in' },
+                  { label: '📋 Booking Desk', email: 'booking.desk@equipgrid.in' },
+                ].map((account) => (
+                  <button
+                    key={account.email}
+                    type="button"
+                    onClick={() => {
+                      setEmailInput(account.email);
+                      setPasswordInput('admin123');
+                    }}
+                    className={`text-left px-2.5 py-1.5 rounded-lg border text-[11px] font-medium transition-all cursor-pointer ${
+                      emailInput === account.email
+                        ? 'border-amber-500 bg-amber-500/20 font-bold'
+                        : isDaylight
+                        ? 'border-slate-200 bg-white hover:bg-slate-100 text-slate-800'
+                        : 'border-slate-800 bg-slate-950/60 hover:bg-slate-800 text-slate-300'
+                    }`}
+                  >
+                    <div className="font-semibold">{account.label}</div>
+                    <div className="text-[9px] font-mono text-slate-500 truncate">{account.email}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Sign-in Form */}
             <form onSubmit={handleFormSubmit} className="space-y-4 pt-1">
               {/* Email Input */}

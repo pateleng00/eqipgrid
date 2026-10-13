@@ -17,13 +17,15 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { api } from '../services/api';
 
+import { getInitialActiveTab, persistActiveTab, getUrlParam, setUrlParam } from '../lib/navigationState';
+
 export const App: React.FC = () => {
   const { isAuthenticated, currentUser } = useAuth();
   const isGuest = currentUser?.role === 'guest';
 
-  // Guests always open directly to the Fleet & Machinery tab
+  // Session-persistent active tab: preserves tab on browser refresh, defaults to 'dashboard' on fresh login
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return isGuest ? 'catalog' : 'dashboard';
+    return getInitialActiveTab(isGuest);
   });
   const [preselectedAsset, setPreselectedAsset] = useState<Asset | null>(null);
   const [guestBlockModal, setGuestBlockModal] = useState(false);
@@ -37,9 +39,19 @@ export const App: React.FC = () => {
     });
   }, []);
 
+  // Listen to browser Back/Forward (popstate)
+  React.useEffect(() => {
+    const handlePopState = () => {
+      const current = getInitialActiveTab(isGuest);
+      setActiveTab(current);
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isGuest]);
+
   React.useEffect(() => {
     if (isGuest && activeTab !== 'catalog') {
-      setActiveTab('catalog');
+      handleTabChange('catalog');
     }
   }, [isGuest, activeTab]);
 
@@ -47,44 +59,48 @@ export const App: React.FC = () => {
     return <LoginPage />;
   }
 
-  const handleSelectForBooking = (asset: Asset) => {
-    if (isGuest) {
-      setGuestBlockModal(true);
-      return;
-    }
-    setPreselectedAsset(asset);
-    setActiveTab('booking');
-  };
-
   const handleTabChange = (tab: string) => {
     // If guest, only allow catalog
     if (isGuest && tab !== 'catalog') {
       return;
     }
     setActiveTab(tab);
+    persistActiveTab(tab);
+  };
+
+  const handleSelectForBooking = (asset: Asset) => {
+    if (isGuest) {
+      setGuestBlockModal(true);
+      return;
+    }
+    setPreselectedAsset(asset);
+    handleTabChange('booking');
   };
 
   const handleNewDeployment = () => {
     if (isGuest) { setGuestBlockModal(true); return; }
-    setActiveTab('booking');
+    handleTabChange('booking');
     // Small delay so the BookingDeskView mounts before the effect fires
     setTimeout(() => setTriggerNewDeployment(true), 50);
   };
 
   return (
     <Layout activeTab={isGuest ? 'catalog' : activeTab} onTabChange={handleTabChange} onNewDeployment={handleNewDeployment}>
-      {activeTab === 'dashboard' && <DashboardView onNavigate={setActiveTab} />}
+      {activeTab === 'dashboard' && <DashboardView onNavigate={handleTabChange} />}
       {activeTab === 'catalog' && (
         <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />
       )}
-      {(activeTab === 'booking' || activeTab === 'dispatch') && (
+      {activeTab === 'booking' && (
         <BookingDeskView
           preselectedAsset={preselectedAsset}
-          onBookingCreated={() => setActiveTab('dashboard')}
-          initialViewMode={activeTab === 'dispatch' ? 'dispatch' : 'all'}
+          onBookingCreated={() => handleTabChange('dashboard')}
+          initialViewMode="all"
           openCreateModal={triggerNewDeployment}
           onCreateModalOpened={() => setTriggerNewDeployment(false)}
         />
+      )}
+      {activeTab === 'dispatch' && (
+        <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />
       )}
       {activeTab === 'rental-configs' && <RentalConfigView />}
       {activeTab === 'locations' && <LocationMasterView />}
