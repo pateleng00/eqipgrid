@@ -36,8 +36,8 @@ public class MetaSignatureValidator {
      * @return true if authentic; false if forged, missing, or mismatched
      */
     public boolean isValidSignature(String payload, String signatureHeader) {
-        // If verification is explicitly turned off and no secret is configured (local dev/test)
-        if (!verificationEnabled && appSecret.isBlank()) {
+        // If verification is explicitly turned off (local dev/test)
+        if (!verificationEnabled) {
             return true;
         }
 

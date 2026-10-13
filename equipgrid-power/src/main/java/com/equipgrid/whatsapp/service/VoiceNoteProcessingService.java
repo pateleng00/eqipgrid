@@ -44,21 +44,30 @@ public class VoiceNoteProcessingService {
     // Gemini API base endpoint
     private static final String GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
     private final ObjectMapper objectMapper;
-    @Value("${equipgrid.intelligence.gemini.api-key}")
+    @Value("${equipgrid.intelligence.gemini.api-key:}")
     private String geminiApiKey;
-    @Value("${equipgrid.intelligence.gemini.model}")
+    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
     private String geminiModel;
 
     /**
-     * Transcribes a WhatsApp voice note and extracts booking intent.
+     * Transcribes raw audio bytes and extracts structured booking intent.
      *
-     * @param audioUrl   Publicly accessible URL of the audio file (OGG/OPUS/MP3)
-     * @param mimeType   MIME type of the audio (e.g. "audio/ogg; codecs=opus")
+     * @param audioBytes Raw audio bytes (OGG Opus, MP3, etc.)
+     * @param mimeType   MIME type of the audio
      * @param senderName Customer name for context
-     * @return {@link VoiceBookingIntent} with transcript and parsed booking fields
+     * @return {@link VoiceBookingIntent}
      */
-    public VoiceBookingIntent processVoiceNote(String audioUrl, String mimeType, String senderName) {
-        log.info("[VoiceBot] Processing voice note from {} | mimeType: {} | url: {}", senderName, mimeType, audioUrl);
+    public VoiceBookingIntent processVoiceNote(byte[] audioBytes, String mimeType, String senderName) {
+        if (audioBytes == null || audioBytes.length == 0) {
+            log.warn("[VoiceBot] Received empty audio bytes from {}", senderName);
+            return VoiceBookingIntent.builder()
+                    .transcript("")
+                    .transcriptionSucceeded(false)
+                    .fallbackReason("Audio bytes were empty")
+                    .build();
+        }
+
+        log.info("[VoiceBot] Processing {} audio bytes from {} | mimeType: {}", audioBytes.length, senderName, mimeType);
 
         String apiKey = resolveGeminiApiKey();
         if (StringUtils.isBlank(apiKey)) {
@@ -71,7 +80,7 @@ public class VoiceNoteProcessingService {
         }
 
         try {
-            return callGeminiForVoiceTranscription(audioUrl, mimeType, apiKey, senderName);
+            return callGeminiForVoiceTranscription(audioBytes, mimeType, apiKey, senderName);
         } catch (Exception e) {
             log.warn("[VoiceBot] Gemini transcription call failed: {}", e.getMessage());
             return VoiceBookingIntent.builder()
@@ -80,6 +89,88 @@ public class VoiceNoteProcessingService {
                     .fallbackReason("Transcription service error: " + e.getMessage())
                     .build();
         }
+    }
+
+    /**
+     * Transcribes a WhatsApp voice note and extracts booking intent.
+     * Accepts a public URL, data URI (data:audio/ogg;base64,...), or raw Base64 string.
+     *
+     * @param audioSource URL or Base64 data of the audio file
+     * @param mimeType    MIME type of the audio (e.g. "audio/ogg; codecs=opus")
+     * @param senderName  Customer name for context
+     * @return {@link VoiceBookingIntent} with transcript and parsed booking fields
+     */
+    public VoiceBookingIntent processVoiceNote(String audioSource, String mimeType, String senderName) {
+        log.info("[VoiceBot] Processing voice note from {} | mimeType: {} | source: {}",
+                senderName, mimeType, audioSource != null && audioSource.length() > 60 ? audioSource.substring(0, 60) + "..." : audioSource);
+
+        if (StringUtils.isBlank(audioSource)) {
+            return VoiceBookingIntent.builder()
+                    .transcript("")
+                    .transcriptionSucceeded(false)
+                    .fallbackReason("No audio source provided")
+                    .build();
+        }
+
+        byte[] audioBytes = null;
+        String resolvedMime = mimeType;
+
+        // Check if data URI
+        if (audioSource.startsWith("data:")) {
+            try {
+                int commaIdx = audioSource.indexOf(',');
+                if (commaIdx != -1) {
+                    String meta = audioSource.substring(5, commaIdx);
+                    if (meta.contains(";base64")) {
+                        String mimePart = meta.substring(0, meta.indexOf(';'));
+                        if (!mimePart.isBlank()) {
+                            resolvedMime = mimePart;
+                        }
+                    }
+                    String base64Data = audioSource.substring(commaIdx + 1);
+                    audioBytes = java.util.Base64.getDecoder().decode(base64Data);
+                }
+            } catch (Exception e) {
+                log.warn("[VoiceBot] Failed to decode data URI audio: {}", e.getMessage());
+            }
+        } else if (audioSource.startsWith("http://") || audioSource.startsWith("https://")) {
+            audioBytes = downloadAudioBytesFromUrl(audioSource);
+        } else {
+            // Attempt decoding as raw base64 string
+            try {
+                audioBytes = java.util.Base64.getDecoder().decode(audioSource.trim());
+            } catch (Exception ignored) {
+            }
+        }
+
+        if (audioBytes == null || audioBytes.length == 0) {
+            return VoiceBookingIntent.builder()
+                    .transcript("")
+                    .transcriptionSucceeded(false)
+                    .fallbackReason("Could not obtain audio bytes from source")
+                    .build();
+        }
+
+        return processVoiceNote(audioBytes, resolvedMime, senderName);
+    }
+
+    private byte[] downloadAudioBytesFromUrl(String url) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "EquipGrid-VoiceBot/1.0")
+                    .timeout(Duration.ofSeconds(15))
+                    .GET()
+                    .build();
+            HttpResponse<byte[]> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            if (response.statusCode() == 200) {
+                return response.body();
+            }
+            log.warn("[VoiceBot] HTTP download returned status {} for URL: {}", response.statusCode(), url);
+        } catch (Exception e) {
+            log.error("[VoiceBot] Error downloading audio from URL {}: {}", url, e.getMessage());
+        }
+        return null;
     }
 
     /**
@@ -126,12 +217,17 @@ public class VoiceNoteProcessingService {
     // ─── Gemini API calls ──────────────────────────────────────────────────────
 
     private VoiceBookingIntent callGeminiForVoiceTranscription(
-            String audioUrl, String mimeType, String apiKey, String senderName) throws IOException, InterruptedException {
+            byte[] audioBytes, String mimeType, String apiKey, String senderName) throws IOException, InterruptedException {
 
         String endpoint = String.format(GEMINI_API_BASE, geminiModel, apiKey);
-        String effectiveMime = (mimeType != null && !mimeType.isBlank()) ? mimeType : "audio/ogg";
+        String effectiveMime = "audio/ogg";
+        if (mimeType != null && !mimeType.isBlank()) {
+            effectiveMime = mimeType.split(";")[0].trim().toLowerCase();
+        }
 
-        // Build the Gemini multimodal request
+        String base64Audio = java.util.Base64.getEncoder().encodeToString(audioBytes);
+
+        // Build the Gemini multimodal request using inline_data
         ObjectNode root = objectMapper.createObjectNode();
         ArrayNode contents = root.putArray("contents");
         ObjectNode content = contents.addObject();
@@ -141,11 +237,11 @@ public class VoiceNoteProcessingService {
         ObjectNode textPart = parts.addObject();
         textPart.put("text", buildVoiceTranscriptionPrompt(senderName));
 
-        // Audio file part — reference by URI
+        // Audio file part — inline base64 audio data
         ObjectNode audioPart = parts.addObject();
-        ObjectNode fileData = audioPart.putObject("file_data");
-        fileData.put("mime_type", effectiveMime);
-        fileData.put("file_uri", audioUrl);
+        ObjectNode inlineData = audioPart.putObject("inline_data");
+        inlineData.put("mime_type", effectiveMime);
+        inlineData.put("data", base64Audio);
 
         // Generation config — ask for JSON output
         ObjectNode genConfig = root.putObject("generation_config");
@@ -350,17 +446,17 @@ public class VoiceNoteProcessingService {
         String upper = text.toUpperCase().trim();
 
         String intent = "UNKNOWN";
-        if (upper.contains("BOOK") || upper.contains("RENT") || upper.contains("CHAHIYE") ||
-                upper.contains("MACHINE") || upper.contains("KIRAYA") || upper.contains("BHEJA")) {
-            intent = "BROWSE_RENT";
-        } else if (upper.contains("TRACK") || upper.contains("STATUS") || upper.contains("KAHAN")) {
-            intent = "TRACK_ORDER";
-        } else if (upper.contains("PAY") || upper.contains("UPI") || upper.contains("BHUGTAN")) {
-            intent = "PAY";
-        } else if (upper.contains("RETURN") || upper.contains("WAPAS") || upper.contains("VAPAS")) {
+        if (upper.contains("RETURN") || upper.contains("WAPAS") || upper.contains("VAPAS") || upper.contains("PICKUP") || upper.contains("PICK UP") || upper.contains("LAUTA")) {
             intent = "RETURN";
-        } else if (upper.contains("HELP") || upper.contains("MADAD") || upper.contains("HELPLINE")) {
+        } else if (upper.contains("TRACK") || upper.contains("STATUS") || upper.contains("KAHAN") || upper.contains("PAHUNCH")) {
+            intent = "TRACK_ORDER";
+        } else if (upper.contains("PAY") || upper.contains("UPI") || upper.contains("BHUGTAN") || upper.contains("PAISE") || upper.contains("ADVANCE") || upper.contains("BALANCE")) {
+            intent = "PAY";
+        } else if (upper.contains("HELP") || upper.contains("MADAD") || upper.contains("HELPLINE") || upper.contains("KHARAB") || upper.contains("SHIKAYAT") || upper.contains("SUPPORT")) {
             intent = "HELP";
+        } else if (upper.contains("BOOK") || upper.contains("RENT") || upper.contains("CHAHIYE") ||
+                upper.contains("MACHINE") || upper.contains("KIRAYA") || upper.contains("BHEJA") || upper.contains("BHEJ") || upper.contains("TRACTOR")) {
+            intent = "BROWSE_RENT";
         }
 
         String category = "";

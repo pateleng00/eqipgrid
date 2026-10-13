@@ -39,7 +39,7 @@ public class WhatsAppWebhookController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.equipgrid.whatsapp.security.MetaSignatureValidator metaSignatureValidator;
 
-    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token}")
+    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token:eq_whk_default_token}")
     private String metaVerifyToken;
 
     @Operation(summary = "Meta Webhook Verification Challenge", description = "Responds to Meta Cloud API webhook verification GET request")
@@ -84,7 +84,8 @@ public class WhatsAppWebhookController {
             log.info("[WhatsApp Webhook] Received non-message event (e.g. delivery/status receipt), acknowledged with 200 OK");
             return ResponseEntity.ok(ApiResponse.buildSuccess("EVENT_ACK", "Event acknowledged", null));
         }
-        log.info("Received WhatsApp webhook message from {}", request.getFrom());
+        log.info("Received WhatsApp webhook message from {} | mediaType: {} | mediaId: {}",
+                request.getFrom(), request.getMediaType(), request.getMediaId());
         WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
 
         // Automatically dispatch bot response back to farmer via Meta Cloud API
@@ -106,15 +107,33 @@ public class WhatsAppWebhookController {
             return ResponseEntity.badRequest().body(ApiResponse.buildFail("INVALID_SENDER", "Missing From parameter", null));
         }
 
-        WhatsAppInboundRequest request = WhatsAppInboundRequest.builder()
+        WhatsAppInboundRequest.WhatsAppInboundRequestBuilder builder = WhatsAppInboundRequest.builder()
                 .from(from)
                 .message(body)
                 .userName(profileName)
                 .messageId(formParams.get("MessageSid"))
-                .timestamp(System.currentTimeMillis() / 1000)
-                .build();
+                .timestamp(System.currentTimeMillis() / 1000);
 
-        log.info("[Twilio Webhook] Received incoming message from {}, body: {}", from, body);
+        String mediaContentType = formParams.get("MediaContentType0");
+        String mediaUrl = formParams.get("MediaUrl0");
+        String transcriptionText = formParams.get("TranscriptionText");
+
+        if (mediaContentType != null && (mediaContentType.startsWith("audio/") || mediaContentType.contains("audio") || mediaContentType.contains("ogg"))) {
+            builder.mediaType("audio")
+                    .mediaUrl(mediaUrl)
+                    .mimeType(mediaContentType);
+            if (transcriptionText != null && !transcriptionText.isBlank()) {
+                builder.transcribedText(transcriptionText);
+            }
+        } else if (mediaContentType != null && mediaContentType.startsWith("image/")) {
+            builder.mediaType("image")
+                    .mediaUrl(mediaUrl)
+                    .mimeType(mediaContentType);
+        }
+
+        WhatsAppInboundRequest request = builder.build();
+
+        log.info("[Twilio Webhook] Received incoming message from {}, body: {}, mediaType: {}", from, body, request.getMediaType());
         WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
     }
@@ -125,7 +144,26 @@ public class WhatsAppWebhookController {
         // 1. Check if direct WhatsAppInboundRequest format
         if (root.has("from") && !root.path("from").asText().isBlank()) {
             try {
-                return objectMapper.treeToValue(root, WhatsAppInboundRequest.class);
+                WhatsAppInboundRequest direct = objectMapper.treeToValue(root, WhatsAppInboundRequest.class);
+                if (root.has("audio") && (direct.getMediaType() == null || direct.getMediaType().isBlank())) {
+                    com.fasterxml.jackson.databind.JsonNode audioNode = root.path("audio");
+                    direct.setMediaType("audio");
+                    if (audioNode.has("id") && (direct.getMediaId() == null || direct.getMediaId().isBlank())) {
+                        direct.setMediaId(audioNode.path("id").asText());
+                    }
+                    if (audioNode.has("mime_type") && (direct.getMimeType() == null || direct.getMimeType().isBlank())) {
+                        direct.setMimeType(audioNode.path("mime_type").asText());
+                    }
+                    if (audioNode.has("url") && (direct.getMediaUrl() == null || direct.getMediaUrl().isBlank())) {
+                        direct.setMediaUrl(audioNode.path("url").asText());
+                    } else if (audioNode.has("link") && (direct.getMediaUrl() == null || direct.getMediaUrl().isBlank())) {
+                        direct.setMediaUrl(audioNode.path("link").asText());
+                    }
+                    if (audioNode.has("transcription") && (direct.getTranscribedText() == null || direct.getTranscribedText().isBlank())) {
+                        direct.setTranscribedText(audioNode.path("transcription").asText());
+                    }
+                }
+                return direct;
             } catch (Exception e) {
                 log.warn("Failed to deserialize direct WhatsAppInboundRequest: {}", e.getMessage());
             }
@@ -170,6 +208,47 @@ public class WhatsAppWebhookController {
                                 .userName(userName)
                                 .messageId(msg.path("id").asText())
                                 .timestamp(msg.path("timestamp").asLong(System.currentTimeMillis() / 1000));
+
+                        // ── Audio / Voice Note extraction ──
+                        String type = msg.path("type").asText("");
+                        if ("audio".equalsIgnoreCase(type) || "voice".equalsIgnoreCase(type) || msg.has("audio") || msg.has("voice")) {
+                            com.fasterxml.jackson.databind.JsonNode audioNode = msg.has("audio") ? msg.path("audio") : msg.path("voice");
+                            builder.mediaType("audio");
+                            if (audioNode.has("id")) {
+                                builder.mediaId(audioNode.path("id").asText());
+                            }
+                            if (audioNode.has("mime_type")) {
+                                builder.mimeType(audioNode.path("mime_type").asText());
+                            }
+                            if (audioNode.has("link")) {
+                                builder.mediaUrl(audioNode.path("link").asText());
+                            } else if (audioNode.has("url")) {
+                                builder.mediaUrl(audioNode.path("url").asText());
+                            }
+                            if (audioNode.has("transcription")) {
+                                builder.transcribedText(audioNode.path("transcription").asText());
+                            } else if (audioNode.has("text")) {
+                                builder.transcribedText(audioNode.path("text").asText());
+                            }
+                        } else if ("image".equalsIgnoreCase(type) || msg.has("image")) {
+                            com.fasterxml.jackson.databind.JsonNode imgNode = msg.path("image");
+                            builder.mediaType("image");
+                            if (imgNode.has("id")) {
+                                builder.mediaId(imgNode.path("id").asText());
+                            }
+                            if (imgNode.has("mime_type")) {
+                                builder.mimeType(imgNode.path("mime_type").asText());
+                            }
+                            if (imgNode.has("link")) {
+                                builder.mediaUrl(imgNode.path("link").asText());
+                            } else if (imgNode.has("url")) {
+                                builder.mediaUrl(imgNode.path("url").asText());
+                            }
+                            if (imgNode.has("caption") && text.isBlank()) {
+                                text = imgNode.path("caption").asText();
+                                builder.message(text);
+                            }
+                        }
 
                         // Handle location pin
                         if (msg.has("location")) {

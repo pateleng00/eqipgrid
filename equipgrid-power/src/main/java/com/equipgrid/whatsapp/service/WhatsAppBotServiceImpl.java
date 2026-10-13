@@ -87,6 +87,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private final StorageService storageService;
     private final ObjectMapper objectMapper;
     private final VoiceNoteProcessingService voiceNoteProcessingService;
+    private final MetaWhatsAppClientService metaWhatsAppClientService;
     private final ChallanDocumentService challanDocumentService;
 
     public static String getEquipmentHindiName(String name, String tag) {
@@ -1582,8 +1583,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             WhatsAppConversationContext context) {
 
         String senderName = customer.getFullName();
-        log.info("[VoiceBot] Received voice note from {} | mediaUrl: {} | preTranscribed: '{}'",
-                senderName, request.getMediaUrl(), request.getTranscribedText());
+        log.info("[VoiceBot] Received voice note from {} | mediaId: {} | mediaUrl: {} | preTranscribed: '{}'",
+                senderName, request.getMediaId(), request.getMediaUrl(), request.getTranscribedText());
 
         context.setVoiceNoteReceived(true);
         int retries = context.getVoiceRetryCount() != null ? context.getVoiceRetryCount() : 0;
@@ -1594,14 +1595,34 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         if (request.getTranscribedText() != null && !request.getTranscribedText().isBlank()) {
             intent = voiceNoteProcessingService.parseTranscriptIntent(request.getTranscribedText());
             log.info("[VoiceBot] Using pre-transcribed text: '{}'", request.getTranscribedText());
-        } else if (request.getMediaUrl() != null && !request.getMediaUrl().isBlank()) {
-            // 2. Send audio URL to Gemini for transcription
-            intent = voiceNoteProcessingService.processVoiceNote(
-                    request.getMediaUrl(), request.getMimeType(), senderName);
         } else {
-            // 3. No audio data — prompt for text or voice note with URL
-            log.warn("[VoiceBot] No mediaUrl or transcribedText in voice message from {}", senderName);
-            return buildVoiceRetryPrompt(conv, customer, "ऑडियो नहीं मिली (Audio not received)", retries);
+            byte[] audioBytes = null;
+            // 2a. If mediaId is provided (e.g. from Meta Cloud API), fetch media bytes from Meta
+            if (request.getMediaId() != null && !request.getMediaId().isBlank()) {
+                log.info("[VoiceBot] Downloading audio from Meta Cloud API for mediaId: {}", request.getMediaId());
+                try {
+                    audioBytes = metaWhatsAppClientService.downloadMediaBytes(request.getMediaId());
+                } catch (Exception e) {
+                    log.error("[VoiceBot] Failed to download audio from Meta for mediaId {}: {}", request.getMediaId(), e.getMessage());
+                }
+            }
+
+            if (audioBytes != null && audioBytes.length > 0) {
+                // 2b. Transcribe audio bytes directly via Gemini inline_data
+                intent = voiceNoteProcessingService.processVoiceNote(
+                        audioBytes, request.getMimeType(), senderName);
+            } else if (request.getMediaUrl() != null && !request.getMediaUrl().isBlank()) {
+                // 2c. Send audio URL / data URI to service for download and transcription
+                intent = voiceNoteProcessingService.processVoiceNote(
+                        request.getMediaUrl(), request.getMimeType(), senderName);
+            } else if (request.getMessage() != null && !request.getMessage().isBlank()) {
+                // 2d. Fallback: Parse intent from accompanying message or caption
+                log.info("[VoiceBot] Using message caption as fallback: '{}'", request.getMessage());
+                intent = voiceNoteProcessingService.parseTranscriptIntent(request.getMessage());
+            } else {
+                log.warn("[VoiceBot] No audio data or transcription found for {}", senderName);
+                return buildVoiceRetryPrompt(conv, customer, "ऑडियो नहीं मिली (Audio not received)", retries);
+            }
         }
 
         if (!intent.isTranscriptionSucceeded() || intent.getTranscript().isBlank()) {
@@ -2026,9 +2047,25 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     // ─── Helper: detect voice/audio messages ──────────────────────────────────
 
     private boolean isVoiceMessage(WhatsAppInboundRequest request) {
-        if (request.getMediaType() == null) return false;
-        String mt = request.getMediaType().toLowerCase();
-        return mt.equals("audio") || mt.equals("voice") || mt.startsWith("audio/");
+        if (request == null) return false;
+        if (request.getMediaType() != null) {
+            String mt = request.getMediaType().toLowerCase();
+            if (mt.equals("audio") || mt.equals("voice") || mt.startsWith("audio/")) {
+                return true;
+            }
+        }
+        if (request.getMimeType() != null && request.getMimeType().toLowerCase().startsWith("audio/")) {
+            return true;
+        }
+        if (request.getMediaId() != null && !request.getMediaId().isBlank()
+                && (request.getMediaType() != null && request.getMediaType().toLowerCase().contains("audio"))) {
+            return true;
+        }
+        if (request.getTranscribedText() != null && !request.getTranscribedText().isBlank()
+                && (request.getMessage() == null || request.getMessage().isBlank())) {
+            return true;
+        }
+        return false;
     }
 
     private boolean isImageMessage(WhatsAppInboundRequest request) {
