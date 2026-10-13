@@ -28,7 +28,27 @@ WHERE t.code = 'TYPE-MULTI-GEN' AND m.code = 'MFG-KIRLOSKAR'
 ON CONFLICT (type_id, manufacturer_id, model_number) DO NOTHING;
 
 -- 3. Assets for Multipurpose Fleet
-ALTER TABLE assets ADD COLUMN IF NOT EXISTS category SMALLINT;
+ALTER TABLE assets 
+    ADD COLUMN IF NOT EXISTS name VARCHAR(128),
+    ADD COLUMN IF NOT EXISTS category SMALLINT,
+    ADD COLUMN IF NOT EXISTS model_name VARCHAR(128),
+    ADD COLUMN IF NOT EXISTS serial_number VARCHAR(128),
+    ADD COLUMN IF NOT EXISTS daily_rate NUMERIC(10, 2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS deposit_amount NUMERIC(10, 2) DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS purchase_cost NUMERIC(10, 2),
+    ADD COLUMN IF NOT EXISTS operator_required BOOLEAN DEFAULT FALSE,
+    ADD COLUMN IF NOT EXISTS status SMALLINT DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS condition_notes TEXT,
+    ADD COLUMN IF NOT EXISTS accessories_included TEXT,
+    ADD COLUMN IF NOT EXISTS engine_hours NUMERIC(8, 2) DEFAULT 0.0,
+    ADD COLUMN IF NOT EXISTS image_url VARCHAR(512) DEFAULT 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800',
+    ADD COLUMN IF NOT EXISTS billing_unit SMALLINT DEFAULT 1,
+    ADD COLUMN IF NOT EXISTS working_hours_limit NUMERIC(6, 2),
+    ADD COLUMN IF NOT EXISTS shift_terms VARCHAR(256),
+    ADD COLUMN IF NOT EXISTS type_id BIGINT,
+    ADD COLUMN IF NOT EXISTS manufacturer_id BIGINT,
+    ADD COLUMN IF NOT EXISTS model_id BIGINT,
+    ADD COLUMN IF NOT EXISTS hub_id BIGINT;
 
 INSERT INTO assets (
     asset_tag, name, category, model_name, serial_number, daily_rate, deposit_amount,
