@@ -52,23 +52,61 @@ The backend accepts Meta credentials dynamically via environment variables so se
 
 | Variable | Description | Example / Default |
 |---|---|---|
-| `META_PHONE_NUMBER_ID` | Phone Number ID from Meta API Setup | `1450975934758555` |
-| `META_BUSINESS_ACCOUNT_ID` | WhatsApp Business Account (WABA) ID | `1795175008399502` |
-| `META_ACCESS_TOKEN` | Temporary Sandbox or Permanent System User Token | `EAAS9...` |
-| `META_VERIFY_TOKEN` | Secret string you create for Webhook handshake | `eq_whk_9f8a3c2e7b1d4e6a8c0f5b2d7e1a3c5f` |
-| `META_APP_SECRET` | App Secret from Meta App Settings ➔ Basic | `a1b2c3d4...` |
+| `META_PHONE_NUMBER_ID` | Phone Number ID from Meta API Setup | `****************` |
+| `META_BUSINESS_ACCOUNT_ID` | WhatsApp Business Account (WABA) ID | `****************` |
+| `META_ACCESS_TOKEN` | Temporary Sandbox or Permanent System User Token | `****************` |
+| `META_VERIFY_TOKEN` | Secret string you create for Webhook handshake | `****************` |
+| `META_APP_SECRET` | App Secret from Meta App Settings ➔ Basic | `****************` |
 | `META_API_VERSION` | Graph API version | `v21.0` (or `v22.0`) |
 | `META_VERIFY_SIGNATURE` | Whether to enforce HMAC-SHA256 signature check | `false` (dev) / `true` (prod) |
+
+### How to Generate a Permanent Access Token (Never Expires)
+
+By default, the token on the **API Setup** page is a temporary sandbox token that **expires in 24 hours**. 
+To get a **Permanent Access Token** that never expires (recommended for both sandbox and production):
+
+#### Step 1: Open Meta Business Settings
+1. Go to [business.facebook.com/settings](https://business.facebook.com/settings/).
+2. Select your Business Portfolio (e.g., `EquipGrid`).
+
+#### Step 2: Create a System User
+1. In the left navigation menu, go to **Users** ➔ **System users**.
+2. Click **Add** (or **Create System User**).
+3. Fill in:
+   - **System Username**: `equipgrid-backend-bot`
+   - **System User Role**: Select **Admin** (required to manage messaging assets).
+4. Click **Create system user**.
+
+#### Step 3: Assign Assets to the System User
+1. Click on your newly created system user (`equipgrid-backend-bot`).
+2. Click the **Add Assets** button.
+3. Assign the following two assets:
+   - **Apps**: Select your app (`EquipGrid Station`). Toggle **Full control** (Manage app) to **ON**.
+   - **WhatsApp Accounts**: Select your WhatsApp Business Account (`1795175008399502`). Toggle **Full control** (Manage WhatsApp account) to **ON**.
+4. Click **Save Changes**.
+
+#### Step 4: Generate the Permanent Token
+1. With `equipgrid-backend-bot` selected, click the **Generate new token** button.
+2. In the popup window:
+   - **Select App**: Choose your app (`EquipGrid Station`).
+   - **Token Expiration**: Choose **Never** (Permanent).
+   - **Available Permissions**: Search and check these two mandatory permissions:
+     - `whatsapp_business_messaging` (Allows sending and receiving WhatsApp messages)
+     - `whatsapp_business_management` (Allows managing WhatsApp accounts and webhooks)
+3. Click **Generate Token**.
+4. **Copy the token immediately**: Meta will only display this token once! (It starts with `EAAG...`).
+
+---
 
 ### Setting in Server Environment (`.env.prod` on EC2)
 
 Add these to `/opt/equipgrid/config/.env.prod`:
 ```ini
-META_PHONE_NUMBER_ID=1450975934758555
-META_BUSINESS_ACCOUNT_ID=1795175008399502
-META_ACCESS_TOKEN=your_meta_access_token_here
-META_VERIFY_TOKEN=eq_whk_9f8a3c2e7b1d4e6a8c0f5b2d7e1a3c5f
-META_APP_SECRET=your_meta_app_secret_here
+META_PHONE_NUMBER_ID=***************
+META_BUSINESS_ACCOUNT_ID=****************
+META_ACCESS_TOKEN=****************
+META_VERIFY_TOKEN=****************
+META_APP_SECRET=****************
 META_API_VERSION=v21.0
 META_VERIFY_SIGNATURE=false
 ```
@@ -151,7 +189,7 @@ Even after the Webhook is verified and `messages` is subscribed, the **WhatsApp 
      ```text
      {WABA_ID}/subscribed_apps
      ```
-     *(Example: `1795175008399502/subscribed_apps`)*
+     *(Example: `*****************/subscribed_apps`)*
 4. Click **Submit**.
 5. Meta will respond with:
    ```json
