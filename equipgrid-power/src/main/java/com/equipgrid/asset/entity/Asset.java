@@ -118,4 +118,20 @@ public class Asset extends BaseEntity {
     public AssetCategory getCategory() {
         return this.type != null ? this.type.getCategory() : null;
     }
+
+    public String getHindiName() {
+        return this.type != null ? this.type.getHindiName() : null;
+    }
+
+    public String getLocalLanguageName() {
+        return this.type != null ? this.type.getLocalLanguageName() : null;
+    }
+
+    public String getHindiDescription() {
+        return this.type != null ? this.type.getHindiDescription() : null;
+    }
+
+    public String getDescription() {
+        return this.type != null ? this.type.getDescription() : null;
+    }
 }

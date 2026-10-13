@@ -17,6 +17,9 @@ public class WebsiteMachineModelResponse {
     private String assetTag;
     private String name;
     private String hindiName;
+    private String localLanguageName;
+    private String description;
+    private String hindiDescription;
     private AssetCategory category;
     private String modelName;
     private BigDecimal dailyRate;

@@ -31,6 +31,15 @@ public class EquipmentType extends BaseEntity {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "hindi_name", length = 128)
+    private String hindiName;
+
+    @Column(name = "local_language_name", length = 128)
+    private String localLanguageName;
+
+    @Column(name = "hindi_description", length = 512)
+    private String hindiDescription;
+
     @Builder.Default
     @Column(nullable = false)
     private Boolean active = true;

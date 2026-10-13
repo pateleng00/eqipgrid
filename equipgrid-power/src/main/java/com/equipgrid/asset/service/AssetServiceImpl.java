@@ -285,11 +285,21 @@ public class AssetServiceImpl implements IAssetService {
                 effectiveShift = resolveDefaultShiftTerms(rep.getName(), rep.getAssetTag(), effectiveUnit, rep.getDepositAmount());
             }
 
+            String effectiveHindiName = rep.getType() != null && rep.getType().getHindiName() != null && !rep.getType().getHindiName().isBlank()
+                    ? rep.getType().getHindiName()
+                    : getHindiName(rep.getName());
+            String effectiveLocalLang = rep.getType() != null ? rep.getType().getLocalLanguageName() : null;
+            String effectiveDesc = rep.getType() != null ? rep.getType().getDescription() : null;
+            String effectiveHindiDesc = rep.getType() != null ? rep.getType().getHindiDescription() : null;
+
             result.add(WebsiteMachineModelResponse.builder()
                     .id(rep.getId())
                     .assetTag(rep.getAssetTag())
                     .name(rep.getName())
-                    .hindiName(getHindiName(rep.getName()))
+                    .hindiName(effectiveHindiName)
+                    .localLanguageName(effectiveLocalLang)
+                    .description(effectiveDesc)
+                    .hindiDescription(effectiveHindiDesc)
                     .category(rep.getCategory())
                     .modelName(rep.getModel() != null ? rep.getModel().getName() : null)
                     .dailyRate(rep.getDailyRate())

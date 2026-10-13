@@ -130,6 +130,9 @@ export interface EquipmentType {
   code: string;
   category: AssetCategory;
   description?: string;
+  hindiName?: string;
+  localLanguageName?: string;
+  hindiDescription?: string;
   active: boolean;
 }
 
@@ -177,6 +180,9 @@ export interface Asset {
   id: number;
   assetTag: string; // e.g. C-MIX-001
   name: string;
+  hindiName?: string;
+  localLanguageName?: string;
+  hindiDescription?: string;
   category: AssetCategory;
   modelName: string;
   serialNumber: string;
