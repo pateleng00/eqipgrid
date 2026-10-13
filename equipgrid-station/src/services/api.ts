@@ -6,6 +6,7 @@ import {
   BillingUnit,
   BillingUnitMaster,
   BILLING_UNIT_OPTIONS,
+  DEFAULT_BILLING_UNITS,
   getBillingUnitLabel,
   getBillingUnitHindiLabel,
   resolveBillingUnitCode,
@@ -535,16 +536,16 @@ export class ApiStore {
             displayOrder: Number(u.displayOrder || u.id),
           }));
         } else {
-          this._billingUnits = [...BILLING_UNIT_OPTIONS];
+          this._billingUnits = [...DEFAULT_BILLING_UNITS];
         }
         this.notify();
       }).catch((err) => {
         console.warn('Failed to fetch billing units from backend, using defaults:', err);
-        this._billingUnits = [...BILLING_UNIT_OPTIONS];
+        this._billingUnits = [...DEFAULT_BILLING_UNITS];
         this.notify();
       });
     }
-    return this._billingUnits.length > 0 ? this._billingUnits : BILLING_UNIT_OPTIONS;
+    return this._billingUnits.length > 0 ? this._billingUnits : DEFAULT_BILLING_UNITS;
   }
   set billingUnits(v) { this._billingUnits = v; }
 

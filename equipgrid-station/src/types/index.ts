@@ -147,6 +147,19 @@ export const BILLING_UNIT_OPTIONS: BillingUnitOption[] = [
   },
 ];
 
+export const DEFAULT_BILLING_UNITS: BillingUnitMaster[] = BILLING_UNIT_OPTIONS.map((opt) => ({
+  id: typeof opt.value === 'number' ? opt.value : 0,
+  code: opt.code,
+  name: opt.label,
+  hindiName: opt.hindiName || '',
+  unitLabel: opt.unitLabel,
+  hindiUnitLabel: opt.hindiUnitLabel || '',
+  unitLabelLong: opt.unitLabelLong,
+  defaultShiftTerms: opt.defaultShiftTerms,
+  active: true,
+  displayOrder: typeof opt.value === 'number' ? opt.value : 0,
+}));
+
 export function resolveBillingUnitCode(val: BillingUnit | number | string | undefined | null): BillingUnitCode {
   if (!val) return 'DAILY';
   const str = String(val).trim().toUpperCase();
