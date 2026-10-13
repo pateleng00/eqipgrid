@@ -39,7 +39,7 @@ public class WhatsAppWebhookController {
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
     private final com.equipgrid.whatsapp.security.MetaSignatureValidator metaSignatureValidator;
 
-    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token:equipgrid_meta_webhook_secret_2026}")
+    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token:eq_whk_9f8a3c2e7b1d4e6a8c0f5b2d7e1a3c5f}")
     private String metaVerifyToken;
 
     @Operation(summary = "Meta Webhook Verification Challenge", description = "Responds to Meta Cloud API webhook verification GET request")
