@@ -246,8 +246,10 @@ public class VoiceNoteProcessingService {
         // Generation config — ask for JSON output
         ObjectNode genConfig = root.putObject("generation_config");
         genConfig.put("temperature", 0.1);
-        genConfig.put("max_output_tokens", 512);
+        genConfig.put("max_output_tokens", 2048);
         genConfig.put("response_mime_type", "application/json");
+        ObjectNode thinkingConfig = genConfig.putObject("thinking_config");
+        thinkingConfig.put("thinking_budget", 0);
 
         String requestBody = objectMapper.writeValueAsString(root);
 
@@ -281,8 +283,10 @@ public class VoiceNoteProcessingService {
 
         ObjectNode genConfig = root.putObject("generation_config");
         genConfig.put("temperature", 0.1);
-        genConfig.put("max_output_tokens", 256);
+        genConfig.put("max_output_tokens", 2048);
         genConfig.put("response_mime_type", "application/json");
+        ObjectNode thinkingConfig = genConfig.putObject("thinking_config");
+        thinkingConfig.put("thinking_budget", 0);
 
         String requestBody = objectMapper.writeValueAsString(root);
 
@@ -301,18 +305,66 @@ public class VoiceNoteProcessingService {
     }
 
     private VoiceBookingIntent parseGeminiVoiceResponse(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return VoiceBookingIntent.builder()
+                    .transcript("")
+                    .transcriptionSucceeded(false)
+                    .fallbackReason("Empty response from Gemini")
+                    .build();
+        }
+
         try {
             JsonNode root = objectMapper.readTree(responseBody);
             JsonNode candidates = root.path("candidates");
             if (candidates.isArray() && !candidates.isEmpty()) {
-                JsonNode contentNode = candidates.get(0).path("content").path("parts");
-                if (contentNode.isArray() && !contentNode.isEmpty()) {
-                    String text = contentNode.get(0).path("text").asText("{}").trim();
+                JsonNode candidate = candidates.get(0);
+                String finishReason = candidate.path("finishReason").asText("");
+                if (!finishReason.isBlank() && !"STOP".equals(finishReason)) {
+                    log.warn("[VoiceBot] Gemini finishReason: {}", finishReason);
+                }
+
+                JsonNode parts = candidate.path("content").path("parts");
+                if (parts.isArray() && !parts.isEmpty()) {
+                    String jsonText = null;
+
+                    // 1. Find part that does not have thought=true
+                    for (JsonNode part : parts) {
+                        if (!part.path("thought").asBoolean(false) && part.has("text")) {
+                            String candidateText = part.path("text").asText("").trim();
+                            if (!candidateText.isBlank()) {
+                                jsonText = candidateText;
+                                break;
+                            }
+                        }
+                    }
+
+                    // 2. Fallback to last part if not found
+                    if (jsonText == null || jsonText.isBlank()) {
+                        jsonText = parts.get(parts.size() - 1).path("text").asText("{}").trim();
+                    }
+
                     // Strip markdown code fences if present
-                    text = text.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
-                    JsonNode parsed = objectMapper.readTree(text);
+                    jsonText = jsonText.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+
+                    // If text contains extra text around JSON, extract between first '{' and last '}'
+                    int firstBrace = jsonText.indexOf('{');
+                    int lastBrace = jsonText.lastIndexOf('}');
+                    if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+                        jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+                    }
+
+                    JsonNode parsed;
+                    try {
+                        parsed = objectMapper.readTree(jsonText);
+                    } catch (Exception parseEx) {
+                        log.warn("[VoiceBot] Jackson parse failed on '{}': {}. Attempting partial recovery...",
+                                jsonText, parseEx.getMessage());
+                        return recoverTruncatedVoiceResponse(jsonText);
+                    }
+
                     return VoiceBookingIntent.builder()
                             .transcript(parsed.path("transcript").asText(""))
+                            .transcriptEnglish(parsed.path("transcript_english").asText(""))
                             .detectedLanguage(parsed.path("detected_language").asText("hi"))
                             .intent(parsed.path("intent").asText(""))
                             .assetCategory(parsed.path("asset_category").asText(""))
@@ -326,12 +378,34 @@ public class VoiceNoteProcessingService {
                 }
             }
         } catch (Exception e) {
-            log.warn("[VoiceBot] Failed to parse Gemini voice response JSON: {}", e.getMessage());
+            log.warn("[VoiceBot] Failed to parse Gemini voice response JSON: {} | Raw: {}", e.getMessage(), responseBody);
         }
+
         return VoiceBookingIntent.builder()
                 .transcript("")
                 .transcriptionSucceeded(false)
                 .fallbackReason("Could not parse Gemini response")
+                .build();
+    }
+
+    private VoiceBookingIntent recoverTruncatedVoiceResponse(String rawText) {
+        String transcript = "";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("\"transcript\"\\s*:\\s*\"([^\"]*)").matcher(rawText);
+        if (m.find()) {
+            transcript = m.group(1).trim();
+        }
+
+        if (!transcript.isBlank()) {
+            log.info("[VoiceBot] Recovered partial transcript from truncated response: '{}'", transcript);
+            VoiceBookingIntent fallback = keywordBasedIntentExtraction(transcript);
+            fallback.setTranscriptionSucceeded(true);
+            return fallback;
+        }
+
+        return VoiceBookingIntent.builder()
+                .transcript("")
+                .transcriptionSucceeded(false)
+                .fallbackReason("Could not parse or recover Gemini response: " + rawText)
                 .build();
     }
 
