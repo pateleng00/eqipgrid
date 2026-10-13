@@ -64,6 +64,8 @@ public class CreateAssetRequest {
     @Builder.Default
     private BillingUnit billingUnit = BillingUnit.DAILY;
 
+    private Long billingUnitId;
+
     private BigDecimal workingHoursLimit;
     
     private String shiftTerms;

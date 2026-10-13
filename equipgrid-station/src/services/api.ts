@@ -4,6 +4,10 @@ import {
   AssetMedia,
   AssetStatus,
   BillingUnit,
+  BillingUnitMaster,
+  BILLING_UNIT_OPTIONS,
+  getBillingUnitLabel,
+  getBillingUnitHindiLabel,
   resolveBillingUnitCode,
   resolveBillingUnitInt,
   Booking,
@@ -358,9 +362,13 @@ function mapAsset(a: any): Asset {
     engineHours: Number(a.engineHours || 0),
     accessoriesIncluded: a.accessoriesIncluded || '',
     mediaItems: media,
-    billingUnit: resolveBillingUnitCode(a.billingUnit),
+    billingUnit: resolveBillingUnitCode(a.billingUnitMaster?.code || a.billingUnit),
+    billingUnitId: a.billingUnitMaster?.id || (typeof a.billingUnit === 'number' ? a.billingUnit : undefined),
+    billingUnitMaster: a.billingUnitMaster,
+    unitLabel: a.billingUnitMaster?.unitLabel || a.unitLabel || getBillingUnitLabel(a.billingUnit),
+    hindiUnitLabel: a.billingUnitMaster?.hindiUnitLabel || a.hindiUnitLabel || getBillingUnitHindiLabel(a.billingUnit),
     workingHoursLimit: a.workingHoursLimit ? Number(a.workingHoursLimit) : undefined,
-    shiftTerms: a.shiftTerms,
+    shiftTerms: a.shiftTerms || a.billingUnitMaster?.defaultShiftTerms,
   };
 }
 
@@ -382,9 +390,13 @@ function mapRentalConfig(rc: any): RentalConfiguration {
     ratePerKmAfterFree: Number(rc.ratePerKmAfterFree || 10.0),
     active: Boolean(rc.active ?? true),
     notes: rc.notes,
-    billingUnit: resolveBillingUnitCode(rc.billingUnit),
+    billingUnit: resolveBillingUnitCode(rc.billingUnitMaster?.code || rc.billingUnit),
+    billingUnitId: rc.billingUnitMaster?.id || (typeof rc.billingUnit === 'number' ? rc.billingUnit : undefined),
+    billingUnitMaster: rc.billingUnitMaster,
+    unitLabel: rc.billingUnitMaster?.unitLabel || getBillingUnitLabel(rc.billingUnit),
+    hindiUnitLabel: rc.billingUnitMaster?.hindiUnitLabel || getBillingUnitHindiLabel(rc.billingUnit),
     workingHoursLimit: rc.workingHoursLimit ? Number(rc.workingHoursLimit) : undefined,
-    shiftTerms: rc.shiftTerms,
+    shiftTerms: rc.shiftTerms || rc.billingUnitMaster?.defaultShiftTerms,
   };
 }
 
@@ -501,6 +513,40 @@ export class ApiStore {
     return this._models;
   }
   set models(v) { this._models = v; }
+
+  private _billingUnits: BillingUnitMaster[] = [];
+  private _billingUnitsLoading = false;
+  get billingUnits(): BillingUnitMaster[] {
+    if (this._billingUnits.length === 0 && !this._billingUnitsLoading) {
+      this._billingUnitsLoading = true;
+      request<any[]>('/masters/billing-units').then(res => {
+        if (Array.isArray(res) && res.length > 0) {
+          this._billingUnits = res.map((u: any) => ({
+            id: Number(u.id),
+            code: String(u.code),
+            name: String(u.name),
+            hindiName: u.hindiName || undefined,
+            unitLabel: String(u.unitLabel || u.name),
+            hindiUnitLabel: u.hindiUnitLabel || undefined,
+            unitLabelLong: u.unitLabelLong || undefined,
+            defaultShiftTerms: u.defaultShiftTerms || undefined,
+            description: u.description || undefined,
+            active: Boolean(u.active ?? true),
+            displayOrder: Number(u.displayOrder || u.id),
+          }));
+        } else {
+          this._billingUnits = [...BILLING_UNIT_OPTIONS];
+        }
+        this.notify();
+      }).catch((err) => {
+        console.warn('Failed to fetch billing units from backend, using defaults:', err);
+        this._billingUnits = [...BILLING_UNIT_OPTIONS];
+        this.notify();
+      });
+    }
+    return this._billingUnits.length > 0 ? this._billingUnits : BILLING_UNIT_OPTIONS;
+  }
+  set billingUnits(v) { this._billingUnits = v; }
 
   private _assets: Asset[] = [];
   private _assetsLoading = false;
@@ -970,6 +1016,10 @@ export class ApiStore {
     return newModel;
   }
 
+  getBillingUnits(): BillingUnitMaster[] {
+    return this.billingUnits.filter((u) => u.active !== false);
+  }
+
   // --- RENTAL CONFIGURATION METHODS ---
   getRentalConfigs(hubId?: number, assetId?: number): RentalConfiguration[] {
     let list = this.rentalConfigs.filter((c) => c.active);
@@ -1003,6 +1053,7 @@ export class ApiStore {
     ratePerKmAfterFree?: number;
     notes?: string;
     billingUnit?: BillingUnit;
+    billingUnitId?: number;
     workingHoursLimit?: number;
     shiftTerms?: string;
   }): RentalConfiguration {
@@ -1028,6 +1079,9 @@ export class ApiStore {
       active: true,
       notes: data.notes,
       billingUnit: resolveBillingUnitCode(data.billingUnit),
+      billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
+      unitLabel: getBillingUnitLabel(data.billingUnit),
+      hindiUnitLabel: getBillingUnitHindiLabel(data.billingUnit),
       workingHoursLimit: data.workingHoursLimit,
       shiftTerms: data.shiftTerms,
     };
@@ -1039,6 +1093,7 @@ export class ApiStore {
       body: JSON.stringify({
         ...data,
         billingUnit: resolveBillingUnitInt(data.billingUnit),
+        billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
       }),
     }).then((raw) => {
       const mapped = mapRentalConfig(raw);
@@ -1071,6 +1126,7 @@ export class ApiStore {
     const payload: any = { ...data };
     if (data.billingUnit !== undefined) {
       payload.billingUnit = resolveBillingUnitInt(data.billingUnit);
+      payload.billingUnitId = (data as any).billingUnitId || resolveBillingUnitInt(data.billingUnit);
     }
 
     request<any>(`/rental-configs/${id}`, {
@@ -1129,6 +1185,7 @@ export class ApiStore {
     assetTag?: string;
     videoUrl?: string;
     billingUnit?: BillingUnit;
+    billingUnitId?: number;
     workingHoursLimit?: number;
     shiftTerms?: string;
   }): Asset {
@@ -1175,6 +1232,9 @@ export class ApiStore {
       conditionNotes: data.conditionNotes || 'Pre-commissioned at yard',
       accessoriesIncluded: data.accessoriesIncluded,
       billingUnit: resolveBillingUnitCode(data.billingUnit),
+      billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
+      unitLabel: getBillingUnitLabel(data.billingUnit),
+      hindiUnitLabel: getBillingUnitHindiLabel(data.billingUnit),
       workingHoursLimit: data.workingHoursLimit,
       shiftTerms: data.shiftTerms,
       mediaItems: buildMachineMedia(
@@ -1208,6 +1268,7 @@ export class ApiStore {
         conditionNotes: data.conditionNotes,
         accessoriesIncluded: data.accessoriesIncluded,
         billingUnit: resolveBillingUnitInt(data.billingUnit),
+        billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
         workingHoursLimit: data.workingHoursLimit,
         shiftTerms: data.shiftTerms,
       }),
@@ -1249,6 +1310,7 @@ export class ApiStore {
     const payload: any = { ...data };
     if (data.billingUnit !== undefined) {
       payload.billingUnit = resolveBillingUnitInt(data.billingUnit);
+      payload.billingUnitId = (data as any).billingUnitId || resolveBillingUnitInt(data.billingUnit);
     }
     if (data.category !== undefined) {
       payload.category = data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1;
@@ -1258,6 +1320,9 @@ export class ApiStore {
       ...existing,
       ...data,
       billingUnit: data.billingUnit !== undefined ? resolveBillingUnitCode(data.billingUnit) : existing.billingUnit,
+      billingUnitId: (data as any).billingUnitId || (data.billingUnit !== undefined ? resolveBillingUnitInt(data.billingUnit) : existing.billingUnitId),
+      unitLabel: data.billingUnit !== undefined ? getBillingUnitLabel(data.billingUnit) : existing.unitLabel,
+      hindiUnitLabel: data.billingUnit !== undefined ? getBillingUnitHindiLabel(data.billingUnit) : existing.hindiUnitLabel,
     };
     const idx = this.assets.findIndex((a) => a.id === id);
     if (idx !== -1) {

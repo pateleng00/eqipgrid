@@ -37,6 +37,7 @@ public class AssetServiceImpl implements IAssetService {
     private final com.equipgrid.master.repository.ManufacturerRepository manufacturerRepository;
     private final com.equipgrid.master.repository.MachineModelRepository machineModelRepository;
     private final com.equipgrid.location.repository.HubRepository hubRepository;
+    private final com.equipgrid.master.repository.BillingUnitMasterRepository billingUnitMasterRepository;
 
     @Override
     public List<Asset> getAllAssets(AssetCategory category, AssetStatus status) {
@@ -102,6 +103,16 @@ public class AssetServiceImpl implements IAssetService {
                 .shiftTerms(request.getShiftTerms())
                 .build();
 
+        if (request.getBillingUnitId() != null) {
+            billingUnitMasterRepository.findById(request.getBillingUnitId()).ifPresent(bu -> {
+                asset.setBillingUnitMaster(bu);
+                asset.setBillingUnit(BillingUnit.fromValue(bu.getCode()));
+                if (asset.getShiftTerms() == null || asset.getShiftTerms().isBlank()) {
+                    asset.setShiftTerms(bu.getDefaultShiftTerms());
+                }
+            });
+        }
+
         Asset saved = assetRepository.save(asset);
         auditService.log("ASSET", saved.getAssetTag(), "CREATE", performedBy != null ? performedBy : "SYSTEM",
                 "Created asset: " + saved.getName());
@@ -149,7 +160,15 @@ public class AssetServiceImpl implements IAssetService {
         if (request.getAccessoriesIncluded() != null) {
             asset.setAccessoriesIncluded(request.getAccessoriesIncluded());
         }
-        if (request.getBillingUnit() != null && request.getBillingUnit() != BillingUnit.NA) {
+        if (request.getBillingUnitId() != null) {
+            billingUnitMasterRepository.findById(request.getBillingUnitId()).ifPresent(bu -> {
+                asset.setBillingUnitMaster(bu);
+                asset.setBillingUnit(BillingUnit.fromValue(bu.getCode()));
+                if (request.getShiftTerms() == null && bu.getDefaultShiftTerms() != null) {
+                    asset.setShiftTerms(bu.getDefaultShiftTerms());
+                }
+            });
+        } else if (request.getBillingUnit() != null && request.getBillingUnit() != BillingUnit.NA) {
             asset.setBillingUnit(request.getBillingUnit());
         }
         if (request.getWorkingHoursLimit() != null) {
@@ -324,6 +343,13 @@ public class AssetServiceImpl implements IAssetService {
                     .billingUnit(effectiveUnit)
                     .workingHoursLimit(rep.getWorkingHoursLimit())
                     .shiftTerms(effectiveShift)
+                    .billingUnitId(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getId() : (effectiveUnit != null ? effectiveUnit.getValue().longValue() : 1L))
+                    .unitLabel(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getUnitLabel() : (effectiveUnit != null ? effectiveUnit.getUnitLabel() : "day"))
+                    .hindiUnitLabel(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getHindiUnitLabel() : "दिन")
+                    .unitLabelLong(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getUnitLabelLong() : (effectiveUnit != null ? effectiveUnit.getUnitLabelLong() : "24-hr day"))
+                    .billingUnitCode(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getCode() : (effectiveUnit != null ? effectiveUnit.getCode() : "DAILY"))
+                    .billingUnitName(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getName() : (effectiveUnit != null ? effectiveUnit.getDisplayName() : "Per Day"))
+                    .billingUnitHindiName(rep.getBillingUnitMaster() != null ? rep.getBillingUnitMaster().getHindiName() : "प्रति दिन")
                     .build());
         }
 

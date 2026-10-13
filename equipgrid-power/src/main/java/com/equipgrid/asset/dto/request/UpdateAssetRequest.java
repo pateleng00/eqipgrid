@@ -36,6 +36,7 @@ public class UpdateAssetRequest {
     private String conditionNotes;
     private String accessoriesIncluded;
     private BillingUnit billingUnit;
+    private Long billingUnitId;
     private BigDecimal workingHoursLimit;
     private String shiftTerms;
 }

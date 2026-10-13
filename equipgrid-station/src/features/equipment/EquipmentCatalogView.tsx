@@ -12,7 +12,7 @@ import { formatINR } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
 import { api } from '../../services/api';
-import { Asset, AssetMedia } from '../../types';
+import { Asset, AssetMedia, getBillingUnitLabel, getBillingUnitShiftTerms } from '../../types';
 import { AddMachineModal } from './AddMachineModal';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { getUrlParam, setUrlParam } from '../../lib/navigationState';
@@ -510,7 +510,7 @@ const MachineCard: React.FC<{
               <div className={`text-xl font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
                 {formatINR(asset.dailyRate)}
                 <span className={`text-xs font-normal ml-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  /{asset.billingUnit === 'HOURLY' ? 'hr' : asset.billingUnit === 'PER_TRIP' ? 'trip' : asset.billingUnit === 'PER_HOLE' ? 'hole' : asset.billingUnit === 'PER_ACRE' ? 'acre' : 'day'}
+                  /{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}
                 </span>
               </div>
               <div className={`text-[11px] mt-0.5 ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400')}`}>
@@ -879,9 +879,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                         <div className="text-slate-500 text-[10px] ml-4">{asset.cityName}</div>
                       </td>
                       <td className="py-3 px-4">
-                        <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{formatINR(asset.dailyRate)}<span className="text-[10px] font-normal text-slate-500">/day</span></div>
-                        <div className={`text-[11px] ${isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}>Dep: {formatINR(asset.depositAmount)}</div>
-                        <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold">Std: 8h/day (+1h buffer) • Extra billed</div>
+                        <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{formatINR(asset.dailyRate)}<span className="text-[10px] font-normal text-slate-500">/{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}</span></div>
+                        <div className={`text-[11px] ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400')}`}>Dep: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}</div>
+                        <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold truncate max-w-[200px]">{asset.shiftTerms || getBillingUnitShiftTerms(asset.billingUnit)}</div>
                       </td>
                       <td className="py-3 px-4"><StatusBadge status={asset.status} size="sm" /></td>
                       <td className="py-3 px-4 text-right">

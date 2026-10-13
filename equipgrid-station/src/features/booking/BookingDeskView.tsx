@@ -53,6 +53,8 @@ import {
   BookingSource,
   EquipmentRecommendationResponse,
   getFarmerFriendlyStatus,
+  getBillingUnitLabel,
+  getBillingUnitShiftTerms,
 } from '../../types';
 import { printBookingConfirmationPdf, printDispatchChallanPdf } from '../../services/voucherPdfService';
 import { getBookingWhatsAppMessage } from '../../services/whatsappCirculation';
@@ -1358,7 +1360,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                   <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">{rec.assetTag}</div>
                                 </div>
                                 <div className="text-right">
-                                  <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/day</div>
+                                  <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/{getBillingUnitLabel((rec as any).billingUnit)}</div>
                                   <div className="text-[10px] text-slate-500 font-semibold">
                                     {rec.depositAmount === 0 ? 'Zero Deposit' : `Deposit ${formatINR(rec.depositAmount)}`}
                                   </div>
@@ -1478,16 +1480,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   ) : availableMachines.length ? (
                     <SearchSelect
                       options={availableMachines.map((a) => {
-                        const unitSuffix =
-                          a.billingUnit === 'HOURLY' ? '/hr' :
-                          a.billingUnit === 'PER_HOLE' ? '/hole' :
-                          a.billingUnit === 'PER_TRIP' ? '/trip' :
-                          a.billingUnit === 'PER_ACRE' ? '/acre' : '/day';
+                        const unitSuffix = `/${a.unitLabel || getBillingUnitLabel(a.billingUnit)}`;
                         const depText = a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
-                        const shiftPolicy =
-                          a.billingUnit === 'HOURLY' ? 'Metered Run-Time' :
-                          a.billingUnit === 'PER_HOLE' ? 'Metered Hole Count' :
-                          'Std: 8h/day (+1h buffer)';
+                        const shiftPolicy = a.shiftTerms || getBillingUnitShiftTerms(a.billingUnit);
                         return {
                           value: a.id,
                           label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { RentalConfiguration, AssetCategory, BILLING_UNIT_OPTIONS, resolveBillingUnitCode, BillingUnitCode } from '../../types';
+import { RentalConfiguration, AssetCategory, resolveBillingUnitCode, BillingUnitCode, getBillingUnitLabel } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { formatINR } from '../../lib/utils';
 import { SkeletonTable } from '../../components/SkeletonTable';
@@ -30,6 +30,7 @@ export const RentalConfigView: React.FC = () => {
   const types = api.getEquipmentTypes();
   const models = api.getMachineModels();
   const assets = api.assets;
+  const billingUnits = api.getBillingUnits();
 
   React.useEffect(() => {
     setConfigs(api.getRentalConfigs());
@@ -205,6 +206,7 @@ export const RentalConfigView: React.FC = () => {
   const handleSaveNew = (e: React.FormEvent) => {
     e.preventDefault();
     const modelObj = formModelId ? models.find((m) => m.id === Number(formModelId)) : undefined;
+    const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
     const added = api.addRentalConfig({
       hubId: Number(formHubId),
       assetId: formAssetId ? Number(formAssetId) : undefined,
@@ -216,6 +218,7 @@ export const RentalConfigView: React.FC = () => {
       ratePerKmAfterFree: parseFloat(formRatePerKm) || 10.0,
       notes: formNotes,
       billingUnit: formBillingUnit || 'DAILY',
+      billingUnitId: matchingUnit?.id,
       workingHoursLimit: formWorkingHours ? parseFloat(formWorkingHours) : undefined,
       shiftTerms: formShiftTerms,
     });
@@ -227,6 +230,7 @@ export const RentalConfigView: React.FC = () => {
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingConfig) return;
+    const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
     const updated = api.updateRentalConfig(editingConfig.id, {
       baseDailyRate: parseFloat(formBaseRate) || editingConfig.baseDailyRate,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
@@ -235,6 +239,7 @@ export const RentalConfigView: React.FC = () => {
       ratePerKmAfterFree: parseFloat(formRatePerKm) || editingConfig.ratePerKmAfterFree,
       notes: formNotes,
       billingUnit: formBillingUnit,
+      billingUnitId: matchingUnit?.id,
       workingHoursLimit: formWorkingHours ? parseFloat(formWorkingHours) : undefined,
       shiftTerms: formShiftTerms,
     });
@@ -431,7 +436,7 @@ export const RentalConfigView: React.FC = () => {
                     <div className={`text-[11px] ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.cityName || 'City'}</div>
                   </td>
                   <td className={`py-2.5 px-3 font-mono font-black whitespace-nowrap ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-                    {formatINR(c.baseDailyRate)}/day
+                    {formatINR(c.baseDailyRate)}/{c.unitLabel || getBillingUnitLabel(c.billingUnit)}
                   </td>
                   <td className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`}>
                     {formatINR(c.depositAmount)}
@@ -649,19 +654,19 @@ export const RentalConfigView: React.FC = () => {
                 <div>
                   <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
                   <SearchSelect
-                    options={BILLING_UNIT_OPTIONS.map((opt) => ({
+                    options={billingUnits.map((opt) => ({
                       value: opt.code,
-                      label: opt.label,
+                      label: `${opt.name}${opt.hindiName ? ` (${opt.hindiName})` : ''}`,
                       subLabel: opt.defaultShiftTerms,
-                      badge: opt.unitLabel.toUpperCase(),
+                      badge: (opt.unitLabel || opt.code).toUpperCase(),
                     }))}
                     value={formBillingUnit}
                     onChange={(val) => {
                       if (!val) return;
                       const selectedCode = resolveBillingUnitCode(val);
-                      const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === selectedCode);
+                      const opt = billingUnits.find((o) => o.code === selectedCode);
                       setFormBillingUnit(selectedCode);
-                      if (opt) {
+                      if (opt?.defaultShiftTerms) {
                         setFormShiftTerms(opt.defaultShiftTerms);
                       }
                     }}
@@ -672,7 +677,7 @@ export const RentalConfigView: React.FC = () => {
 
                 <div>
                   <label className="block text-xs font-bold mb-1">
-                    Base Rate (₹ / {formBillingUnit.toLowerCase().replace('per_', '')}) *
+                    Base Rate (₹ / {getBillingUnitLabel(formBillingUnit)}) *
                   </label>
                   <input
                     type="number"

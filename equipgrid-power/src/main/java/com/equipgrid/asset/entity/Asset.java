@@ -90,6 +90,10 @@ public class Asset extends BaseEntity {
     @Column(name = "billing_unit")
     private BillingUnit billingUnit = BillingUnit.DAILY;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "billing_unit_id")
+    private com.equipgrid.master.entity.BillingUnitMaster billingUnitMaster;
+
     @Column(name = "working_hours_limit", precision = 6, scale = 2)
     private BigDecimal workingHoursLimit;
 

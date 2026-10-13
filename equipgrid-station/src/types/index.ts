@@ -1,22 +1,55 @@
 export type AssetCategory = 'CONSTRUCTION' | 'AGRICULTURE' | 'MULTIPURPOSE_FLEET';
 
+export interface BillingUnitMaster {
+  id: number;
+  code: string;
+  name: string;
+  hindiName: string;
+  unitLabel: string;
+  hindiUnitLabel: string;
+  unitLabelLong?: string;
+  hindiUnitLabelLong?: string;
+  description?: string;
+  hindiDescription?: string;
+  defaultShiftTerms?: string;
+  hindiDefaultShiftTerms?: string;
+  displayOrder?: number;
+  active: boolean;
+}
+
 export enum BillingUnitEnum {
-  NA = 0,
   DAILY = 1,
   HOURLY = 2,
   PER_TRIP = 3,
   PER_HOLE = 4,
   PER_ACRE = 5,
+  PER_KM = 6,
+  PER_SHIFT = 7,
+  PER_TON = 8,
+  MONTHLY = 9,
 }
 
-export type BillingUnitCode = 'DAILY' | 'HOURLY' | 'PER_TRIP' | 'PER_HOLE' | 'PER_ACRE';
+export type BillingUnitCode =
+  | 'DAILY'
+  | 'HOURLY'
+  | 'PER_TRIP'
+  | 'PER_HOLE'
+  | 'PER_ACRE'
+  | 'PER_KM'
+  | 'PER_SHIFT'
+  | 'PER_TON'
+  | 'MONTHLY'
+  | (string & {});
+
 export type BillingUnit = BillingUnitEnum | BillingUnitCode;
 
 export interface BillingUnitOption {
-  value: BillingUnitEnum;
+  value: BillingUnitEnum | number;
   code: BillingUnitCode;
   label: string;
+  hindiName?: string;
   unitLabel: string;
+  hindiUnitLabel?: string;
   unitLabelLong: string;
   defaultShiftTerms: string;
 }
@@ -26,7 +59,9 @@ export const BILLING_UNIT_OPTIONS: BillingUnitOption[] = [
     value: BillingUnitEnum.DAILY,
     code: 'DAILY',
     label: 'Per Day (Daily Shift / 24-hr)',
+    hindiName: 'प्रति दिन (24 घंटे की शिफ्ट)',
     unitLabel: 'day',
+    hindiUnitLabel: 'दिन',
     unitLabelLong: '24-hr day',
     defaultShiftTerms: 'Full 24-hr day site deployment • Flexible field usage',
   },
@@ -34,15 +69,19 @@ export const BILLING_UNIT_OPTIONS: BillingUnitOption[] = [
     value: BillingUnitEnum.HOURLY,
     code: 'HOURLY',
     label: 'Per Hour (Metered Run Time)',
+    hindiName: 'प्रति घंटा (मीटर समय अनुसार)',
     unitLabel: 'hr',
-    unitLabelLong: 'hour',
+    hindiUnitLabel: 'घंटा',
+    unitLabelLong: 'metered hour',
     defaultShiftTerms: 'Hourly metered operation • Pay for actual run time',
   },
   {
     value: BillingUnitEnum.PER_TRIP,
     code: 'PER_TRIP',
     label: 'Per Trip (Transportation / Haulage)',
+    hindiName: 'प्रति चक्कर (परिवहन / ढुलाई)',
     unitLabel: 'trip',
+    hindiUnitLabel: 'ट्रिप',
     unitLabelLong: 'transport trip',
     defaultShiftTerms: 'Per transport trip • No daily shift restriction',
   },
@@ -50,7 +89,9 @@ export const BILLING_UNIT_OPTIONS: BillingUnitOption[] = [
     value: BillingUnitEnum.PER_HOLE,
     code: 'PER_HOLE',
     label: 'Per Hole (Earth Auger / Drilling)',
+    hindiName: 'प्रति गड्ढा (बरमा / पोल ड्रिलिंग)',
     unitLabel: 'hole',
+    hindiUnitLabel: 'गड्ढा',
     unitLabelLong: 'hole drilled',
     defaultShiftTerms: 'Per hole drilled • Includes 6" & 8" bits • Zero time boundation',
   },
@@ -58,26 +99,105 @@ export const BILLING_UNIT_OPTIONS: BillingUnitOption[] = [
     value: BillingUnitEnum.PER_ACRE,
     code: 'PER_ACRE',
     label: 'Per Acre (Field Operation / Harvesting)',
+    hindiName: 'प्रति एकड़ (खेत जुताई / कटाई)',
     unitLabel: 'acre',
+    hindiUnitLabel: 'एकड़',
     unitLabelLong: 'acre worked',
     defaultShiftTerms: 'Per acre worked • Rate based on land area covered',
+  },
+  {
+    value: BillingUnitEnum.PER_KM,
+    code: 'PER_KM',
+    label: 'Per Kilometer (Distance / Towing)',
+    hindiName: 'प्रति किलोमीटर (दूरी अनुसार)',
+    unitLabel: 'km',
+    hindiUnitLabel: 'किमी',
+    unitLabelLong: 'kilometer traveled',
+    defaultShiftTerms: 'Per kilometer traveled • Mileage-based logistics billing',
+  },
+  {
+    value: BillingUnitEnum.PER_SHIFT,
+    code: 'PER_SHIFT',
+    label: 'Per Shift (8-Hour Working Shift)',
+    hindiName: 'प्रति शिफ्ट (8 घंटे का कार्य)',
+    unitLabel: 'shift',
+    hindiUnitLabel: 'शिफ्ट',
+    unitLabelLong: '8-hr shift',
+    defaultShiftTerms: 'Standard 8-hour work shift • Operator allowance included',
+  },
+  {
+    value: BillingUnitEnum.PER_TON,
+    code: 'PER_TON',
+    label: 'Per Ton (Bulk Material Haulage)',
+    hindiName: 'प्रति टन (थोक सामग्री वजन)',
+    unitLabel: 'ton',
+    hindiUnitLabel: 'टन',
+    unitLabelLong: 'metric ton',
+    defaultShiftTerms: 'Per metric ton payload weighed at certified weighbridge',
+  },
+  {
+    value: BillingUnitEnum.MONTHLY,
+    code: 'MONTHLY',
+    label: 'Per Month (Long-Term Site Lease)',
+    hindiName: 'प्रति माह (दीर्घकालिक साइट पट्टा)',
+    unitLabel: 'mo',
+    hindiUnitLabel: 'माह',
+    unitLabelLong: 'calendar month',
+    defaultShiftTerms: 'Monthly lease contract • Dedicated on-site maintenance support',
   },
 ];
 
 export function resolveBillingUnitCode(val: BillingUnit | number | string | undefined | null): BillingUnitCode {
-  if (val === BillingUnitEnum.HOURLY || val === 2 || val === '2' || val === 'HOURLY') return 'HOURLY';
-  if (val === BillingUnitEnum.PER_TRIP || val === 3 || val === '3' || val === 'PER_TRIP') return 'PER_TRIP';
-  if (val === BillingUnitEnum.PER_HOLE || val === 4 || val === '4' || val === 'PER_HOLE') return 'PER_HOLE';
-  if (val === BillingUnitEnum.PER_ACRE || val === 5 || val === '5' || val === 'PER_ACRE') return 'PER_ACRE';
+  if (!val) return 'DAILY';
+  const str = String(val).trim().toUpperCase();
+  if (val === BillingUnitEnum.HOURLY || str === '2' || str === 'HOURLY') return 'HOURLY';
+  if (val === BillingUnitEnum.PER_TRIP || str === '3' || str === 'PER_TRIP') return 'PER_TRIP';
+  if (val === BillingUnitEnum.PER_HOLE || str === '4' || str === 'PER_HOLE') return 'PER_HOLE';
+  if (val === BillingUnitEnum.PER_ACRE || str === '5' || str === 'PER_ACRE') return 'PER_ACRE';
+  if (val === BillingUnitEnum.PER_KM || str === '6' || str === 'PER_KM') return 'PER_KM';
+  if (val === BillingUnitEnum.PER_SHIFT || str === '7' || str === 'PER_SHIFT') return 'PER_SHIFT';
+  if (val === BillingUnitEnum.PER_TON || str === '8' || str === 'PER_TON') return 'PER_TON';
+  if (val === BillingUnitEnum.MONTHLY || str === '9' || str === 'MONTHLY') return 'MONTHLY';
   return 'DAILY';
 }
 
 export function resolveBillingUnitInt(val: BillingUnit | number | string | undefined | null): BillingUnitEnum {
-  if (val === BillingUnitEnum.HOURLY || val === 2 || val === '2' || val === 'HOURLY') return BillingUnitEnum.HOURLY;
-  if (val === BillingUnitEnum.PER_TRIP || val === 3 || val === '3' || val === 'PER_TRIP') return BillingUnitEnum.PER_TRIP;
-  if (val === BillingUnitEnum.PER_HOLE || val === 4 || val === '4' || val === 'PER_HOLE') return BillingUnitEnum.PER_HOLE;
-  if (val === BillingUnitEnum.PER_ACRE || val === 5 || val === '5' || val === 'PER_ACRE') return BillingUnitEnum.PER_ACRE;
-  return BillingUnitEnum.DAILY;
+  const code = resolveBillingUnitCode(val);
+  switch (code) {
+    case 'HOURLY': return BillingUnitEnum.HOURLY;
+    case 'PER_TRIP': return BillingUnitEnum.PER_TRIP;
+    case 'PER_HOLE': return BillingUnitEnum.PER_HOLE;
+    case 'PER_ACRE': return BillingUnitEnum.PER_ACRE;
+    case 'PER_KM': return BillingUnitEnum.PER_KM;
+    case 'PER_SHIFT': return BillingUnitEnum.PER_SHIFT;
+    case 'PER_TON': return BillingUnitEnum.PER_TON;
+    case 'MONTHLY': return BillingUnitEnum.MONTHLY;
+    default: return BillingUnitEnum.DAILY;
+  }
+}
+
+export function getBillingUnitLabel(val: BillingUnit | number | string | undefined | null): string {
+  const code = resolveBillingUnitCode(val);
+  const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === code);
+  return opt ? opt.unitLabel : 'day';
+}
+
+export function getBillingUnitHindiLabel(val: BillingUnit | number | string | undefined | null): string {
+  const code = resolveBillingUnitCode(val);
+  const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === code);
+  return opt?.hindiUnitLabel || 'दिन';
+}
+
+export function getBillingUnitShiftTerms(val: BillingUnit | number | string | undefined | null): string {
+  const code = resolveBillingUnitCode(val);
+  const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === code);
+  return opt ? opt.defaultShiftTerms : 'Full 24-hr day site deployment • Flexible field usage';
+}
+
+export function getBillingUnitDisplayName(val: BillingUnit | number | string | undefined | null): string {
+  const code = resolveBillingUnitCode(val);
+  const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === code);
+  return opt ? opt.label : 'Per Day (Daily Shift / 24-hr)';
 }
 
 export type AssetStatus =
@@ -172,6 +292,10 @@ export interface RentalConfiguration {
   active: boolean;
   notes?: string;
   billingUnit?: BillingUnit;
+  billingUnitId?: number;
+  billingUnitMaster?: BillingUnitMaster;
+  unitLabel?: string;
+  hindiUnitLabel?: string;
   workingHoursLimit?: number;
   shiftTerms?: string;
 }
@@ -206,6 +330,10 @@ export interface Asset {
   stateName?: string;
   mediaItems?: AssetMedia[]; // gallery images + video
   billingUnit?: BillingUnit;
+  billingUnitId?: number;
+  billingUnitMaster?: BillingUnitMaster;
+  unitLabel?: string;
+  hindiUnitLabel?: string;
   workingHoursLimit?: number;
   shiftTerms?: string;
 }

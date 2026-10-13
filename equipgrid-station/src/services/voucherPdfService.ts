@@ -6,7 +6,7 @@
  * 3. Return Inspection & Security Deposit Settlement Receipt (Form F-004)
  */
 
-import { Booking, DispatchRecord, ReturnInspection, getFarmerFriendlyStatus, FarmLocation } from '../types';
+import { Booking, DispatchRecord, ReturnInspection, getFarmerFriendlyStatus, FarmLocation, getBillingUnitDisplayName, getBillingUnitShiftTerms, resolveBillingUnitCode } from '../types';
 
 export interface BookingVoucherData {
   booking: Booking;
@@ -84,19 +84,29 @@ function getBookingSourceMeta(source?: string): { en: string; hi: string } {
 }
 
 function getDynamicBookingTerms(booking: Booking): string {
-  const billingUnit = booking.asset?.billingUnit;
+  const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
   const isFreeDelivery = Number(booking.distanceKm || 0) <= 5 || Number(booking.deliveryFee || 0) === 0;
 
-  let shiftPolicy = '1. <strong>Standard Shift Policy (दैनिक कार्य समय):</strong> Machine rental duration is standard 8:00 hours (+ 1:00 hour complimentary grace buffer allowed at no extra cost). Beyond 9:00 hours total running time, pro-rata hourly rates apply.';
-  if (billingUnit === 'HOURLY') {
+  let shiftPolicy = `1. <strong>${escapeHtml(getBillingUnitDisplayName(billingUnitCode))} Policy:</strong> ${escapeHtml(booking.asset?.shiftTerms || getBillingUnitShiftTerms(billingUnitCode))}`;
+  if (billingUnitCode === 'DAILY') {
+    shiftPolicy = '1. <strong>Standard Shift Policy (दैनिक कार्य समय):</strong> Machine rental duration is standard 8:00 hours (+ 1:00 hour complimentary grace buffer allowed at no extra cost). Beyond 9:00 hours total running time, pro-rata hourly rates apply.';
+  } else if (billingUnitCode === 'HOURLY') {
     shiftPolicy = '1. <strong>Metered Run-Time Policy (प्रति घंटा मीटर दर):</strong> Billed strictly on actual engine/machine operating run hours. Pay only for actual runtime with zero daily minimum boundation.';
-  } else if (billingUnit === 'PER_HOLE') {
+  } else if (billingUnitCode === 'PER_HOLE') {
     shiftPolicy = '1. <strong>Per Hole Drilling Policy (प्रति गड्ढा दर):</strong> Billed per actual hole drilled on site with standard bits. Zero shift or time restriction applies.';
-  } else if (billingUnit === 'PER_TRIP') {
+  } else if (billingUnitCode === 'PER_TRIP') {
     shiftPolicy = '1. <strong>Per Trip Haulage Policy (प्रति चक्कर दर):</strong> Billed per completed transportation trip between designated dispatch yard and farm site.';
-  } else if (billingUnit === 'PER_ACRE') {
+  } else if (billingUnitCode === 'PER_ACRE') {
     shiftPolicy = '1. <strong>Per Acre Field Policy (प्रति एकड़ दर):</strong> Billed per actual worked acreage as verified on GPS field perimeter.';
+  } else if (billingUnitCode === 'PER_KM') {
+    shiftPolicy = '1. <strong>Per Kilometer Transit Policy (प्रति किलोमीटर दर):</strong> Billed per actual transit haulage distance recorded on vehicle odometer.';
+  } else if (billingUnitCode === 'PER_SHIFT') {
+    shiftPolicy = '1. <strong>Per Shift Work Policy (प्रति शिफ्ट दर):</strong> Billed per standard 8-hour operator shift window.';
+  } else if (billingUnitCode === 'PER_TON') {
+    shiftPolicy = '1. <strong>Per Ton Material Handling Policy (प्रति टन दर):</strong> Billed per actual weighed tonnage loaded/handled.';
+  } else if (billingUnitCode === 'MONTHLY') {
+    shiftPolicy = '1. <strong>Monthly Lease Policy (मासिक पट्टा दर):</strong> Billed on 30-day scheduled rental cycles with dedicated maintenance coverage.';
   }
 
   const shiftTermsLine = booking.asset?.shiftTerms 
@@ -124,21 +134,33 @@ function getDynamicBookingTerms(booking: Booking): string {
 }
 
 function getDynamicDispatchPolicy(booking: Booking): string {
-  const billingUnit = booking.asset?.billingUnit;
+  const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
 
-  if (billingUnit === 'HOURLY') {
+  if (billingUnitCode === 'HOURLY') {
     return `<strong>⚠️ Metered Hourly Run-Time Policy (प्रति घंटा मीटर नियम):</strong><br>
       This machine is billed per actual engine meter run hours. Operator/driver and customer verify outgoing meter reading (${booking.asset.engineHours || 0} hrs). Operating time is calculated strictly from on-site start to return check-in. ${isZeroDeposit ? 'Zero deposit held.' : 'Refueling deltas adjusted upon return.'}`;
-  } else if (billingUnit === 'PER_HOLE') {
+  } else if (billingUnitCode === 'PER_HOLE') {
     return `<strong>⚠️ Per Hole Drilling Policy (प्रति गड्ढा ड्रिलिंग नियम):</strong><br>
       Billed per actual hole drilled on site. Includes verified auger bits. Zero shift or time restriction applies. Customer acceptance signature confirms operational readiness.`;
-  } else if (billingUnit === 'PER_TRIP') {
+  } else if (billingUnitCode === 'PER_TRIP') {
     return `<strong>⚠️ Per Trip Haulage Policy (परिवहन चक्कर नियम):</strong><br>
       Billed per completed transportation trip. Driver verifies safe delivery unloading at designated farm edge.`;
-  } else if (billingUnit === 'PER_ACRE') {
+  } else if (billingUnitCode === 'PER_ACRE') {
     return `<strong>⚠️ Per Acre Agricultural Operation Policy (प्रति एकड़ खेत नियम):</strong><br>
       Billed per actual field acreage worked. Field handover verified upon arrival.`;
+  } else if (billingUnitCode === 'PER_KM') {
+    return `<strong>⚠️ Per Kilometer Transit Policy (प्रति किमी परिवहन नियम):</strong><br>
+      Billed per actual odometer distance traveled. Starting odometer verified at hub departure.`;
+  } else if (billingUnitCode === 'PER_SHIFT') {
+    return `<strong>⚠️ Dedicated Shift Policy (प्रति शिफ्ट नियम):</strong><br>
+      Billed per 8-hour working shift window with certified operator. Overtime pro-rated.`;
+  } else if (billingUnitCode === 'PER_TON') {
+    return `<strong>⚠️ Payload Tonnage Policy (प्रति टन वजन नियम):</strong><br>
+      Billed per actual tonnage loaded/moved with verified weighbridge slips.`;
+  } else if (billingUnitCode === 'MONTHLY') {
+    return `<strong>⚠️ Monthly Lease Contract Policy (मासिक अनुबंध नियम):</strong><br>
+      Dedicated deployment under long-term contract with periodic hub maintenance checkups.`;
   } else {
     return `<strong>⚠️ Shift Hours & Overtime Policy (कार्य समय व शिफ्ट नियम):</strong><br>
       Standard operational duty is 8:00 hours once handed over to farmer at field (+ 1:00 hour buffer allowed without extra charge). Working beyond 9:00 hours is levied at pro-rata hourly rates. ${isZeroDeposit ? 'Zero deposit held under farmer welfare scheme.' : 'Adjusted from escrow deposit upon return.'} Customer acceptance signature confirms agreement to these terms.`;
@@ -147,11 +169,19 @@ function getDynamicDispatchPolicy(booking: Booking): string {
 
 function getDynamicSettlementSummary(booking: Booking): string {
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
-  const billingUnit = booking.asset?.billingUnit;
-  const shiftText = billingUnit === 'HOURLY'
+  const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
+  const shiftText = billingUnitCode === 'HOURLY'
     ? 'Actual operating metered run hours were audited with no daily shift boundation.'
-    : billingUnit === 'PER_HOLE'
+    : billingUnitCode === 'PER_HOLE'
     ? 'Total drilled hole count was verified with zero time restriction.'
+    : billingUnitCode === 'PER_TRIP'
+    ? 'Total haulage transport trips were verified.'
+    : billingUnitCode === 'PER_ACRE'
+    ? 'Total acreage field coverage was verified.'
+    : billingUnitCode === 'PER_KM'
+    ? 'Total transit odometer distance was verified.'
+    : billingUnitCode === 'PER_TON'
+    ? 'Total material payload tonnage was audited.'
     : 'Standard 8-hr duty shift (+ 1 hr complimentary grace buffer) was audited.';
 
   const depositText = isZeroDeposit
@@ -442,19 +472,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
   const isFreeDelivery = Number(booking.distanceKm || 0) <= 5 || Number(booking.deliveryFee || 0) === 0;
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
 
-  const billingUnitText = booking.asset?.billingUnit
-    ? (booking.asset.billingUnit === 'DAILY'
-        ? 'Daily Shift (24-hr)'
-        : booking.asset.billingUnit === 'HOURLY'
-        ? 'Hourly Metered'
-        : booking.asset.billingUnit === 'PER_HOLE'
-        ? 'Per Hole Drilled'
-        : booking.asset.billingUnit === 'PER_TRIP'
-        ? 'Per Transport Trip'
-        : booking.asset.billingUnit === 'PER_ACRE'
-        ? 'Per Acre Worked'
-        : String(booking.asset.billingUnit))
-    : 'Daily Shift (24-hr)';
+  const billingUnitText = getBillingUnitDisplayName(booking.asset?.billingUnit || 'DAILY');
 
   const bodyHtml = `
     <div class="header">

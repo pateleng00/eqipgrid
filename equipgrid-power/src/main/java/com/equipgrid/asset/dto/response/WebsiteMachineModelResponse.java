@@ -44,4 +44,11 @@ public class WebsiteMachineModelResponse {
     private BillingUnit billingUnit;
     private BigDecimal workingHoursLimit;
     private String shiftTerms;
+    private Long billingUnitId;
+    private String unitLabel;
+    private String hindiUnitLabel;
+    private String unitLabelLong;
+    private String billingUnitCode;
+    private String billingUnitName;
+    private String billingUnitHindiName;
 }

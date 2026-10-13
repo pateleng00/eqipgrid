@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { Asset, AssetCategory, BillingUnitCode, BILLING_UNIT_OPTIONS } from '../../types';
+import { Asset, AssetCategory, BillingUnitCode, BillingUnitMaster } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 
 interface AddMachineModalProps {
@@ -38,6 +38,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   const hubs = api.getHubs();
   const types = api.getEquipmentTypes();
   const manufacturers = api.getManufacturers();
+  const billingUnits = api.getBillingUnits();
 
   // Step state: 1 = Details & Territory, 2 = Media & Operations
   const [step, setStep] = useState<1 | 2>(1);
@@ -217,6 +218,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
     try {
       const selectedModel = api.models.find((m) => m.id === Number(selectedModelId));
+      const matchingBillingUnit = billingUnits.find((u) => u.code === selectedBillingUnit);
       const newAsset = api.addAsset({
         name: machineName.trim() || selectedModel?.name || 'New Machine',
         assetTag: assetTag.trim() || undefined,
@@ -232,6 +234,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
         conditionNotes: conditionNotes.trim() || undefined,
         accessoriesIncluded: accessoriesIncluded.trim() || undefined,
         billingUnit: selectedBillingUnit,
+        billingUnitId: matchingBillingUnit?.id,
         workingHoursLimit: workingHoursLimit ? parseFloat(workingHoursLimit) : undefined,
         shiftTerms: shiftTerms.trim() || undefined,
       });
@@ -465,19 +468,19 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               <div>
                 <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
                 <SearchSelect
-                  options={BILLING_UNIT_OPTIONS.map((opt) => ({
+                  options={billingUnits.map((opt) => ({
                     value: opt.code,
-                    label: opt.label,
+                    label: `${opt.name}${opt.hindiName ? ` (${opt.hindiName})` : ''}`,
                     subLabel: opt.defaultShiftTerms,
-                    badge: opt.unitLabel.toUpperCase(),
+                    badge: (opt.unitLabel || opt.code).toUpperCase(),
                   }))}
                   value={selectedBillingUnit}
                   onChange={(val) => {
                     if (!val) return;
                     const nextUnit = val as BillingUnitCode;
                     setSelectedBillingUnit(nextUnit);
-                    const opt = BILLING_UNIT_OPTIONS.find((o) => o.code === nextUnit);
-                    if (opt) setShiftTerms(opt.defaultShiftTerms);
+                    const opt = billingUnits.find((o) => o.code === nextUnit);
+                    if (opt?.defaultShiftTerms) setShiftTerms(opt.defaultShiftTerms);
                   }}
                   isClearable={false}
                   placeholder="Select Billing Unit..."

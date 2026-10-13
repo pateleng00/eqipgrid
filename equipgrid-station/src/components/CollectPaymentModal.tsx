@@ -18,7 +18,7 @@ import {
 import { cn, formatINR } from '../lib/utils';
 import { useTheme } from '../lib/ThemeContext';
 import { api } from '../services/api';
-import { Booking, PaymentMode } from '../types';
+import { Booking, PaymentMode, getBillingUnitDisplayName } from '../types';
 import { printBookingConfirmationPdf } from '../services/voucherPdfService';
 import { getBookingWhatsAppMessage, openWhatsAppCirculation } from '../services/whatsappCirculation';
 
@@ -165,7 +165,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <span className="font-bold">{successBooking.asset.name} ({successBooking.asset.assetTag})</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Advance Rent Paid ({successBooking.billingUnit || successBooking.asset?.billingUnit || 'DAILY'}):</span>
+              <span className="text-slate-500">Advance Rent Paid ({getBillingUnitDisplayName(successBooking.billingUnit || successBooking.asset?.billingUnit)}):</span>
               <span className="font-bold font-mono">{formatINR(successBooking.advancePaid)}</span>
             </div>
             <div className="flex justify-between">
@@ -340,7 +340,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="font-mono text-[11px] text-amber-600 font-bold">{booking.asset.assetTag}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                  {booking.billingUnit || booking.asset?.billingUnit || 'DAILY'}
+                  {getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit)}
                 </span>
               </div>
             </div>
@@ -370,7 +370,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <div className="px-4 py-2.5 flex items-center justify-between">
                 <div>
                   <span className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
-                    1. Advance Rental ({booking.billingUnit || booking.asset?.billingUnit || 'DAILY'})
+                    1. Advance Rental ({getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit)})
                   </span>
                   <div className={cn('text-[10px]', isDaylight ? 'text-slate-600 font-medium' : 'text-slate-500')}>Paid: {formatINR(advancePaid)}</div>
                 </div>

@@ -1,6 +1,7 @@
 package com.equipgrid.rentalconfig.controller;
 
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.common.dto.rest.MessageApiResponse;
@@ -27,6 +28,7 @@ public class RentalConfigController {
     private final HubRepository hubRepository;
     private final AssetRepository assetRepository;
     private final EquipmentTypeRepository equipmentTypeRepository;
+    private final com.equipgrid.master.repository.BillingUnitMasterRepository billingUnitMasterRepository;
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<RentalConfiguration>>> getRentalConfigs(
@@ -63,12 +65,22 @@ public class RentalConfigController {
                 .operatorDailyRate(request.operatorDailyRate() != null ? request.operatorDailyRate() : new BigDecimal("500.00"))
                 .freeDeliveryDistanceKm(request.freeDeliveryDistanceKm() != null ? request.freeDeliveryDistanceKm() : new BigDecimal("5.00"))
                 .ratePerKmAfterFree(request.ratePerKmAfterFree() != null ? request.ratePerKmAfterFree() : new BigDecimal("10.00"))
-                .billingUnit(request.billingUnit() != null && request.billingUnit() != com.equipgrid.asset.enums.BillingUnit.NA ? request.billingUnit() : com.equipgrid.asset.enums.BillingUnit.DAILY)
+                .billingUnit(request.billingUnit() != null && request.billingUnit() != null ? request.billingUnit() : BillingUnit.DAILY)
                 .workingHoursLimit(request.workingHoursLimit())
                 .shiftTerms(request.shiftTerms())
                 .notes(request.notes())
                 .active(true)
                 .build();
+
+        if (request.billingUnitId() != null) {
+            billingUnitMasterRepository.findById(request.billingUnitId()).ifPresent(bu -> {
+                config.setBillingUnitMaster(bu);
+                config.setBillingUnit(com.equipgrid.asset.enums.BillingUnit.fromValue(bu.getCode()));
+                if (config.getShiftTerms() == null || config.getShiftTerms().isBlank()) {
+                    config.setShiftTerms(bu.getDefaultShiftTerms());
+                }
+            });
+        }
 
         RentalConfiguration saved = rentalConfigurationRepository.save(config);
         return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Rental configuration created"), saved, null));
@@ -87,8 +99,17 @@ public class RentalConfigController {
         if (request.freeDeliveryDistanceKm() != null)
             config.setFreeDeliveryDistanceKm(request.freeDeliveryDistanceKm());
         if (request.ratePerKmAfterFree() != null) config.setRatePerKmAfterFree(request.ratePerKmAfterFree());
-        if (request.billingUnit() != null && request.billingUnit() != com.equipgrid.asset.enums.BillingUnit.NA)
+        if (request.billingUnitId() != null) {
+            billingUnitMasterRepository.findById(request.billingUnitId()).ifPresent(bu -> {
+                config.setBillingUnitMaster(bu);
+                config.setBillingUnit(com.equipgrid.asset.enums.BillingUnit.fromValue(bu.getCode()));
+                if (request.shiftTerms() == null && bu.getDefaultShiftTerms() != null) {
+                    config.setShiftTerms(bu.getDefaultShiftTerms());
+                }
+            });
+        } else if (request.billingUnit() != null && request.billingUnit() != BillingUnit.NA) {
             config.setBillingUnit(request.billingUnit());
+        }
         if (request.workingHoursLimit() != null) config.setWorkingHoursLimit(request.workingHoursLimit());
         if (request.shiftTerms() != null) config.setShiftTerms(request.shiftTerms());
         if (request.notes() != null) config.setNotes(request.notes());
@@ -98,7 +119,7 @@ public class RentalConfigController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse<Void>> removeRentalConfig(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse<Void>> deleteRentalConfig(@PathVariable Long id) {
         RentalConfiguration config = rentalConfigurationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Rental configuration not found: " + id));
         config.setActive(false);
@@ -116,6 +137,7 @@ public class RentalConfigController {
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
             com.equipgrid.asset.enums.BillingUnit billingUnit,
+            Long billingUnitId,
             BigDecimal workingHoursLimit,
             String shiftTerms,
             String notes
@@ -129,6 +151,7 @@ public class RentalConfigController {
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
             com.equipgrid.asset.enums.BillingUnit billingUnit,
+            Long billingUnitId,
             BigDecimal workingHoursLimit,
             String shiftTerms,
             String notes
