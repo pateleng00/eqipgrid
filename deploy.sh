@@ -46,8 +46,9 @@ sync_production_config() {
         exit 1
     fi
 
-    # Restrict file permissions for security
-    chmod 600 "$CONFIG_DIR/application-prod.properties" 2>/dev/null || true
+    # Ensure directory is traversable and file is readable by Docker non-root container user
+    chmod 755 "$CONFIG_DIR" 2>/dev/null || true
+    chmod 644 "$CONFIG_DIR/application-prod.properties" 2>/dev/null || true
     echo "✅ Production configuration is secured and ready at $CONFIG_DIR."
 }
 
