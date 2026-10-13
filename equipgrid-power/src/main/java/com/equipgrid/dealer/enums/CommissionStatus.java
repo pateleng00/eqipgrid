@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum CommissionStatus {
-    NA((short) 0),
     PENDING((short) 1),
     SETTLED((short) 2);
 
@@ -21,31 +20,31 @@ public enum CommissionStatus {
 
     public static CommissionStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (CommissionStatus status : CommissionStatus.values()) {
             if (status.getValue() != null && status.getValue().equals(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     public static CommissionStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (CommissionStatus status : CommissionStatus.values()) {
             if (status.name().equalsIgnoreCase(value) || String.valueOf(status.getValue()).equalsIgnoreCase(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static CommissionStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

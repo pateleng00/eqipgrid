@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum RefundStatus {
-    NA((short) 0, "Not Applicable"),
     PENDING((short) 1, "Refund Pending Approval (रिफंड लंबित)"),
     PROCESSING((short) 2, "Refund In Process (रिफंड प्रक्रिया जारी)"),
     COMPLETED((short) 3, "Refund Completed (रिफंड संपन्न)"),
@@ -25,31 +24,31 @@ public enum RefundStatus {
 
     public static RefundStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (RefundStatus s : RefundStatus.values()) {
             if (s.getValue() != null && s.getValue().equals(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     public static RefundStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (RefundStatus s : RefundStatus.values()) {
             if (s.name().equalsIgnoreCase(value) || String.valueOf(s.getValue()).equalsIgnoreCase(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static RefundStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum Role {
-    NA((short) 0),
     CUSTOMER((short) 1),
     OPERATOR((short) 2),
     TECHNICIAN((short) 3),
@@ -27,31 +26,31 @@ public enum Role {
 
     public static Role fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (Role r : Role.values()) {
             if (r.getValue() != null && r.getValue().equals(value)) {
                 return r;
             }
         }
-        return NA;
+        return null;
     }
 
     public static Role fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (Role r : Role.values()) {
             if (r.name().equalsIgnoreCase(value) || String.valueOf(r.getValue()).equalsIgnoreCase(value)) {
                 return r;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static Role jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

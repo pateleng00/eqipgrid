@@ -107,7 +107,7 @@ public class RentalConfigController {
                     config.setShiftTerms(bu.getDefaultShiftTerms());
                 }
             });
-        } else if (request.billingUnit() != null && request.billingUnit() != BillingUnit.NA) {
+        } else if (request.billingUnit() != null) {
             config.setBillingUnit(request.billingUnit());
         }
         if (request.workingHoursLimit() != null) config.setWorkingHoursLimit(request.workingHoursLimit());

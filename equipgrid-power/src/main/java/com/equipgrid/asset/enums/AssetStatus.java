@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum AssetStatus {
-    NA((short) 0),
     AVAILABLE((short) 1),
     RESERVED((short) 2),
     DISPATCH_READY((short) 3),
@@ -31,31 +30,31 @@ public enum AssetStatus {
 
     public static AssetStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (AssetStatus status : AssetStatus.values()) {
             if (status.getValue() != null && status.getValue().equals(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     public static AssetStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (AssetStatus status : AssetStatus.values()) {
             if (status.name().equalsIgnoreCase(value) || String.valueOf(status.getValue()).equalsIgnoreCase(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static AssetStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

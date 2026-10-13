@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum FarmLocationType {
-    NA((short) 0, "Not Applicable"),
     FARM((short) 1, "Agricultural Farm (खेत)"),
     HOME((short) 2, "Farmer Residence (घर / निवास)"),
     VILLAGE_PICKUP((short) 3, "Common Pickup Point (ग्राम पिकअप स्थल)"),
@@ -25,31 +24,31 @@ public enum FarmLocationType {
 
     public static FarmLocationType fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (FarmLocationType t : FarmLocationType.values()) {
             if (t.getValue() != null && t.getValue().equals(value)) {
                 return t;
             }
         }
-        return NA;
+        return null;
     }
 
     public static FarmLocationType fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (FarmLocationType t : FarmLocationType.values()) {
             if (t.name().equalsIgnoreCase(value) || String.valueOf(t.getValue()).equalsIgnoreCase(value)) {
                 return t;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static FarmLocationType jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

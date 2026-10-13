@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum BookingSource {
-    NA((short) 0, "Not Applicable"),
     STATION((short) 1, "Hub Booking Desk (केंद्र बुकिंग काउंटर)"),
     PHONE_AGENT((short) 2, "Phone Booking Agent (फोन बुकिंग एजेंट)"),
     DEALER((short) 3, "Village Dealer (ग्राम डीलर)"),
@@ -28,31 +27,31 @@ public enum BookingSource {
 
     public static BookingSource fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (BookingSource s : BookingSource.values()) {
             if (s.getValue() != null && s.getValue().equals(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     public static BookingSource fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (BookingSource s : BookingSource.values()) {
             if (s.name().equalsIgnoreCase(value) || String.valueOf(s.getValue()).equalsIgnoreCase(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static BookingSource jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

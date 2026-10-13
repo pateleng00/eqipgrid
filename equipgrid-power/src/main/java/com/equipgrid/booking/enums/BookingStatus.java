@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum BookingStatus {
-    NA((short) 0, "Not Applicable"),
     QUOTED((short) 1, "Quotation Generated (कोटेशन तैयार)"),
     PENDING_PAYMENT((short) 2, "Pending Advance Payment (अग्रिम भुगतान लंबित)"),
     CONFIRMED((short) 3, "Booking Confirmed (बुकिंग पक्की)"),
@@ -33,31 +32,31 @@ public enum BookingStatus {
 
     public static BookingStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (BookingStatus status : BookingStatus.values()) {
             if (status.getValue() != null && status.getValue().equals(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     public static BookingStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (BookingStatus status : BookingStatus.values()) {
             if (status.name().equalsIgnoreCase(value) || String.valueOf(status.getValue()).equalsIgnoreCase(value)) {
                 return status;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static BookingStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

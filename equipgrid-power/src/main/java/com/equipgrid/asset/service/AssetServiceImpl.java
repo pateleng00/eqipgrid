@@ -168,7 +168,7 @@ public class AssetServiceImpl implements IAssetService {
                     asset.setShiftTerms(bu.getDefaultShiftTerms());
                 }
             });
-        } else if (request.getBillingUnit() != null && request.getBillingUnit() != BillingUnit.NA) {
+        } else if (request.getBillingUnit() != null) {
             asset.setBillingUnit(request.getBillingUnit());
         }
         if (request.getWorkingHoursLimit() != null) {
@@ -295,7 +295,7 @@ public class AssetServiceImpl implements IAssetService {
             }
 
             BillingUnit effectiveUnit = rep.getBillingUnit();
-            if (effectiveUnit == null || effectiveUnit == BillingUnit.NA) {
+            if (effectiveUnit == null) {
                 effectiveUnit = resolveDefaultBillingUnit(rep.getName(), rep.getAssetTag());
             }
 

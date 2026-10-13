@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum JobStatus {
-    NA((short) 0, "Not Applicable"),
     REQUESTED((short) 1, "Fulfillment Job Requested (अनुरोध दर्ज)"),
     SCHEDULED((short) 2, "Logistics Slot Scheduled (शेड्यूल किया गया)"),
     OUT_FOR_DELIVERY((short) 3, "Out For Delivery / En Route (रास्ते में है)"),
@@ -26,31 +25,31 @@ public enum JobStatus {
 
     public static JobStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (JobStatus s : JobStatus.values()) {
             if (s.getValue() != null && s.getValue().equals(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     public static JobStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (JobStatus s : JobStatus.values()) {
             if (s.name().equalsIgnoreCase(value) || String.valueOf(s.getValue()).equalsIgnoreCase(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static JobStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

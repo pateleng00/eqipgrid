@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum CustomerTier {
-    NA((short) 0),
     TIER_1_BASIC((short) 1),
     TIER_2_VERIFIED((short) 2);
 
@@ -21,31 +20,31 @@ public enum CustomerTier {
 
     public static CustomerTier fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (CustomerTier tier : CustomerTier.values()) {
             if (tier.getValue() != null && tier.getValue().equals(value)) {
                 return tier;
             }
         }
-        return NA;
+        return null;
     }
 
     public static CustomerTier fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (CustomerTier tier : CustomerTier.values()) {
             if (tier.name().equalsIgnoreCase(value) || String.valueOf(tier.getValue()).equalsIgnoreCase(value)) {
                 return tier;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static CustomerTier jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

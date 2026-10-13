@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum WhatsAppState {
-    NA((short) 0),
     MAIN_MENU((short) 1),
     SELECTING_CATEGORY((short) 2),
     SELECTING_ASSET((short) 3),
@@ -38,31 +37,31 @@ public enum WhatsAppState {
 
     public static WhatsAppState fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (WhatsAppState state : WhatsAppState.values()) {
             if (state.getValue() != null && state.getValue().equals(value)) {
                 return state;
             }
         }
-        return NA;
+        return null;
     }
 
     public static WhatsAppState fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (WhatsAppState state : WhatsAppState.values()) {
             if (state.name().equalsIgnoreCase(value) || String.valueOf(state.getValue()).equalsIgnoreCase(value)) {
                 return state;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static WhatsAppState jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

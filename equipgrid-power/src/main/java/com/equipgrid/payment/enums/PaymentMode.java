@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentMode {
-    NA((short) 0),
     CASH((short) 1),
     UPI((short) 2),
     BANK_TRANSFER((short) 3);
@@ -22,31 +21,31 @@ public enum PaymentMode {
 
     public static PaymentMode fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (PaymentMode mode : PaymentMode.values()) {
             if (mode.getValue() != null && mode.getValue().equals(value)) {
                 return mode;
             }
         }
-        return NA;
+        return null;
     }
 
     public static PaymentMode fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (PaymentMode mode : PaymentMode.values()) {
             if (mode.name().equalsIgnoreCase(value) || String.valueOf(mode.getValue()).equalsIgnoreCase(value)) {
                 return mode;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static PaymentMode jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

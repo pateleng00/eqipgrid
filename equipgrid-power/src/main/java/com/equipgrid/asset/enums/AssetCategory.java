@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum AssetCategory {
-    NA((short) 0, "Not Applicable"),
     CONSTRUCTION((short) 1, "Construction & Civil Infrastructure (निर्माण उपकरण)"),
     AGRICULTURE((short) 2, "Agricultural & Farming Machinery (कृषि उपकरण)"),
     MULTIPURPOSE_FLEET((short) 3, "Multipurpose Fleet (बहुउद्देशीय वाहन)");
@@ -24,31 +23,31 @@ public enum AssetCategory {
 
     public static AssetCategory fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (AssetCategory cat : AssetCategory.values()) {
             if (cat.getValue() != null && cat.getValue().equals(value)) {
                 return cat;
             }
         }
-        return NA;
+        return null;
     }
 
     public static AssetCategory fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (AssetCategory cat : AssetCategory.values()) {
             if (cat.name().equalsIgnoreCase(value) || String.valueOf(cat.getValue()).equalsIgnoreCase(value)) {
                 return cat;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static AssetCategory jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

@@ -8,7 +8,6 @@ import lombok.Getter;
 
 @Getter
 public enum VerificationStatus {
-    NA((short) 0, "Not Applicable"),
     PENDING((short) 1, "Pending Verification (सत्यापन लंबित)"),
     VERIFIED((short) 2, "Verified (सत्यापित)"),
     REJECTED((short) 3, "Rejected (अस्वीकृत)");
@@ -24,31 +23,31 @@ public enum VerificationStatus {
 
     public static VerificationStatus fromValue(Short value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (VerificationStatus s : VerificationStatus.values()) {
             if (s.getValue() != null && s.getValue().equals(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     public static VerificationStatus fromValue(String value) {
         if (value == null) {
-            return NA;
+            return null;
         }
         for (VerificationStatus s : VerificationStatus.values()) {
             if (s.name().equalsIgnoreCase(value) || String.valueOf(s.getValue()).equalsIgnoreCase(value)) {
                 return s;
             }
         }
-        return NA;
+        return null;
     }
 
     @JsonCreator
     public static VerificationStatus jsonCreator(Object obj) {
-        if (obj == null) return NA;
+        if (obj == null) return null;
         if (obj instanceof Number num) {
             return fromValue(num.shortValue());
         }

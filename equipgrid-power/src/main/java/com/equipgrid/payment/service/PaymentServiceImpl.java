@@ -95,7 +95,7 @@ public class PaymentServiceImpl implements IPaymentService {
 
             // Lock respective machine for further bookings
             Asset asset = booking.getAsset();
-            if (asset != null && (asset.getStatus() == AssetStatus.AVAILABLE || asset.getStatus() == AssetStatus.NA)) {
+            if (asset != null && asset.getStatus() == AssetStatus.AVAILABLE) {
                 asset.setStatus(AssetStatus.RESERVED);
                 assetRepository.save(asset);
                 log.info("[Payment] Asset {} locked (status: RESERVED) for booking {} after advance + deposit payment barrier satisfied",
