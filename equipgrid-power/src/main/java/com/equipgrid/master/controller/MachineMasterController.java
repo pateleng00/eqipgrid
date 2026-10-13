@@ -23,6 +23,7 @@ public class MachineMasterController {
     private final EquipmentTypeRepository equipmentTypeRepository;
     private final ManufacturerRepository manufacturerRepository;
     private final MachineModelRepository machineModelRepository;
+    private final com.equipgrid.master.repository.BillingUnitMasterRepository billingUnitMasterRepository;
 
     @GetMapping("/types")
     public ResponseEntity<ApiResponse<List<EquipmentType>>> getTypes() {
@@ -82,6 +83,27 @@ public class MachineMasterController {
                 .build();
         MachineModel saved = machineModelRepository.save(model);
         return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Machine model created"), saved, null));
+    }
+    @GetMapping("/billing-units")
+    public ResponseEntity<ApiResponse<List<com.equipgrid.master.entity.BillingUnitMaster>>> getBillingUnits() {
+        List<com.equipgrid.master.entity.BillingUnitMaster> units = billingUnitMasterRepository.findByActiveTrueOrderByDisplayOrderAsc();
+        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Billing units fetched"), units, null));
+    }
+
+    @PostMapping("/billing-units")
+    public ResponseEntity<ApiResponse<com.equipgrid.master.entity.BillingUnitMaster>> createBillingUnit(@RequestBody com.equipgrid.master.entity.BillingUnitMaster unit) {
+        if (unit.getCode() == null || unit.getCode().isBlank()) {
+            throw new IllegalArgumentException("Billing unit code is required");
+        }
+        if (billingUnitMasterRepository.existsByCodeIgnoreCase(unit.getCode().trim())) {
+            throw new IllegalArgumentException("Billing unit with code already exists: " + unit.getCode());
+        }
+        unit.setCode(unit.getCode().trim().toUpperCase());
+        if (unit.getActive() == null) {
+            unit.setActive(true);
+        }
+        com.equipgrid.master.entity.BillingUnitMaster saved = billingUnitMasterRepository.save(unit);
+        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Billing unit created"), saved, null));
     }
 
     public record ModelRequest(Long typeId, Long manufacturerId, String name, String modelNumber, String specs) {
