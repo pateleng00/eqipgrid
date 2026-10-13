@@ -71,7 +71,7 @@ INSERT INTO assets (
     (SELECT id FROM machine_models WHERE model_number = 'MAH-TRL-10T' LIMIT 1),
     (SELECT id FROM equipment_types WHERE code = 'TYPE-MULTI-TRL' LIMIT 1),
     (SELECT id FROM manufacturers WHERE code = 'MFG-KISANFORCE' LIMIT 1),
-    1,
+    COALESCE((SELECT id FROM hubs WHERE code = 'HUB-HRD-01'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)),
     1,
     'Full 24-hr day site deployment • Farm harvest & civil haulage allowed'
 ),
@@ -91,7 +91,7 @@ INSERT INTO assets (
     (SELECT id FROM machine_models WHERE model_number = 'MAH-TRL-10T' LIMIT 1),
     (SELECT id FROM equipment_types WHERE code = 'TYPE-MULTI-TRL' LIMIT 1),
     (SELECT id FROM manufacturers WHERE code = 'MFG-KISANFORCE' LIMIT 1),
-    3,
+    COALESCE((SELECT id FROM hubs WHERE code = 'HUB-BLG-03'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)),
     1,
     'Full 24-hr day site deployment • Farm harvest & civil haulage allowed'
 ),
@@ -111,7 +111,7 @@ INSERT INTO assets (
     (SELECT id FROM machine_models WHERE model_number = 'UNIV-TNK-5000L' LIMIT 1),
     (SELECT id FROM equipment_types WHERE code = 'TYPE-MULTI-TNK' LIMIT 1),
     (SELECT id FROM manufacturers WHERE code = 'MFG-UNIVERSAL' LIMIT 1),
-    2,
+    COALESCE((SELECT id FROM hubs WHERE code = 'HUB-SDL-02'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)),
     1,
     'Full 24-hr day site deployment • Zero shift restriction'
 ),
@@ -131,7 +131,7 @@ INSERT INTO assets (
     (SELECT id FROM machine_models WHERE model_number = 'KIRL-GEN-7.5KVA' LIMIT 1),
     (SELECT id FROM equipment_types WHERE code = 'TYPE-MULTI-GEN' LIMIT 1),
     (SELECT id FROM manufacturers WHERE code = 'MFG-KIRLOSKAR' LIMIT 1),
-    1,
+    COALESCE((SELECT id FROM hubs WHERE code = 'HUB-HRD-01'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)),
     1,
     'Full 24-hr day site deployment • Fuel not included'
 )
@@ -145,7 +145,7 @@ INSERT INTO rental_configurations (
     hub_id, type_id, base_daily_rate, deposit_amount,
     operator_daily_rate, free_delivery_distance_km, rate_per_km_after_free, active, billing_unit
 )
-SELECT 1, id, 1500.00, 4000.00, 0.00, 10.0, 18.00, true, 1
+SELECT COALESCE((SELECT id FROM hubs WHERE code = 'HUB-HRD-01'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)), id, 1500.00, 4000.00, 0.00, 10.0, 18.00, true, 1
 FROM equipment_types WHERE code = 'TYPE-MULTI-TRL'
 ON CONFLICT DO NOTHING;
 
@@ -153,7 +153,7 @@ INSERT INTO rental_configurations (
     hub_id, type_id, base_daily_rate, deposit_amount,
     operator_daily_rate, free_delivery_distance_km, rate_per_km_after_free, active, billing_unit
 )
-SELECT 1, id, 1200.00, 3000.00, 0.00, 10.0, 18.00, true, 1
+SELECT COALESCE((SELECT id FROM hubs WHERE code = 'HUB-HRD-01'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)), id, 1200.00, 3000.00, 0.00, 10.0, 18.00, true, 1
 FROM equipment_types WHERE code = 'TYPE-MULTI-TNK'
 ON CONFLICT DO NOTHING;
 
@@ -161,6 +161,6 @@ INSERT INTO rental_configurations (
     hub_id, type_id, base_daily_rate, deposit_amount,
     operator_daily_rate, free_delivery_distance_km, rate_per_km_after_free, active, billing_unit
 )
-SELECT 1, id, 1400.00, 4500.00, 0.00, 10.0, 18.00, true, 1
+SELECT COALESCE((SELECT id FROM hubs WHERE code = 'HUB-HRD-01'), (SELECT id FROM hubs ORDER BY id ASC LIMIT 1)), id, 1400.00, 4500.00, 0.00, 10.0, 18.00, true, 1
 FROM equipment_types WHERE code = 'TYPE-MULTI-GEN'
 ON CONFLICT DO NOTHING;
