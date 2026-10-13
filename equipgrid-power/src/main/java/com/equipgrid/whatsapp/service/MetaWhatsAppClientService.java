@@ -17,11 +17,11 @@ import java.util.Map;
 public class MetaWhatsAppClientService {
 
     private final RestTemplate restTemplate = new RestTemplate();
-    @Value("${equipgrid.whatsapp.meta.phone-number-id:1450975934758555}")
+    @Value("${equipgrid.whatsapp.meta.phone-number-id}")
     private String phoneNumberId;
-    @Value("${equipgrid.whatsapp.meta.access-token:}")
+    @Value("${equipgrid.whatsapp.meta.access-token}")
     private String accessToken;
-    @Value("${equipgrid.whatsapp.meta.api-version:v21.0}")
+    @Value("${equipgrid.whatsapp.meta.api-version}")
     private String apiVersion;
 
     /**

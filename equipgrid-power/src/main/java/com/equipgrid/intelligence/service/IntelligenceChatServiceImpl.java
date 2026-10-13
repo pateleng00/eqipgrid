@@ -38,9 +38,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
-    @Value("${equipgrid.intelligence.gemini.api-key:}")
+    @Value("${equipgrid.intelligence.gemini.api-key}")
     private String configuredGeminiApiKey;
-    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
+    @Value("${equipgrid.intelligence.gemini.model}")
     private String geminiModel;
 
     private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();

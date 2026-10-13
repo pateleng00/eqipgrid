@@ -18,7 +18,7 @@ public class JwtTokenProvider {
     @Value("${equipgrid.jwt.secret}")
     private String jwtSecret;
 
-    @Value("${equipgrid.jwt.expiration-ms:86400000}")
+    @Value("${equipgrid.jwt.expiration-ms}")
     private long jwtExpirationMs;
 
     private SecretKey key;

@@ -44,9 +44,9 @@ public class VoiceNoteProcessingService {
     // Gemini API base endpoint
     private static final String GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s";
     private final ObjectMapper objectMapper;
-    @Value("${equipgrid.intelligence.gemini.api-key:}")
+    @Value("${equipgrid.intelligence.gemini.api-key}")
     private String geminiApiKey;
-    @Value("${equipgrid.intelligence.gemini.model:gemini-1.5-flash}")
+    @Value("${equipgrid.intelligence.gemini.model}")
     private String geminiModel;
 
     /**

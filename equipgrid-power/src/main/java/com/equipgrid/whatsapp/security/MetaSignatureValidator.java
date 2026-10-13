@@ -22,8 +22,8 @@ public class MetaSignatureValidator {
     private final boolean verificationEnabled;
 
     public MetaSignatureValidator(
-            @Value("${equipgrid.whatsapp.meta.app-secret:}") String appSecret,
-            @Value("${equipgrid.whatsapp.meta.verify-signature:false}") boolean verificationEnabled) {
+            @Value("${equipgrid.whatsapp.meta.app-secret}") String appSecret,
+            @Value("${equipgrid.whatsapp.meta.verify-signature}") boolean verificationEnabled) {
         this.appSecret = appSecret != null ? appSecret.trim() : "";
         this.verificationEnabled = verificationEnabled;
     }

@@ -24,10 +24,10 @@ import java.util.Map;
 @Service
 public class UpiQrGeneratorServiceImpl implements IUpiQrGeneratorService {
 
-    @Value("${equipgrid.upi.vpa:9984698008@upi}")
+    @Value("${equipgrid.upi.vpa}")
     private String defaultVpa;
 
-    @Value("${equipgrid.upi.payee-name:Akash Kumar}")
+    @Value("${equipgrid.upi.payee-name}")
     private String defaultPayeeName;
 
     @Override
