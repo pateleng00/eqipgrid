@@ -28,6 +28,8 @@ WHERE t.code = 'TYPE-MULTI-GEN' AND m.code = 'MFG-KIRLOSKAR'
 ON CONFLICT (type_id, manufacturer_id, model_number) DO NOTHING;
 
 -- 3. Assets for Multipurpose Fleet
+ALTER TABLE assets ADD COLUMN IF NOT EXISTS category SMALLINT;
+
 INSERT INTO assets (
     asset_tag, name, category, model_name, serial_number, daily_rate, deposit_amount,
     purchase_cost, operator_required, status, condition_notes, accessories_included,
