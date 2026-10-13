@@ -13,6 +13,8 @@ import com.equipgrid.dispatch.dto.request.CreateDispatchRequest;
 import com.equipgrid.dispatch.entity.DispatchRecord;
 import com.equipgrid.dispatch.repository.DispatchQueryRepository;
 import com.equipgrid.dispatch.repository.DispatchRepository;
+import com.equipgrid.fulfillment.enums.JobStatus;
+import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class DispatchServiceImpl implements IDispatchService {
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final DeliveryJobRepository deliveryJobRepository;
     private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
@@ -51,13 +54,13 @@ public class DispatchServiceImpl implements IDispatchService {
 
         BigDecimal advance = booking.getAdvancePaid() != null ? booking.getAdvancePaid() : BigDecimal.ZERO;
         BigDecimal deposit = booking.getDepositPaid() != null ? booking.getDepositPaid() : BigDecimal.ZERO;
-        BigDecimal requiredBarrier = booking.getDepositAmount().add(booking.getBaseRent());
+        BigDecimal requiredBarrier = booking.getDepositAmount().add(booking.getBaseRent()).add(booking.getDeliveryFee());
 
         BigDecimal totalCollected = advance.add(deposit);
         if (totalCollected.compareTo(requiredBarrier) < 0) {
             throw new Exceptions.BusinessRuleViolationException(
                     "ZERO-OPEN-CREDIT VIOLATION: Dispatch blocked! Required initial collection is INR " + requiredBarrier +
-                            " (Deposit: INR " + booking.getDepositAmount() + " + Advance Rent: INR " + booking.getBaseRent() +
+                            " (Deposit: INR " + booking.getDepositAmount() + " + Advance Rent: INR " + booking.getBaseRent() + " + Delivery: INR " + booking.getDeliveryFee() +
                             "), but only INR " + totalCollected + " was paid.");
         }
 
@@ -86,6 +89,12 @@ public class DispatchServiceImpl implements IDispatchService {
 
         booking.setStatus(BookingStatus.ON_RENT);
         bookingRepository.save(booking);
+        deliveryJobRepository.findByBookingId(booking.getId()).ifPresent(job -> {
+            job.setStatus(JobStatus.COMPLETED);
+            job.setDeliveredAt(LocalDateTime.now());
+            if (job.getDriverName() == null) job.setDriverName(request.getDriverName());
+            deliveryJobRepository.save(job);
+        });
 
         // Notify customer on machinery dispatch from yard via WhatsApp
         try {

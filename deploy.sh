@@ -7,12 +7,48 @@
 set -e
 
 COMPOSE_FILE="docker-compose.prod.yml"
+CONFIG_DIR="${CONFIG_DIR:-/opt/equipgrid/config}"
+CONFIG_REPO="${CONFIG_REPO:-git@github.com:pateleng00/equipgrid-config.git}"
+export CONFIG_DIR
 
 print_header() {
     echo ""
     echo "=================================================================="
     echo "🚜  EquipGrid Monolith Deployment: $1"
     echo "=================================================================="
+}
+
+sync_production_config() {
+    echo "🔐 Syncing production secrets from $CONFIG_REPO..."
+    if [ ! -d "$CONFIG_DIR/.git" ]; then
+        echo "📁 Config directory not found. Initializing at $CONFIG_DIR..."
+        if [ ! -w "$(dirname "$CONFIG_DIR")" ] && [ "$(id -u)" -ne 0 ]; then
+            sudo mkdir -p "$CONFIG_DIR"
+            sudo chown -R "$USER:$USER" "$CONFIG_DIR"
+        else
+            mkdir -p "$CONFIG_DIR"
+        fi
+        git clone "$CONFIG_REPO" "$CONFIG_DIR" || {
+            echo "❌ Failed to clone $CONFIG_REPO. Please verify your SSH deploy key or repository permissions."
+            exit 1
+        }
+    else
+        echo "🔄 Pulling latest configuration updates..."
+        cd "$CONFIG_DIR"
+        git pull --ff-only || {
+            echo "⚠️  Git pull returned non-zero for config repo. Continuing with current config..."
+        }
+        cd - > /dev/null
+    fi
+
+    if [ ! -f "$CONFIG_DIR/application-prod.properties" ]; then
+        echo "❌ Error: '$CONFIG_DIR/application-prod.properties' does not exist in $CONFIG_REPO!"
+        exit 1
+    fi
+
+    # Restrict file permissions for security
+    chmod 600 "$CONFIG_DIR/application-prod.properties" 2>/dev/null || true
+    echo "✅ Production configuration is secured and ready at $CONFIG_DIR."
 }
 
 git_pull_updates() {
@@ -56,6 +92,7 @@ deploy_frontend() {
 deploy_backend() {
     print_header "Deploying Backend (power-backend)"
     git_pull_updates
+    sync_production_config
     echo "🔨 Building power-backend container..."
     docker compose -f "$COMPOSE_FILE" build power-backend
     echo "🚀 Restarting power-backend..."
@@ -68,6 +105,7 @@ deploy_backend() {
 deploy_all() {
     print_header "Deploying Monolith (Backend + Frontend connecting to AWS RDS)"
     git_pull_updates
+    sync_production_config
     echo "🔨 Building all containers..."
     docker compose -f "$COMPOSE_FILE" build
     echo "🚀 Launching all containers..."
@@ -90,6 +128,9 @@ case "$TARGET" in
     all|monolith)
         deploy_all
         ;;
+    config|sync-config)
+        sync_production_config
+        ;;
     status|ps)
         show_status
         ;;
@@ -102,6 +143,7 @@ case "$TARGET" in
         echo "Usage: ./deploy.sh [command]"
         echo ""
         echo "Available commands:"
+        echo "  ./deploy.sh config                     -> Test sync secrets from equipgrid-config"
         echo "  ./deploy.sh frontend  (or fe, station) -> Rebuild and redeploy only Station UI"
         echo "  ./deploy.sh backend   (or be, power)   -> Rebuild and redeploy only Power REST API"
         echo "  ./deploy.sh all       (or monolith)    -> Rebuild and redeploy full stack"

@@ -8,25 +8,27 @@ import lombok.Getter;
 
 @Getter
 public enum BookingStatus {
-    NA((short) 0),
-    QUOTED((short) 1),
-    PENDING_PAYMENT((short) 2),
-    CONFIRMED((short) 3),
-    ALLOCATED((short) 4),
-    DISPATCH_READY((short) 5),
-    DISPATCHED((short) 6),
-    ON_RENT((short) 7),
-    RETURN_REQUESTED((short) 8),
-    RETURNED((short) 9),
-    INSPECTED((short) 10),
-    CLOSED((short) 11),
-    CANCELLED((short) 12);
+    NA((short) 0, "Not Applicable"),
+    QUOTED((short) 1, "Quotation Generated (कोटेशन तैयार)"),
+    PENDING_PAYMENT((short) 2, "Pending Advance Payment (अग्रिम भुगतान लंबित)"),
+    CONFIRMED((short) 3, "Booking Confirmed (बुकिंग पक्की)"),
+    ALLOCATED((short) 4, "Machinery Allocated (मशीन आवंटित)"),
+    DISPATCH_READY((short) 5, "Dispatch Ready (भेजने के लिए तैयार)"),
+    DISPATCHED((short) 6, "Dispatched (यार्ड से रवाना)"),
+    ON_RENT((short) 7, "On Rent (खेत पर कार्यरत)"),
+    RETURN_REQUESTED((short) 8, "Return Pickup Requested (वापसी अनुरोध दर्ज)"),
+    RETURNED((short) 9, "Returned to Yard (यार्ड में वापस)"),
+    INSPECTED((short) 10, "Return Inspection Completed (जांच पूर्ण)"),
+    CLOSED((short) 11, "Account Settled (खाता बंद)"),
+    CANCELLED((short) 12, "Cancelled (रद्द)");
 
     @JsonValue
     private final Short value;
+    private final String description;
 
-    BookingStatus(short value) {
+    BookingStatus(short value, String description) {
         this.value = value;
+        this.description = description;
     }
 
     public static BookingStatus fromValue(Short value) {

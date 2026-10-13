@@ -67,6 +67,17 @@ public class AssetController {
         return ResponseEntity.ok(ApiResponse.buildSuccess("Asset created successfully", created));
     }
 
+    @PutMapping("/{id}")
+    @Operation(summary = "Update machinery details, pricing, deposit, and billing unit")
+    public ResponseEntity<ApiResponse<Asset>> updateAsset(
+            @PathVariable Long id,
+            @Valid @RequestBody com.equipgrid.asset.dto.request.UpdateAssetRequest request,
+            Principal principal) {
+        String actor = principal != null ? principal.getName() : "ADMIN";
+        Asset updated = assetService.updateAsset(id, request, actor);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Asset updated successfully", updated));
+    }
+
     @PatchMapping("/{id}/status")
     @Operation(summary = "Transition asset status (e.g. AVAILABLE, MAINTENANCE, INSPECTION)")
     public ResponseEntity<ApiResponse<Asset>> updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest request, Principal principal) {

@@ -93,12 +93,27 @@ git clone https://github.com/pateleng00/eqipgrid.git /opt/equipgrid
 cd /opt/equipgrid
 ```
 
-### 3. Verify Database Configuration
-The backend is already configured in `equipgrid-power/src/main/resources/application.properties` to connect to your AWS RDS:
-```properties
-spring.datasource.url=jdbc:postgresql://equipgrid-power.clkwqae24w3l.ap-south-1.rds.amazonaws.com:5432/postgres
-spring.datasource.username=postgres
-spring.datasource.password=b6GXOWwaEq3yVfLoujfH
+### 3. Secure Production Secrets (`equipgrid-config`)
+Production configuration is isolated in the private repository **`pateleng00/equipgrid-config`**.
+
+Configure an SSH deploy key on your server so `deploy.sh` can pull secrets automatically:
+```bash
+# 1. Generate server SSH key
+ssh-keygen -t ed25519 -C "equipgrid-deploy-key" -f ~/.ssh/equipgrid_config_deploy -N ""
+
+# 2. Add Host entry in ~/.ssh/config:
+cat << 'EOF' >> ~/.ssh/config
+Host github.com
+  IdentityFile ~/.ssh/equipgrid_config_deploy
+  IdentitiesOnly yes
+EOF
+chmod 600 ~/.ssh/config
+
+# 3. Print public key and add it to GitHub (pateleng00/equipgrid-config -> Settings -> Deploy keys)
+cat ~/.ssh/equipgrid_config_deploy.pub
+
+# 4. Verify config sync:
+./deploy.sh config
 ```
 
 > **Important AWS RDS Check**: In the AWS Console, open your **RDS Security Group** and verify it allows inbound **Port 5432** from your Monolith EC2 instance's IP (or security group ID).

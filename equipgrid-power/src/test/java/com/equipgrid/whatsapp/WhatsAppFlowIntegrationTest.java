@@ -290,7 +290,7 @@ class WhatsAppFlowIntegrationTest {
         assertNotNull(qrResponse.getBody());
         assertTrue(qrResponse.getBody().length > 100, "PNG image bytes must be valid");
 
-        // 9. Farmer completes UPI payment and replies with UTR reference
+        // 9. A farmer-submitted UTR is retained as payment proof, not treated as payment verification.
         WhatsAppInboundRequest req7 = WhatsAppInboundRequest.builder()
                 .from(FARMER_PHONE)
                 .message("PAID UTR-202610058899")
@@ -298,12 +298,12 @@ class WhatsAppFlowIntegrationTest {
         WhatsAppMessageResponse resp7 = whatsAppBotService.processIncomingMessage(req7);
         assertNotNull(resp7);
         assertEquals(WhatsAppState.MAIN_MENU, resp7.getState());
-        assertTrue(resp7.getMessage().contains("Payment Received & Verified"));
-        assertTrue(resp7.getMessage().contains("CONFIRMED & READY FOR DISPATCH"));
+        assertTrue(resp7.getMessage().contains("Payment Details Received"));
+        assertTrue(resp7.getMessage().contains("Payment verification in progress"));
 
-        // Verify booking status transitioned to CONFIRMED
+        // Verify station/gateway reconciliation is still required before confirmation.
         Booking updatedBooking = bookingQueryRepository.fetchById(booking.getId()).orElseThrow();
-        assertEquals(BookingStatus.CONFIRMED, updatedBooking.getStatus());
+        assertEquals(BookingStatus.PENDING_PAYMENT, updatedBooking.getStatus());
 
         // 10. Farmer checks tracking status via WhatsApp (Option 4)
         WhatsAppInboundRequest req8 = WhatsAppInboundRequest.builder()
@@ -314,7 +314,7 @@ class WhatsAppFlowIntegrationTest {
         assertNotNull(resp8);
         assertTrue(resp8.getMessage().contains("Live Tracking for Booking"));
         assertTrue(resp8.getMessage().contains(bookingNumber));
-        assertTrue(resp8.getMessage().contains("Confirmed"));
+        assertTrue(resp8.getMessage().contains("Payment verification in progress"));
 
         // 11. Test Proactive Outbound Notification Service
         WhatsAppMessageResponse notif = whatsAppNotificationService.notifyBookingCreated(booking.getId());

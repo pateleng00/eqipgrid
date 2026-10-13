@@ -17,6 +17,8 @@ public interface IAssetService {
 
     Asset createAsset(CreateAssetRequest request, String performedBy);
 
+    Asset updateAsset(Long id, com.equipgrid.asset.dto.request.UpdateAssetRequest request, String performedBy);
+
     Asset updateAssetStatus(Long id, AssetStatus newStatus, String notes, String performedBy);
 
     /**

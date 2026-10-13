@@ -25,4 +25,9 @@ public interface IUpiQrGeneratorService {
      * Generates full payment details model with embedded QR code.
      */
     UpiPaymentDetails buildUpiPaymentDetails(String bookingNumber, BigDecimal amount, String transactionNote);
+
+    /**
+     * Generates merchant desk payment details model with embedded QR code.
+     */
+    UpiPaymentDetails getMerchantUpiDetails(BigDecimal amount, String transactionNote);
 }

@@ -9,6 +9,8 @@ services:
     environment:
       SERVER_PORT: 8081
       SERVER_SERVLET_CONTEXT_PATH: /equipgrid
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/app/config/application-prod.properties
       # AWS S3 Object Storage
       AWS_S3_ACCESS_KEY: ${AWS_S3_ACCESS_KEY:-}
       AWS_S3_SECRET_KEY: ${AWS_S3_SECRET_KEY:-}
@@ -17,6 +19,8 @@ services:
       AWS_S3_COMMON_BUCKET_NAME: ${AWS_S3_COMMON_BUCKET_NAME:-equipgrid-assets-prod}
       # Gemini AI (Optional)
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    volumes:
+      - ${CONFIG_DIR:-/opt/equipgrid/config}/application-prod.properties:/app/config/application-prod.properties:ro
     networks:
       - equipgrid-network
     expose:

@@ -47,11 +47,14 @@ public class UserQueryRepository {
             return Optional.empty();
         }
         String clean = identifier.trim();
+        String fullEmail = clean.contains("@") ? clean : clean + "@equipgrid.in";
         return Optional.ofNullable(
                 queryFactory.selectFrom(qUser)
                         .where(qUser.username.equalsIgnoreCase(clean)
-                                .or(qUser.email.equalsIgnoreCase(clean)))
-                        .fetchOne()
+                                .or(qUser.email.equalsIgnoreCase(clean))
+                                .or(qUser.username.equalsIgnoreCase(fullEmail))
+                                .or(qUser.email.equalsIgnoreCase(fullEmail)))
+                        .fetchFirst()
         );
     }
 

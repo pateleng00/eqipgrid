@@ -19,7 +19,12 @@ Thumbs.db
 # Environment & Local Secrets
 .env
 .env.local
+.env.prod
 *.local
+**/application-prod.properties
+**/application-production.properties
+config-secret/
+config/
 
 # Java / Spring Boot / Gradle (equipgrid-power)
 .gradle/

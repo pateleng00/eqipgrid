@@ -29,6 +29,9 @@ public class CreateBookingRequest {
     @NotNull(message = "Delivery address is required")
     private String deliveryAddress;
 
+    /** Optional saved farm/home/site. When present it supplies the immutable booking location snapshot. */
+    private Long farmLocationId;
+
     @Builder.Default
     private BigDecimal distanceKm = BigDecimal.ZERO;
 
@@ -36,5 +39,12 @@ public class CreateBookingRequest {
     private Boolean operatorRequired = false;
 
     private Long dealerId;
+    @Builder.Default
+    private com.equipgrid.booking.enums.BookingSource bookingSource = com.equipgrid.booking.enums.BookingSource.STATION;
+    @Builder.Default
+    private Boolean callbackRequested = false;
     private String notes;
+
+    /** Single-use signed OTP proof token required for unauthenticated website bookings */
+    private String otpProofToken;
 }

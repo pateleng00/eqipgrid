@@ -63,6 +63,9 @@ public class RentalConfigController {
                 .operatorDailyRate(request.operatorDailyRate() != null ? request.operatorDailyRate() : new BigDecimal("500.00"))
                 .freeDeliveryDistanceKm(request.freeDeliveryDistanceKm() != null ? request.freeDeliveryDistanceKm() : new BigDecimal("5.00"))
                 .ratePerKmAfterFree(request.ratePerKmAfterFree() != null ? request.ratePerKmAfterFree() : new BigDecimal("10.00"))
+                .billingUnit(request.billingUnit() != null && request.billingUnit() != com.equipgrid.asset.enums.BillingUnit.NA ? request.billingUnit() : com.equipgrid.asset.enums.BillingUnit.DAILY)
+                .workingHoursLimit(request.workingHoursLimit())
+                .shiftTerms(request.shiftTerms())
                 .notes(request.notes())
                 .active(true)
                 .build();
@@ -84,6 +87,10 @@ public class RentalConfigController {
         if (request.freeDeliveryDistanceKm() != null)
             config.setFreeDeliveryDistanceKm(request.freeDeliveryDistanceKm());
         if (request.ratePerKmAfterFree() != null) config.setRatePerKmAfterFree(request.ratePerKmAfterFree());
+        if (request.billingUnit() != null && request.billingUnit() != com.equipgrid.asset.enums.BillingUnit.NA)
+            config.setBillingUnit(request.billingUnit());
+        if (request.workingHoursLimit() != null) config.setWorkingHoursLimit(request.workingHoursLimit());
+        if (request.shiftTerms() != null) config.setShiftTerms(request.shiftTerms());
         if (request.notes() != null) config.setNotes(request.notes());
 
         RentalConfiguration saved = rentalConfigurationRepository.save(config);
@@ -108,6 +115,9 @@ public class RentalConfigController {
             BigDecimal operatorDailyRate,
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
+            com.equipgrid.asset.enums.BillingUnit billingUnit,
+            BigDecimal workingHoursLimit,
+            String shiftTerms,
             String notes
     ) {
     }
@@ -118,6 +128,9 @@ public class RentalConfigController {
             BigDecimal operatorDailyRate,
             BigDecimal freeDeliveryDistanceKm,
             BigDecimal ratePerKmAfterFree,
+            com.equipgrid.asset.enums.BillingUnit billingUnit,
+            BigDecimal workingHoursLimit,
+            String shiftTerms,
             String notes
     ) {
     }

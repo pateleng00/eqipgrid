@@ -8,6 +8,8 @@ import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.service.IBookingService;
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.core.botshield.RequireBotShield;
+import com.equipgrid.core.ratelimiter.RateLimited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -47,12 +49,16 @@ public class BookingController {
     }
 
     @PostMapping("/quote")
+    @RequireBotShield
+    @RateLimited(limit = 10, name = "booking_quote")
     @Operation(summary = "Instant commercial quotation calculator (Base rent, delivery zones, operator fee, deposit)")
     public ResponseEntity<ApiResponse<QuoteResponse>> calculateQuote(@Valid @RequestBody QuoteRequest request) {
         return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.calculateQuote(request)));
     }
 
     @PostMapping
+    @RequireBotShield
+    @RateLimited(name = "booking_create")
     @Operation(summary = "Create and record a new booking reservation")
     public ResponseEntity<ApiResponse<Booking>> createBooking(
             @Valid @RequestBody CreateBookingRequest request,
@@ -63,6 +69,7 @@ public class BookingController {
     }
 
     @PatchMapping("/{id}/status")
+    @RateLimited(limit = 10, name = "booking_status")
     @Operation(summary = "Update booking status")
     public ResponseEntity<ApiResponse<Booking>> updateStatus(
             @PathVariable Long id,

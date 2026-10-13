@@ -2,6 +2,7 @@ package com.equipgrid.asset.entity;
 
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
+import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.master.entity.EquipmentType;
@@ -44,6 +45,12 @@ public class Asset extends BaseEntity {
     @JoinColumn(name = "hub_id")
     private Hub hub;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "model_name")
+    private String modelName;
+
     @Builder.Default
     @Column(name = "image_url", nullable = false, length = 512)
     private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
@@ -78,6 +85,16 @@ public class Asset extends BaseEntity {
 
     @Column(name = "accessories_included", columnDefinition = "TEXT")
     private String accessoriesIncluded;
+
+    @Builder.Default
+    @Column(name = "billing_unit")
+    private BillingUnit billingUnit = BillingUnit.DAILY;
+
+    @Column(name = "working_hours_limit", precision = 6, scale = 2)
+    private BigDecimal workingHoursLimit;
+
+    @Column(name = "shift_terms", length = 256)
+    private String shiftTerms;
     /**
      * Associated media items (images and video) populated dynamically.
      */
@@ -85,7 +102,17 @@ public class Asset extends BaseEntity {
     private java.util.List<AssetMedia> mediaItems;
 
     public String getName() {
+        if (this.name != null && !this.name.isBlank()) {
+            return this.name;
+        }
         return this.model != null ? this.model.getName() : null;
+    }
+
+    public String getModelName() {
+        if (this.model != null && this.model.getName() != null) {
+            return this.model.getName();
+        }
+        return this.modelName;
     }
 
     public AssetCategory getCategory() {

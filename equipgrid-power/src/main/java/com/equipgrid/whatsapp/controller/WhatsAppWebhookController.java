@@ -3,9 +3,12 @@ package com.equipgrid.whatsapp.controller;
 import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.core.ratelimiter.RateLimited;
+import com.equipgrid.whatsapp.dto.model.UpiPaymentDetails;
 import com.equipgrid.whatsapp.dto.request.WhatsAppInboundRequest;
 import com.equipgrid.whatsapp.dto.request.WhatsAppNotificationRequest;
 import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
+import com.equipgrid.whatsapp.entity.WhatsAppConversation;
 import com.equipgrid.whatsapp.service.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +20,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -32,6 +37,10 @@ public class WhatsAppWebhookController {
 
     private final MetaWhatsAppClientService metaWhatsAppClientService;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.equipgrid.whatsapp.security.MetaSignatureValidator metaSignatureValidator;
+
+    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token:equipgrid_meta_webhook_secret_2026}")
+    private String metaVerifyToken;
 
     @Operation(summary = "Meta Webhook Verification Challenge", description = "Responds to Meta Cloud API webhook verification GET request")
     @GetMapping("/webhook")
@@ -40,12 +49,36 @@ public class WhatsAppWebhookController {
             @RequestParam(value = "hub.verify_token", required = false) String token,
             @RequestParam(value = "hub.challenge", required = false) String challenge) {
         log.info("[Meta Webhook] Verification request: mode={}, token={}", mode, token);
-        return ResponseEntity.ok(challenge != null ? challenge : "OK");
+
+        if ("subscribe".equals(mode) && metaVerifyToken.equals(token)) {
+            log.info("[Meta Webhook] Verify token challenge accepted. Mode={}, token={}", mode, token);
+            return ResponseEntity.ok(challenge != null ? challenge : "OK");
+        }
+
+        log.warn("[Meta Webhook] Challenge verification failed! Received mode={}, token={}", mode, token);
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Verification challenge failed: invalid token");
     }
 
     @Operation(summary = "WhatsApp Inbound Webhook (JSON)", description = "Receives incoming WhatsApp messages from Meta Cloud API or direct JSON")
     @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingJsonWebhook(@RequestBody com.fasterxml.jackson.databind.JsonNode payload) {
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingJsonWebhook(
+            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signatureHeader,
+            @RequestBody String rawPayload) {
+
+        if (!metaSignatureValidator.isValidSignature(rawPayload, signatureHeader)) {
+            log.warn("[WhatsApp Webhook] Signature verification failed! signature={}", signatureHeader);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.buildFail("EG_403", "Invalid or missing X-Hub-Signature-256 header", null));
+        }
+
+        com.fasterxml.jackson.databind.JsonNode payload;
+        try {
+            payload = objectMapper.readTree(rawPayload);
+        } catch (Exception e) {
+            log.error("[WhatsApp Webhook] Failed to parse JSON body: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.buildFail("EG_400", "Malformed JSON body", null));
+        }
+
         WhatsAppInboundRequest request = parseInboundPayload(payload);
         if (request == null) {
             log.info("[WhatsApp Webhook] Received non-message event (e.g. delivery/status receipt), acknowledged with 200 OK");
@@ -167,6 +200,7 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "Simulate WhatsApp Conversation", description = "Interactive testing endpoint for rural mobile booking, UPI QR generation, and tracking")
     @PostMapping(value = "/simulate", produces = MediaType.APPLICATION_JSON_VALUE)
+    @RateLimited(limit = 10, name = "whatsapp_simulate")
     public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> simulateWhatsAppMessage(@Valid @RequestBody WhatsAppInboundRequest request) {
         log.info("Simulating WhatsApp conversation for phone: {}, message: {}", request.getFrom(), request.getMessage());
         WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
@@ -176,6 +210,10 @@ public class WhatsAppWebhookController {
     @Operation(summary = "Generate Dynamic UPI QR Code Image (PNG)", description = "Renders scannable UPI QR code PNG for a booking's advance & security deposit")
     @GetMapping(value = "/qr/{bookingNumber}", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getUpiQrCodeImage(@PathVariable String bookingNumber) {
+        if ("merchant".equalsIgnoreCase(bookingNumber) || "desk".equalsIgnoreCase(bookingNumber) || "quick".equalsIgnoreCase(bookingNumber)) {
+            return getMerchantUpiQrCodeImage(null, null);
+        }
+
         Booking booking = bookingQueryRepository.fetchByBookingNumber(bookingNumber)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingNumber));
 
@@ -194,6 +232,36 @@ public class WhatsAppWebhookController {
         headers.setCacheControl("no-cache, no-store, must-revalidate");
 
         return new ResponseEntity<>(qrBytes, headers, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Generate Merchant Desk UPI QR Code Image (PNG)", description = "Renders scannable merchant UPI QR code PNG for the rental yard desk")
+    @GetMapping(value = {"/qr/merchant", "/qr/desk"}, produces = MediaType.IMAGE_PNG_VALUE)
+    public ResponseEntity<byte[]> getMerchantUpiQrCodeImage(
+            @RequestParam(required = false) java.math.BigDecimal amount,
+            @RequestParam(required = false) String note
+    ) {
+        String upiUri = upiQrGeneratorService.generateUpiPaymentUri(
+                null,
+                null,
+                amount != null ? amount : java.math.BigDecimal.ZERO,
+                note != null && !note.isBlank() ? note : "EquipGrid Rental Desk Payment",
+                "EQ-DESK-" + System.currentTimeMillis()
+        );
+
+        byte[] qrBytes = upiQrGeneratorService.generateQrCodeBytes(upiUri, 350, 350);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.IMAGE_PNG);
+        headers.setCacheControl("no-cache, no-store, must-revalidate");
+
+        return new ResponseEntity<>(qrBytes, headers, HttpStatus.OK);
+    }
+
+    @Operation(summary = "Get Merchant Desk UPI Payment Details", description = "Returns active VPA, payee name, and generated QR code base64/URL")
+    @GetMapping("/qr/merchant/details")
+    public ResponseEntity<ApiResponse<UpiPaymentDetails>> getMerchantUpiDetails(@RequestParam(required = false) java.math.BigDecimal amount, @RequestParam(required = false) String note) {
+        UpiPaymentDetails details = upiQrGeneratorService.getMerchantUpiDetails(amount, note);
+        return ResponseEntity.ok(ApiResponse.buildSuccess(details));
     }
 
     @Operation(summary = "Send Outbound WhatsApp Notification", description = "Proactively triggers a custom WhatsApp alert")
@@ -242,20 +310,20 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "WhatsApp Machinery Catalog", description = "Returns machines formatted for WhatsApp preview with S3 photos, videos, and hub details")
     @GetMapping("/catalog")
-    public ResponseEntity<ApiResponse<java.util.List<WhatsAppMessageResponse>>> getCatalog(
+    public ResponseEntity<ApiResponse<List<WhatsAppMessageResponse>>> getCatalog(
             @RequestParam(required = false) Long hubId) {
         return ResponseEntity.ok(ApiResponse.buildSuccess(whatsAppBotService.getCatalog(hubId)));
     }
 
     @Operation(summary = "List Active WhatsApp Conversations", description = "Lists all conversation states and phone numbers for station dashboard")
     @GetMapping("/conversations")
-    public ResponseEntity<ApiResponse<java.util.List<com.equipgrid.whatsapp.entity.WhatsAppConversation>>> getConversations() {
+    public ResponseEntity<ApiResponse<List<WhatsAppConversation>>> getConversations() {
         return ResponseEntity.ok(ApiResponse.buildSuccess(whatsAppBotService.getAllConversations()));
     }
 
     @Operation(summary = "Get WhatsApp Conversation by Phone", description = "Gets conversation context and history for a specific phone number")
     @GetMapping("/conversations/{phone}")
-    public ResponseEntity<ApiResponse<com.equipgrid.whatsapp.entity.WhatsAppConversation>> getConversationByPhone(
+    public ResponseEntity<ApiResponse<WhatsAppConversation>> getConversationByPhone(
             @PathVariable String phone) {
         return whatsAppBotService.getConversationByPhone(phone)
                 .map(c -> ResponseEntity.ok(ApiResponse.buildSuccess(c)))

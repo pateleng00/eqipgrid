@@ -46,7 +46,9 @@ public class ChallanDocumentService {
         String machineTag = booking.getAsset().getAssetTag();
         String customer = booking.getCustomer().getFullName();
         String phone = booking.getCustomer().getPhone();
-        String delivery = booking.getDeliveryAddress();
+        String delivery = booking.getFarmLocation() != null
+                ? booking.getFarmLocation().getLocalName() + (booking.getFarmLocation().getLocalNameHindi() != null ? " (" + booking.getFarmLocation().getLocalNameHindi() + ")" : "") + " — " + booking.getDeliveryAddress()
+                : (booking.getDeliveryLocationName() != null ? booking.getDeliveryLocationName() + " — " + booking.getDeliveryAddress() : booking.getDeliveryAddress());
         String driver = dispatch.getDriverName() != null ? dispatch.getDriverName() : "EquipGrid Logistics";
         String fuel = dispatch.getFuelLevel() != null ? dispatch.getFuelLevel() : "100%";
         String hours = dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut().toPlainString() : "0.00";

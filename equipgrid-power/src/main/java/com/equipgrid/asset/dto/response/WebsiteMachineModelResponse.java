@@ -2,6 +2,7 @@ package com.equipgrid.asset.dto.response;
 
 import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.enums.AssetCategory;
+import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.location.entity.Hub;
 import lombok.Builder;
 import lombok.Getter;
@@ -28,4 +29,16 @@ public class WebsiteMachineModelResponse {
     private Hub primaryHub;
     private List<String> availableHubNames;
     private List<Long> availableHubIds;
+    private String manufacturerName;
+    private String modelNumber;
+    private String typeName;
+    private String typeCode;
+    private String accessoriesIncluded;
+    private String conditionNotes;
+    private BigDecimal engineHours;
+    private String specs;
+    private String serialNumber;
+    private BillingUnit billingUnit;
+    private BigDecimal workingHoursLimit;
+    private String shiftTerms;
 }

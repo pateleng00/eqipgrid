@@ -10,18 +10,23 @@ import com.equipgrid.booking.dto.request.CreateBookingRequest;
 import com.equipgrid.booking.dto.request.QuoteRequest;
 import com.equipgrid.booking.dto.response.QuoteResponse;
 import com.equipgrid.booking.entity.Booking;
+import com.equipgrid.booking.enums.BookingSource;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.repository.BookingRepository;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.service.ICustomerService;
+import com.equipgrid.auth.otp.OtpVerificationService;
+import com.equipgrid.farmlocation.entity.FarmLocation;
+import com.equipgrid.farmlocation.service.IFarmLocationService;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
@@ -38,9 +43,12 @@ public class BookingServiceImpl implements IBookingService {
     private final AssetQueryRepository assetQueryRepository;
     private final IAssetService assetService;
     private final ICustomerService customerService;
+    private final IFarmLocationService farmLocationService;
     private final PricingEngine pricingEngine;
+    private final DistanceCalculator distanceCalculator;
     private final IAuditService auditService;
     private final IWhatsAppNotificationService whatsAppNotificationService;
+    private final OtpVerificationService otpVerificationService;
 
     @Override
     public List<Booking> getAllBookings(BookingStatus status) {
@@ -97,7 +105,21 @@ public class BookingServiceImpl implements IBookingService {
         }
 
         Customer customer = customerService.getCustomerById(request.getCustomerId());
+
+        // Mobile OTP pre-validation barrier for website bookings
+        if (request.getBookingSource() == BookingSource.WEBSITE || "WEBSITE".equalsIgnoreCase(performedBy)) {
+            boolean isVerified = otpVerificationService.isPhoneVerified(customer.getPhone(), request.getOtpProofToken());
+            if (!isVerified) {
+                throw new Exceptions.BusinessRuleViolationException(
+                        "MOBILE OTP VERIFICATION REQUIRED: Please verify mobile phone (+91 " + customer.getPhone() +
+                        ") via OTP before committing an online booking reservation."
+                );
+            }
+        }
+
         Asset asset = assetService.getAssetById(request.getAssetId());
+        FarmLocation farmLocation = request.getFarmLocationId() == null ? null
+                : farmLocationService.getCustomerLocation(customer.getId(), request.getFarmLocationId());
 
         Long typeId = asset.getType() != null ? asset.getType().getId() : null;
         Long hubId = asset.getHub() != null ? asset.getHub().getId() : null;
@@ -153,12 +175,13 @@ public class BookingServiceImpl implements IBookingService {
 
         boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
 
+        BigDecimal calculatedDistance = resolveDistance(request.getDistanceKm(), asset, farmLocation);
         PricingEngine.CommercialQuote quote = pricingEngine.calculate(
                 asset.getDailyRate(),
                 asset.getDepositAmount(),
                 request.getStartDate(),
                 request.getEndDate(),
-                request.getDistanceKm(),
+                calculatedDistance,
                 opRequired
         );
 
@@ -177,13 +200,23 @@ public class BookingServiceImpl implements IBookingService {
                 .operatorFee(quote.operatorFee)
                 .depositAmount(quote.depositAmount)
                 .totalAmount(quote.totalAmount)
-                .deliveryAddress(request.getDeliveryAddress())
-                .distanceKm(request.getDistanceKm())
+                .deliveryAddress(resolveDeliveryAddress(request.getDeliveryAddress(), farmLocation))
+                .farmLocation(farmLocation)
+                .deliveryLocationName(farmLocation != null ? farmLocation.getLocalName() : null)
+                .deliveryLocationSnapshot(buildLocationSnapshot(farmLocation))
+                .deliveryLatitude(farmLocation != null ? farmLocation.getLatitude() : null)
+                .deliveryLongitude(farmLocation != null ? farmLocation.getLongitude() : null)
+                .distanceKm(calculatedDistance)
                 .operatorRequired(opRequired)
+                .bookingSource(request.getBookingSource() != null ? request.getBookingSource() : BookingSource.STATION)
+                .callbackRequested(Boolean.TRUE.equals(request.getCallbackRequested()))
                 .notes(request.getNotes())
                 .build();
 
         Booking saved = bookingRepository.save(booking);
+        if (farmLocation != null) {
+            farmLocation.setLastUsedAt(java.time.LocalDateTime.now());
+        }
         auditService.log("BOOKING", saved.getBookingNumber(), "CREATE_BOOKING",
                 performedBy != null ? performedBy : "RENTAL_DESK",
                 "Booking created for " + customer.getFullName() + ", asset " + asset.getAssetTag());
@@ -236,5 +269,34 @@ public class BookingServiceImpl implements IBookingService {
             }
         }
         return "BK-" + year + "-" + System.currentTimeMillis();
+    }
+
+    private BigDecimal resolveDistance(BigDecimal suppliedDistance, Asset asset, FarmLocation farmLocation) {
+        if (farmLocation != null && asset.getHub() != null) {
+            BigDecimal calculated = distanceCalculator.kilometres(
+                    asset.getHub().getLatitude(), asset.getHub().getLongitude(),
+                    farmLocation.getLatitude(), farmLocation.getLongitude());
+            if (calculated != null) return calculated;
+        }
+        return suppliedDistance != null ? suppliedDistance : BigDecimal.ZERO;
+    }
+
+    private String resolveDeliveryAddress(String suppliedAddress, FarmLocation farmLocation) {
+        if (farmLocation == null) return suppliedAddress;
+        StringBuilder result = new StringBuilder(farmLocation.displayAddress());
+        if (farmLocation.getLatitude() != null && farmLocation.getLongitude() != null) {
+            result.append(" | https://www.google.com/maps?q=")
+                    .append(farmLocation.getLatitude()).append(',').append(farmLocation.getLongitude());
+        }
+        return result.toString();
+    }
+
+    private String buildLocationSnapshot(FarmLocation farmLocation) {
+        if (farmLocation == null) return null;
+        return "Name: " + farmLocation.getLocalName()
+                + (farmLocation.getLocalNameHindi() != null ? " | Local: " + farmLocation.getLocalNameHindi() : "")
+                + (farmLocation.getVillage() != null ? " | Village: " + farmLocation.getVillage() : "")
+                + (farmLocation.getLandmark() != null ? " | Landmark: " + farmLocation.getLandmark() : "")
+                + (farmLocation.getAccessNotes() != null ? " | Access: " + farmLocation.getAccessNotes() : "");
     }
 }

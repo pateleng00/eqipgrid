@@ -2,9 +2,11 @@ package com.equipgrid.booking.entity;
 
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.auth.entity.User;
+import com.equipgrid.booking.enums.BookingSource;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.customer.entity.Customer;
+import com.equipgrid.farmlocation.entity.FarmLocation;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -43,6 +45,22 @@ public class Booking extends BaseEntity {
 
     @Column(name = "delivery_address", nullable = false, columnDefinition = "TEXT")
     private String deliveryAddress;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "farm_location_id")
+    private FarmLocation farmLocation;
+
+    @Column(name = "delivery_location_name", length = 128)
+    private String deliveryLocationName;
+
+    @Column(name = "delivery_location_snapshot", columnDefinition = "TEXT")
+    private String deliveryLocationSnapshot;
+
+    @Column(name = "delivery_latitude", precision = 10, scale = 7)
+    private BigDecimal deliveryLatitude;
+
+    @Column(name = "delivery_longitude", precision = 10, scale = 7)
+    private BigDecimal deliveryLongitude;
 
     @Builder.Default
     @Column(name = "distance_km", precision = 6, scale = 2)
@@ -85,6 +103,14 @@ public class Booking extends BaseEntity {
 
     @Column(name = "dealer_id")
     private Long dealerId;
+
+    @Builder.Default
+    @Column(name = "booking_source", nullable = false)
+    private BookingSource bookingSource = BookingSource.STATION;
+
+    @Builder.Default
+    @Column(name = "callback_requested", nullable = false)
+    private Boolean callbackRequested = false;
 
     @Column(columnDefinition = "TEXT")
     private String notes;

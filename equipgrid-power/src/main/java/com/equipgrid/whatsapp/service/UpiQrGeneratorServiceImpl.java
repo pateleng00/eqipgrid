@@ -24,10 +24,10 @@ import java.util.Map;
 @Service
 public class UpiQrGeneratorServiceImpl implements IUpiQrGeneratorService {
 
-    @Value("${equipgrid.upi.vpa:equipgrid@upi}")
+    @Value("${equipgrid.upi.vpa:9984698008@upi}")
     private String defaultVpa;
 
-    @Value("${equipgrid.upi.payee-name:EquipGrid Agro and Civil Rentals}")
+    @Value("${equipgrid.upi.payee-name:Akash Kumar}")
     private String defaultPayeeName;
 
     @Override
@@ -86,15 +86,38 @@ public class UpiQrGeneratorServiceImpl implements IUpiQrGeneratorService {
         String upiUri = generateUpiPaymentUri(defaultVpa, defaultPayeeName, amount, note, ref);
         String qrBase64 = generateQrCodeBase64(upiUri, 300, 300);
 
-        return UpiPaymentDetails.builder()
-                .payeeVpa(defaultVpa)
-                .payeeName(defaultPayeeName)
-                .bookingNumber(bookingNumber)
-                .amount(amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO)
-                .transactionNote(note)
-                .upiUri(upiUri)
-                .qrCodeBase64(qrBase64)
-                .qrCodeImageUrl("/equipgrid/whatsapp/qr/" + (bookingNumber != null ? bookingNumber : "quick"))
-                .build();
+        return new UpiPaymentDetails(
+                defaultVpa,
+                defaultPayeeName,
+                bookingNumber,
+                amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO,
+                note,
+                upiUri,
+                qrBase64,
+                "/equipgrid/whatsapp/qr/" + (bookingNumber != null ? bookingNumber : "quick")
+        );
+    }
+
+    @Override
+    public UpiPaymentDetails getMerchantUpiDetails(BigDecimal amount, String transactionNote) {
+        String note = (transactionNote != null && !transactionNote.isBlank())
+                ? transactionNote
+                : "EquipGrid Rental Desk Payment";
+        String ref = "EQ-DESK-" + System.currentTimeMillis();
+        String upiUri = generateUpiPaymentUri(defaultVpa, defaultPayeeName, amount, note, ref);
+        String qrBase64 = generateQrCodeBase64(upiUri, 350, 350);
+
+        String qrImageUrl = "/equipgrid/whatsapp/qr/merchant" + (amount != null && amount.compareTo(BigDecimal.ZERO) > 0 ? "?amount=" + amount.toPlainString() : "");
+
+        return new UpiPaymentDetails(
+                defaultVpa,
+                defaultPayeeName,
+                "DESK-MERCHANT",
+                amount != null ? amount.setScale(2, RoundingMode.HALF_UP) : BigDecimal.ZERO,
+                note,
+                upiUri,
+                qrBase64,
+                qrImageUrl
+        );
     }
 }

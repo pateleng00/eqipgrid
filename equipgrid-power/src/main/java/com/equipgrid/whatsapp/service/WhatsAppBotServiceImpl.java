@@ -20,6 +20,11 @@ import com.equipgrid.customer.repository.CustomerQueryRepository;
 import com.equipgrid.customer.repository.CustomerRepository;
 import com.equipgrid.dispatch.entity.DispatchRecord;
 import com.equipgrid.dispatch.repository.DispatchQueryRepository;
+import com.equipgrid.fulfillment.entity.ReturnPickupJob;
+import com.equipgrid.fulfillment.repository.ReturnPickupJobRepository;
+import com.equipgrid.farmlocation.entity.FarmLocation;
+import com.equipgrid.farmlocation.repository.FarmLocationRepository;
+import com.equipgrid.farmlocation.enums.FarmLocationType;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.payment.dto.request.RecordPaymentRequest;
@@ -27,6 +32,8 @@ import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.enums.PaymentMode;
 import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.service.IPaymentService;
+import com.equipgrid.payment.entity.PaymentProof;
+import com.equipgrid.payment.repository.PaymentProofRepository;
 import com.equipgrid.whatsapp.dto.model.UpiPaymentDetails;
 import com.equipgrid.whatsapp.dto.model.VoiceBookingIntent;
 import com.equipgrid.whatsapp.dto.model.WhatsAppConversationContext;
@@ -72,7 +79,10 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private final IBookingService bookingService;
     private final BookingQueryRepository bookingQueryRepository;
     private final IPaymentService paymentService;
+    private final PaymentProofRepository paymentProofRepository;
     private final DispatchQueryRepository dispatchQueryRepository;
+    private final ReturnPickupJobRepository returnPickupJobRepository;
+    private final FarmLocationRepository farmLocationRepository;
     private final IUpiQrGeneratorService upiQrGeneratorService;
     private final StorageService storageService;
     private final ObjectMapper objectMapper;
@@ -1023,6 +1033,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         }
 
         // Calculate live quotation
+        saveFarmLocationFromConversation(customer, context);
         QuoteRequest quoteRequest = QuoteRequest.builder()
                 .assetId(context.getSelectedAssetId())
                 .startDate(context.getStartDate())
@@ -1099,6 +1110,25 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .previewImageUrl(context.getPreviewImageUrl())
                 .demoVideoUrl(context.getDemoVideoUrl())
                 .build();
+    }
+
+    private void saveFarmLocationFromConversation(Customer customer, WhatsAppConversationContext context) {
+        if (context.getLatitude() == null || context.getLongitude() == null) return;
+        java.math.BigDecimal latitude = java.math.BigDecimal.valueOf(context.getLatitude());
+        java.math.BigDecimal longitude = java.math.BigDecimal.valueOf(context.getLongitude());
+        FarmLocation location = farmLocationRepository.findFirstByCustomerIdAndLatitudeAndLongitude(customer.getId(), latitude, longitude)
+                .orElseGet(() -> FarmLocation.builder().customer(customer).latitude(latitude).longitude(longitude).build());
+        if (location.getId() == null) {
+            String name = context.getDeliveryAddress() != null ? context.getDeliveryAddress().replaceFirst("^[^:]+: ", "") : "Saved Farm";
+            location.setLocalName(name.length() > 120 ? name.substring(0, 120) : name);
+            location.setLocationType("HOME".equalsIgnoreCase(context.getDeliveryDestinationType())
+                    ? FarmLocationType.HOME : FarmLocationType.FARM);
+            location.setLandmark(context.getDeliveryAddress());
+            location.setActive(true);
+            location.setIsDefault(farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId()).isEmpty());
+        }
+        location.setLastUsedAt(LocalDateTime.now());
+        farmLocationRepository.save(location);
     }
 
     // ─── Booking Confirmation & UPI QR ────────────────────────────────────────
@@ -1243,41 +1273,31 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 txnRef = "UPI-" + matcher.group(1);
             }
 
-            // Record security deposit / advance payment
-            RecordPaymentRequest paymentReq = RecordPaymentRequest.builder()
-                    .bookingId(booking.getId())
-                    .amount(booking.getTotalAmount())
-                    .paymentType(PaymentType.DEPOSIT)
-                    .paymentMode(PaymentMode.UPI)
-                    .transactionRef(txnRef)
-                    .notes("WhatsApp UPI payment recorded for " + booking.getBookingNumber())
+            // A WhatsApp message or UTR-like string is payment proof, not payment verification.
+            // Payment is recorded only after a verified gateway webhook or a station reconciliation.
+            PaymentProof proof = PaymentProof.builder()
+                    .booking(booking)
+                    .submittedReference(txnRef)
+                    .verificationNotes("Submitted through WhatsApp")
                     .build();
-
-            Payment payment = paymentService.recordPayment(paymentReq, "WHATSAPP_BOT");
-
-            // Update booking status to CONFIRMED
-            bookingService.updateStatus(booking.getId(), BookingStatus.CONFIRMED, "Advance & deposit received via WhatsApp UPI QR", "WHATSAPP_BOT");
-
+            paymentProofRepository.save(proof);
             conv.setState(WhatsAppState.MAIN_MENU);
             conv.setContextData(null);
 
             String responseMessage = String.format("""
-                            🎉 *Payment Received & Verified!*
+                            ✅ *Payment Details Received*
                             ━━━━━━━━━━━━━━━━━━━━━━
                             🔖 Booking: *%s*
-                            💳 Payment Mode: *UPI*
-                            📝 Reference ID: *%s*
-                            💰 Amount Paid: *₹%,.2f*
+                            📝 Reference received: *%s*
                             ━━━━━━━━━━━━━━━━━━━━━━
-                            Status: *CONFIRMED & READY FOR DISPATCH* 🚜
+                            Status: *Payment verification in progress* ⏳
                             
-                            Yard technicians are conducting pre-dispatch maintenance inspection. Outward challan will be issued shortly.
+                            We will confirm the payment after bank/UPI reconciliation. The machine will be scheduled only after that confirmation.
                             
-                            👉 Type *4* or *TRACK* anytime to view delivery driver & vehicle details!
+                            👉 Type *4* or *TRACK* anytime to check your booking.
                             """,
                     booking.getBookingNumber(),
-                    payment.getTransactionRef(),
-                    payment.getAmount()
+                    txnRef
             );
 
             return WhatsAppMessageResponse.builder()
@@ -1285,7 +1305,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     .message(responseMessage)
                     .state(WhatsAppState.MAIN_MENU)
                     .bookingNumber(booking.getBookingNumber())
-                    .suggestedOptions(List.of("4. Track Status", "MENU"))
+                    .suggestedOptions(List.of("4. Track Status", "6. Help", "MENU"))
                     .build();
         } else {
             // Re-present QR Code and payment details
@@ -1503,6 +1523,13 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             Booking booking = bookingQueryRepository.fetchById(bookingId).orElse(null);
             if (booking == null) {
                 return resetAndShowMainMenu(conv, customer);
+            }
+
+            if (booking.getStatus() == BookingStatus.ON_RENT || booking.getStatus() == BookingStatus.DISPATCHED) {
+                bookingService.updateStatus(booking.getId(), BookingStatus.RETURN_REQUESTED,
+                        "Customer requested return pickup through WhatsApp", "WHATSAPP_BOT");
+                returnPickupJobRepository.findByBookingId(booking.getId()).orElseGet(() ->
+                        returnPickupJobRepository.save(ReturnPickupJob.builder().booking(booking).build()));
             }
 
             // Route to interactive damage checklist instead of direct return
@@ -2088,7 +2115,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         if (status == null) return "Unknown";
         return switch (status) {
             case QUOTED -> "Quote Prepared";
-            case PENDING_PAYMENT -> "Awaiting UPI Payment";
+            case PENDING_PAYMENT -> "Payment verification in progress";
             case CONFIRMED -> "Confirmed (Paid)";
             case ALLOCATED -> "Machine Allocated in Yard";
             case DISPATCH_READY -> "Ready for Farm Dispatch";
