@@ -8,17 +8,18 @@ import lombok.Getter;
 
 @Getter
 public enum AssetCategory {
-    NA((short) 0),
-    CONSTRUCTION((short) 1),
-    AGRICULTURE((short) 2),
-    MULTIPURPOSE_FLEET((short) 3),
-    ;
+    NA((short) 0, "Not Applicable"),
+    CONSTRUCTION((short) 1, "Construction & Civil Infrastructure (निर्माण उपकरण)"),
+    AGRICULTURE((short) 2, "Agricultural & Farming Machinery (कृषि उपकरण)"),
+    MULTIPURPOSE_FLEET((short) 3, "Multipurpose Fleet (बहुउद्देशीय वाहन)");
 
     @JsonValue
     private final Short value;
+    private final String description;
 
-    AssetCategory(short value) {
+    AssetCategory(short value, String description) {
         this.value = value;
+        this.description = description;
     }
 
     public static AssetCategory fromValue(Short value) {

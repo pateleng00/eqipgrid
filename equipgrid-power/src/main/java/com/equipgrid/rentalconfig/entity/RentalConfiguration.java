@@ -1,6 +1,7 @@
 package com.equipgrid.rentalconfig.entity;
 
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.master.entity.EquipmentType;
@@ -51,6 +52,16 @@ public class RentalConfiguration extends BaseEntity {
     @Builder.Default
     @Column(name = "rate_per_km_after_free", nullable = false, precision = 10, scale = 2)
     private BigDecimal ratePerKmAfterFree = new BigDecimal("10.00");
+
+    @Builder.Default
+    @Column(name = "billing_unit")
+    private BillingUnit billingUnit = BillingUnit.DAILY;
+
+    @Column(name = "working_hours_limit", precision = 6, scale = 2)
+    private BigDecimal workingHoursLimit;
+
+    @Column(name = "shift_terms", length = 256)
+    private String shiftTerms;
 
     @Builder.Default
     @Column(nullable = false)

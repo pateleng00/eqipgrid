@@ -1,6 +1,7 @@
 package com.equipgrid.customer.controller;
 
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.customer.dto.request.CreateCustomerRequest;
 import com.equipgrid.customer.dto.request.VerifyCustomerRequest;
 import com.equipgrid.customer.entity.Customer;
@@ -44,6 +45,7 @@ public class CustomerController {
     }
 
     @PostMapping
+    @RateLimited(name = "customer_create")
     @Operation(summary = "Register or update customer profile")
     public ResponseEntity<ApiResponse<Customer>> createCustomer(@Valid @RequestBody CreateCustomerRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "BOOKING_DESK";
@@ -52,6 +54,7 @@ public class CustomerController {
     }
 
     @PatchMapping("/{id}/verify")
+    @RateLimited(limit = 10, name = "customer_verify")
     @Operation(summary = "Update customer verification tier and KYC approval")
     public ResponseEntity<ApiResponse<Customer>> verifyCustomer(@PathVariable Long id, @RequestBody VerifyCustomerRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "ADMIN";

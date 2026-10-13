@@ -14,6 +14,9 @@ import com.equipgrid.returninspection.dto.response.SettlementCalculationResponse
 import com.equipgrid.returninspection.entity.ReturnInspection;
 import com.equipgrid.returninspection.repository.ReturnInspectionQueryRepository;
 import com.equipgrid.returninspection.repository.ReturnInspectionRepository;
+import com.equipgrid.payment.entity.RefundTransaction;
+import com.equipgrid.payment.enums.RefundStatus;
+import com.equipgrid.payment.repository.RefundTransactionRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +36,7 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final RefundTransactionRepository refundTransactionRepository;
     private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
@@ -77,6 +81,16 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
 
         booking.setStatus(BookingStatus.CLOSED);
         bookingRepository.save(booking);
+
+        BigDecimal refundable = (booking.getDepositPaid() != null ? booking.getDepositPaid() : BigDecimal.ZERO)
+                .subtract(request.getDamageCost() != null ? request.getDamageCost() : BigDecimal.ZERO)
+                .subtract(request.getFuelDeltaCharge() != null ? request.getFuelDeltaCharge() : BigDecimal.ZERO)
+                .max(BigDecimal.ZERO);
+        if (refundable.compareTo(BigDecimal.ZERO) > 0) {
+            refundTransactionRepository.findFirstByBookingIdAndStatus(booking.getId(), RefundStatus.PENDING)
+                    .orElseGet(() -> refundTransactionRepository.save(RefundTransaction.builder()
+                            .booking(booking).amount(refundable).reason("Return inspection settlement").build()));
+        }
 
         // Notify customer on return inspection completion & refund settlement via WhatsApp
         try {

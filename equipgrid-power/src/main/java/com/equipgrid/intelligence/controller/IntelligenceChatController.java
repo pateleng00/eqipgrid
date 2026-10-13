@@ -1,6 +1,8 @@
 package com.equipgrid.intelligence.controller;
 
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.core.botshield.RequireBotShield;
+import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.intelligence.dto.request.IntelligenceChatRequest;
 import com.equipgrid.intelligence.dto.response.IntelligenceChatResponse;
 import com.equipgrid.intelligence.service.IIntelligenceChatService;
@@ -26,6 +28,8 @@ public class IntelligenceChatController {
 
     @Operation(summary = "Chat with EquipGrid Intelligence Assistant", description = "Answers user questions using website data and Gemini AI, finds machinery, and facilitates booking")
     @PostMapping("/chat")
+    @RequireBotShield
+    @RateLimited(name = "intelligence_chat")
     public ResponseEntity<ApiResponse<IntelligenceChatResponse>> chat(@Valid @RequestBody IntelligenceChatRequest request) {
         log.info("Received Intelligence chat request: message='{}'", request.getMessage());
         IntelligenceChatResponse response = intelligenceChatService.chat(request);

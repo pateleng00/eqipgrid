@@ -10,6 +10,7 @@ import com.equipgrid.intelligence.dto.request.IntelligenceChatRequest;
 import com.equipgrid.intelligence.dto.response.IntelligenceChatResponse;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
+import com.equipgrid.intelligence.tool.FleetIntelligenceTools;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -25,6 +26,9 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,53 +38,59 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
-
-    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
-            .build();
-    private final AssetQueryRepository assetQueryRepository;
-    private final HubRepository hubRepository;
-    private final ObjectMapper objectMapper;
     @Value("${equipgrid.intelligence.gemini.api-key:}")
     private String configuredGeminiApiKey;
     @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
     private String geminiModel;
+
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
+    private final AssetQueryRepository assetQueryRepository;
+    private final HubRepository hubRepository;
+    private final ObjectMapper objectMapper;
+    private final FleetIntelligenceTools fleetIntelligenceTools;
+
 
     @Override
     public IntelligenceChatResponse chat(IntelligenceChatRequest request) {
         String userMessage = request.getMessage().trim();
         List<Asset> allAssets = fetchAllAvailableAssets();
         List<Hub> allHubs = hubRepository.findAll();
+        List<EquipmentCardDto> matchedCards = new ArrayList<>();
 
-        // 1. Find equipment that matches the user inquiry
-        List<EquipmentCardDto> matchedCards = matchEquipmentToQuery(userMessage, allAssets);
-
-        // 2. Try calling Gemini AI if API key is present
+        // 1. Try calling Gemini AI with Live MCP-style Tools & Function Calling
         String apiKey = resolveGeminiApiKey();
         if (StringUtils.isNotBlank(apiKey)) {
             try {
-                String geminiReply = callGeminiApi(apiKey, userMessage, request.getConversationHistory(), allAssets, allHubs);
+                String geminiReply = callGeminiApi(apiKey, userMessage, request.getConversationHistory(), allAssets, allHubs, matchedCards);
                 if (StringUtils.isNotBlank(geminiReply)) {
+                    // If function calls didn't match equipment cards, use keyword heuristic
+                    if (matchedCards.isEmpty()) {
+                        matchedCards.addAll(matchEquipmentToQuery(userMessage, allAssets));
+                    }
+
                     return IntelligenceChatResponse.builder()
                             .reply(geminiReply)
-                            .modelUsed("EquipBot Assistant")
+                            .modelUsed("EquipBot AI (Gemini + Live Fleet Tools)")
                             .matchedEquipment(matchedCards)
                             .suggestedQuestions(buildDynamicSuggestions(userMessage, matchedCards))
                             .primaryActionUrl(determinePrimaryAction(matchedCards))
-                            .primaryActionLabel(matchedCards.isEmpty() ? "Explore All Machinery" : "Book Selected Machine")
+                            .primaryActionLabel(matchedCards.isEmpty() ? "Explore All Machinery" : "Book " + matchedCards.get(0).getName())
                             .timestamp(System.currentTimeMillis())
                             .build();
                 }
             } catch (Exception e) {
-                log.warn("Gemini AI API call failed, falling back to local domain intelligence: {}", e.getMessage());
+                log.warn("[Gemini AI] Call threw exception, falling back to local domain intelligence: {}", e.getMessage(), e);
             }
+        } else {
+            log.info("[Gemini AI] No valid API key configured; using EquipGrid Domain Knowledge Engine");
         }
 
-        // 3. Fallback: Local domain-driven AI knowledge engine
+        // 2. Fallback: Local domain-driven AI knowledge engine
+        matchedCards.addAll(matchEquipmentToQuery(userMessage, allAssets));
         String localReply = generateLocalDomainReply(userMessage, allAssets, allHubs, matchedCards);
         return IntelligenceChatResponse.builder()
                 .reply(localReply)
-                .modelUsed("EquipBot Assistant")
+                .modelUsed("EquipBot Assistant (Local Knowledge)")
                 .matchedEquipment(matchedCards)
                 .suggestedQuestions(buildDynamicSuggestions(userMessage, matchedCards))
                 .primaryActionUrl(determinePrimaryAction(matchedCards))
@@ -90,73 +100,211 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
     }
 
     private String resolveGeminiApiKey() {
-        if (StringUtils.isNotBlank(configuredGeminiApiKey)) {
-            return configuredGeminiApiKey.trim();
-        }
         String envKey = System.getenv("GEMINI_API_KEY");
         if (StringUtils.isNotBlank(envKey)) {
             return envKey.trim();
         }
+        if (StringUtils.isNotBlank(configuredGeminiApiKey) && !"AIzaSyALaFipN7rgB6apqXKznEYrUFBDhdFkG4Q".equals(configuredGeminiApiKey.trim())) {
+            return configuredGeminiApiKey.trim();
+        }
+        String dotenvKey = findKeyInDotenv("GEMINI_API_KEY");
+        if (StringUtils.isNotBlank(dotenvKey)) {
+            return dotenvKey.trim();
+        }
         return null;
     }
 
-    private String callGeminiApi(String apiKey, String userMessage, List<IntelligenceChatMessage> history, List<Asset> assets, List<Hub> hubs) throws Exception {
-        String systemInstruction = buildSystemPrompt(assets, hubs);
-        String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + geminiModel + ":generateContent?key=" + apiKey;
-
-        ObjectNode root = objectMapper.createObjectNode();
-
-        // System Instruction
-        ObjectNode systemInstructionNode = root.putObject("systemInstruction");
-        ArrayNode systemParts = systemInstructionNode.putArray("parts");
-        systemParts.addObject().put("text", systemInstruction);
-
-        // Contents
-        ArrayNode contents = root.putArray("contents");
-
-        // Add history
-        if (history != null && !history.isEmpty()) {
-            for (IntelligenceChatMessage msg : history) {
-                if (StringUtils.isNotBlank(msg.getContent())) {
-                    ObjectNode contentNode = contents.addObject();
-                    contentNode.put("role", "assistant".equalsIgnoreCase(msg.getRole()) || "model".equalsIgnoreCase(msg.getRole()) ? "model" : "user");
-                    ArrayNode parts = contentNode.putArray("parts");
-                    parts.addObject().put("text", msg.getContent());
+    private String findKeyInDotenv(String key) {
+        try {
+            Path[] candidatePaths = new Path[] {
+                Paths.get(".env"),
+                Paths.get("../.env"),
+                Paths.get("../../.env")
+            };
+            for (Path path : candidatePaths) {
+                if (Files.exists(path)) {
+                    List<String> lines = Files.readAllLines(path);
+                    for (String line : lines) {
+                        String trimmed = line.trim();
+                        if (trimmed.startsWith(key + "=")) {
+                            String val = trimmed.substring((key + "=").length()).trim();
+                            if ((val.startsWith("\"") && val.endsWith("\"")) || (val.startsWith("'") && val.endsWith("'"))) {
+                                val = val.substring(1, val.length() - 1);
+                            }
+                            if (StringUtils.isNotBlank(val)) {
+                                return val;
+                            }
+                        }
+                    }
                 }
             }
+        } catch (Exception ignored) {
+        }
+        return null;
+    }
+
+    private String callGeminiApi(
+            String apiKey,
+            String userMessage,
+            List<IntelligenceChatMessage> history,
+            List<Asset> assets,
+            List<Hub> hubs,
+            List<EquipmentCardDto> matchedCards
+    ) throws Exception {
+        List<String> modelsToTry = new ArrayList<>();
+        if (StringUtils.isNotBlank(geminiModel)) {
+            modelsToTry.add(geminiModel.trim());
+        }
+        if (!modelsToTry.contains("gemini-2.5-flash-lite")) {
+            modelsToTry.add("gemini-2.5-flash-lite");
+        }
+        if (!modelsToTry.contains("gemini-flash-lite-latest")) {
+            modelsToTry.add("gemini-flash-lite-latest");
+        }
+        if (!modelsToTry.contains("gemini-2.5-flash")) {
+            modelsToTry.add("gemini-2.5-flash");
+        }
+        if (!modelsToTry.contains("gemini-flash-latest")) {
+            modelsToTry.add("gemini-flash-latest");
+        }
+        if (!modelsToTry.contains("gemini-2.5-pro")) {
+            modelsToTry.add("gemini-2.5-pro");
         }
 
-        // Add current user prompt
-        ObjectNode currentContent = contents.addObject();
-        currentContent.put("role", "user");
-        currentContent.putArray("parts").addObject().put("text", userMessage);
+        String systemInstruction = buildSystemPrompt(assets, hubs);
 
-        // Generation Config
-        ObjectNode genConfig = root.putObject("generationConfig");
-        genConfig.put("temperature", 0.4);
-        genConfig.put("maxOutputTokens", 800);
+        for (String modelName : modelsToTry) {
+            try {
+                String endpoint = "https://generativelanguage.googleapis.com/v1beta/models/" + modelName + ":generateContent?key=" + apiKey;
 
-        String jsonPayload = objectMapper.writeValueAsString(root);
+                ObjectNode root = objectMapper.createObjectNode();
 
-        HttpRequest httpRequest = HttpRequest.newBuilder()
-                .uri(URI.create(endpoint))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .timeout(Duration.ofSeconds(15))
-                .build();
+                // System Instruction
+                ObjectNode systemInstructionNode = root.putObject("systemInstruction");
+                ArrayNode systemParts = systemInstructionNode.putArray("parts");
+                systemParts.addObject().put("text", systemInstruction);
 
-        HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+                // Real-time Fleet Intelligence Tools (MCP Tools)
+                root.set("tools", fleetIntelligenceTools.buildGeminiToolDeclarations());
 
-        if (httpResponse.statusCode() >= 200 && httpResponse.statusCode() < 300) {
-            JsonNode responseJson = objectMapper.readTree(httpResponse.body());
-            JsonNode candidate = responseJson.path("candidates").path(0);
-            JsonNode textPart = candidate.path("content").path("parts").path(0).path("text");
-            if (!textPart.isMissingNode() && StringUtils.isNotBlank(textPart.asText())) {
-                return textPart.asText().trim();
+                // Contents
+                ArrayNode contents = root.putArray("contents");
+
+                // Add history
+                if (history != null && !history.isEmpty()) {
+                    for (IntelligenceChatMessage msg : history) {
+                        if (StringUtils.isNotBlank(msg.getContent())) {
+                            ObjectNode contentNode = contents.addObject();
+                            contentNode.put("role", "assistant".equalsIgnoreCase(msg.getRole()) || "model".equalsIgnoreCase(msg.getRole()) ? "model" : "user");
+                            ArrayNode parts = contentNode.putArray("parts");
+                            parts.addObject().put("text", msg.getContent());
+                        }
+                    }
+                }
+
+                // Add current user prompt
+                ObjectNode currentContent = contents.addObject();
+                currentContent.put("role", "user");
+                currentContent.putArray("parts").addObject().put("text", userMessage);
+
+                // Generation Config
+                ObjectNode genConfig = root.putObject("generationConfig");
+                genConfig.put("temperature", 0.3);
+                genConfig.put("maxOutputTokens", 900);
+
+                // Up to 3 tool turns
+                int turn = 0;
+                while (turn < 3) {
+                    turn++;
+                    String jsonPayload = objectMapper.writeValueAsString(root);
+
+                    HttpRequest httpRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(endpoint))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                            .timeout(Duration.ofSeconds(25))
+                            .build();
+
+                    HttpResponse<String> httpResponse = HTTP_CLIENT.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+
+                    if (httpResponse.statusCode() >= 200 && httpResponse.statusCode() < 300) {
+                        JsonNode responseJson = objectMapper.readTree(httpResponse.body());
+                        JsonNode candidate = responseJson.path("candidates").path(0);
+                        JsonNode candidateContent = candidate.path("content");
+                        JsonNode partsArray = candidateContent.path("parts");
+
+                        if (partsArray.isArray() && !partsArray.isEmpty()) {
+                            // Check for functionCall
+                            JsonNode functionCallPart = null;
+                            for (JsonNode part : partsArray) {
+                                if (part.has("functionCall")) {
+                                    functionCallPart = part;
+                                    break;
+                                }
+                            }
+
+                            if (functionCallPart != null) {
+                                JsonNode fnCall = functionCallPart.path("functionCall");
+                                String toolName = fnCall.path("name").asText();
+                                JsonNode args = fnCall.path("args");
+
+                                log.info("[Gemini Tool Call] Executing tool '{}' with args: {}", toolName, args);
+                                JsonNode toolResult = fleetIntelligenceTools.executeTool(toolName, args, matchedCards);
+
+                                // Append model turn
+                                contents.add(candidateContent);
+
+                                // Append function response turn (Google Gemini API requires role: "user" for function responses)
+                                ObjectNode fnTurn = contents.addObject();
+                                fnTurn.put("role", "user");
+                                ArrayNode fnParts = fnTurn.putArray("parts");
+                                ObjectNode fnPart = fnParts.addObject();
+                                ObjectNode fnRespWrapper = fnPart.putObject("functionResponse");
+                                fnRespWrapper.put("name", toolName);
+                                fnRespWrapper.set("response", toolResult);
+
+                                continue;
+                            }
+
+                            // Extract text response
+                            StringBuilder textBuilder = new StringBuilder();
+                            for (JsonNode part : partsArray) {
+                                if (part.has("text")) {
+                                    textBuilder.append(part.path("text").asText());
+                                }
+                            }
+
+                            String finalText = textBuilder.toString().trim();
+                            if (StringUtils.isNotBlank(finalText)) {
+                                log.info("[Gemini AI] Successfully generated response with model: {}", modelName);
+                                return finalText;
+                            }
+                        }
+                        break;
+                    } else if (httpResponse.statusCode() == 404) {
+                        log.warn("[Gemini AI] Model '{}' not found (404), trying next model...", modelName);
+                        break;
+                    } else if (httpResponse.statusCode() == 429) {
+                        log.warn("[Gemini AI] Quota/Rate limit (429) on model '{}', failing over to next model...", modelName);
+                        break;
+                    } else if (httpResponse.statusCode() == 503) {
+                        log.warn("[Gemini AI] Service unavailable (503) on model '{}', backing off and retrying...", modelName);
+                        try {
+                            Thread.sleep(1200);
+                        } catch (InterruptedException ignored) {
+                            Thread.currentThread().interrupt();
+                        }
+                        continue;
+                    } else {
+                        log.error("[Gemini AI] Google API error (status {}): {}", httpResponse.statusCode(), httpResponse.body());
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("[Gemini AI] Failed execution with model '{}': {}", modelName, e.getMessage());
             }
         }
 
-        log.warn("Gemini API returned status {}: {}", httpResponse.statusCode(), httpResponse.body());
         return null;
     }
 
@@ -173,26 +321,17 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
             sb.append("   - ").append(h.getName()).append(" (").append(h.getAddress()).append(") - Phone: ").append(h.getContactPhone()).append(", Radius: ").append(h.getOperatingRadiusKm()).append("km\n");
         }
         sb.append("6. **24x7 Helpline**: Toll-free 1800-889-AGRI (1800-889-2474) and WhatsApp: +1 555 630-0171.\n\n");
-
-        sb.append("### Current Fleet & Catalog (Live Data):\n");
-        for (Asset a : assets) {
-            sb.append("- ").append(a.getName()).append(" [Tag: ").append(a.getAssetTag()).append("]");
-            sb.append(" | Category: ").append(a.getCategory());
-            sb.append(" | Daily Rent: ₹").append(a.getDailyRate()).append("/day");
-            sb.append(" | Security Deposit: ₹").append(a.getDepositAmount());
-            sb.append(" | Status: ").append(a.getStatus());
-            if (a.getHub() != null) {
-                sb.append(" | Hub: ").append(a.getHub().getName());
-            }
-            sb.append("\n");
-        }
-
-        sb.append("\n### Instructions for Response:\n");
+        sb.append("### Live Tool Calling Rules:\n");
+        sb.append("- You have access to real-time tools connected directly to the EquipGrid inventory database and pricing engine.\n");
+        sb.append("- ALWAYS invoke `searchAvailableFleet` whenever the user asks about machinery availability, machine types, or rates (e.g. weeders, reapers, augers, concrete mixers, pumps, compactors).\n");
+        sb.append("- ALWAYS invoke `calculateRentalQuote` whenever the user asks for multi-day rental costs, delivery fees, or deposit amounts.\n");
+        sb.append("- Invoke `getHubCoverage` for yard locations, phone numbers, or operational radius.\n");
+        sb.append("- Invoke `getServiceGuarantees` for official details on deposit refund and breakdown SLA.\n\n");
+        sb.append("### Response Style:\n");
         sb.append("- Provide clear, courteous, and accurate answers in clean Markdown.\n");
-        sb.append("- Support both English and Hinglish/Hindi based on user's query.\n");
-        sb.append("- If user asks about rental costs or machinery availability, mention the exact daily rate, security deposit, and our 2-hour refund guarantee.\n");
+        sb.append("- Support English, Hindi, and Hinglish according to user preference.\n");
+        sb.append("- Always highlight our 2-Hour Security Deposit Refund Guarantee and 90-Minute Breakdown SLA when discussing bookings.\n");
         sb.append("- Guide user on how to book directly online on the website or via our automated WhatsApp bot.\n");
-        sb.append("- Keep responses concise and focused on helping the farmer or contractor.\n");
         return sb.toString();
     }
 
@@ -246,12 +385,40 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
             return sb.toString();
         }
 
-        return "### Namaste! Welcome to EquipGrid AI Assistant 🙏\n\n"
-                + "I can help you search machinery, calculate rental costs, verify delivery to your field GPS, and initiate online bookings.\n\n"
+        if (lower.contains("delivery") || lower.contains("transport") || lower.contains("doorstep") || lower.contains("gps") || lower.contains("field")) {
+            return "### 🚚 Farm Field GPS & Site Delivery\n\n"
+                    + "EquipGrid delivers machinery directly to your farm gate, field headland, or construction site:\n\n"
+                    + "- **GPS Pinpoint Delivery**: Share your location via WhatsApp or web booking, and our transport trailer brings the equipment directly.\n"
+                    + "- **Operating Radius**: 20–30 km coverage around Hardoi Central Yard, Sandila Industrial Hub, and Bilgram Agro Yard.\n"
+                    + "- **Transparent Logistics**: Base delivery is calculated at ₹15/km with zero surprise charges.\n\n"
+                    + "Ready to book delivery? Tell us your nearest village or town in Uttar Pradesh!";
+        }
+
+        if (lower.contains("contact") || lower.contains("phone") || lower.contains("call") || lower.contains("help") || lower.contains("support") || lower.contains("whatsapp")) {
+            return "### 📞 Contact EquipGrid 24/7 Operations Desk\n\n"
+                    + "We are here round the clock to support farmers and construction teams:\n\n"
+                    + "- **Toll-Free Helpline**: 📞 `1800-889-AGRI` (`1800-889-2474`)\n"
+                    + "- **Instant WhatsApp Bot**: 💬 `+1 (555) 630-0171`\n"
+                    + "- **Billing & Refund Desk**: Bilgram Road Industrial Area, Hardoi\n\n"
+                    + "You can also search or book machinery directly through this chat window!";
+        }
+
+        if (lower.contains("hello") || lower.contains("hi") || lower.contains("namaste") || lower.contains("hey") || lower.contains("pranam")) {
+            return "### Namaste! Welcome to EquipGrid 🙏\n\n"
+                    + "I am your EquipBot Assistant. Here is what I can do for you:\n\n"
+                    + "1. **🚜 Browse & Book Machinery**: Power weeders, reapers, earth augers, concrete mixers, plate compactors.\n"
+                    + "2. **💰 Check Rental Rates**: Daily/weekly rent, refundable deposits, and our **2-Hour UPI Refund Guarantee**.\n"
+                    + "3. **🚚 Field Delivery**: Instant machine drop-off to your farm GPS location.\n"
+                    + "4. **🚨 90-Min Zero-Breakdown SLA**: On-site technician support or immediate replacement.\n\n"
+                    + "Which equipment or project do you need assistance with today?";
+        }
+
+        return "### EquipGrid AI Assistant 🙏\n\n"
+                + "I can help you check machinery availability, calculate rental costs, verify delivery to your field GPS, and reserve equipment.\n\n"
                 + "- **🌾 Agriculture**: Power Weeders, Crop Reapers, Earth Augers\n"
                 + "- **🏗️ Construction**: Concrete Mixers, Vibrators, Plate Compactors, Demolition Jackhammers\n"
                 + "- **⚡ Guarantees**: 2-Hour Deposit Refund & 90-Min Breakdown SLA\n\n"
-                + "What machine or project location are you looking for today?";
+                + "Ask me about any machine name, rental pricing, or delivery details!";
     }
 
     private List<EquipmentCardDto> matchEquipmentToQuery(String query, List<Asset> assets) {

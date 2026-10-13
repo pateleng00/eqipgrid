@@ -14,6 +14,8 @@ import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.repository.PaymentQueryRepository;
 import com.equipgrid.payment.repository.PaymentRepository;
+import com.equipgrid.fulfillment.entity.DeliveryJob;
+import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class PaymentServiceImpl implements IPaymentService {
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
     private final IAuditService auditService;
+    private final DeliveryJobRepository deliveryJobRepository;
     private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
 
     @Override
@@ -50,6 +53,16 @@ public class PaymentServiceImpl implements IPaymentService {
     public Payment recordPayment(RecordPaymentRequest request, String performedBy) {
         Booking booking = bookingQueryRepository.fetchById(request.getBookingId())
                 .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Booking not found: " + request.getBookingId()));
+
+        if (request.getTransactionRef() != null && !request.getTransactionRef().isBlank()) {
+            paymentRepository.findByTransactionRef(request.getTransactionRef().trim()).ifPresent(existing -> {
+                if (!existing.getBooking().getId().equals(booking.getId()) ||
+                        existing.getAmount().compareTo(request.getAmount()) != 0) {
+                    throw new Exceptions.BusinessRuleViolationException("This payment reference has already been used.");
+                }
+                throw new Exceptions.BusinessRuleViolationException("This payment has already been recorded for this booking.");
+            });
+        }
 
         Payment payment = Payment.builder()
                 .booking(booking)
@@ -73,7 +86,7 @@ public class PaymentServiceImpl implements IPaymentService {
 
         BigDecimal advance = booking.getAdvancePaid() != null ? booking.getAdvancePaid() : BigDecimal.ZERO;
         BigDecimal deposit = booking.getDepositPaid() != null ? booking.getDepositPaid() : BigDecimal.ZERO;
-        BigDecimal requiredBarrier = booking.getDepositAmount().add(booking.getBaseRent());
+        BigDecimal requiredBarrier = booking.getDepositAmount().add(booking.getBaseRent()).add(booking.getDeliveryFee());
 
         if (advance.add(deposit).compareTo(requiredBarrier) >= 0) {
             if (booking.getStatus() == BookingStatus.CONFIRMED || booking.getStatus() == BookingStatus.ALLOCATED || booking.getStatus() == BookingStatus.PENDING_PAYMENT) {
@@ -88,6 +101,8 @@ public class PaymentServiceImpl implements IPaymentService {
                 log.info("[Payment] Asset {} locked (status: RESERVED) for booking {} after advance + deposit payment barrier satisfied",
                         asset.getAssetTag(), booking.getBookingNumber());
             }
+            deliveryJobRepository.findByBookingId(booking.getId()).orElseGet(() ->
+                    deliveryJobRepository.save(DeliveryJob.builder().booking(booking).build()));
         }
 
         bookingRepository.save(booking);

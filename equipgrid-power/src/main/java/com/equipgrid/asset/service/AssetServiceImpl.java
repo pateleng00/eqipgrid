@@ -5,6 +5,7 @@ import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
+import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.audit.service.IAuditService;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -95,12 +97,72 @@ public class AssetServiceImpl implements IAssetService {
                 .status(AssetStatus.AVAILABLE)
                 .conditionNotes(request.getConditionNotes())
                 .accessoriesIncluded(request.getAccessoriesIncluded())
+                .billingUnit(request.getBillingUnit() != null ? request.getBillingUnit() : BillingUnit.DAILY)
+                .workingHoursLimit(request.getWorkingHoursLimit())
+                .shiftTerms(request.getShiftTerms())
                 .build();
 
         Asset saved = assetRepository.save(asset);
         auditService.log("ASSET", saved.getAssetTag(), "CREATE", performedBy != null ? performedBy : "SYSTEM",
                 "Created asset: " + saved.getName());
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public Asset updateAsset(Long id, com.equipgrid.asset.dto.request.UpdateAssetRequest request, String performedBy) {
+        Asset asset = getAssetById(id);
+
+        if (request.getTypeId() != null) {
+            asset.setType(equipmentTypeRepository.findById(request.getTypeId()).orElse(asset.getType()));
+        }
+        if (request.getManufacturerId() != null) {
+            asset.setManufacturer(manufacturerRepository.findById(request.getManufacturerId()).orElse(asset.getManufacturer()));
+        }
+        if (request.getModelId() != null) {
+            asset.setModel(machineModelRepository.findById(request.getModelId()).orElse(asset.getModel()));
+        }
+        if (request.getHubId() != null) {
+            asset.setHub(hubRepository.findById(request.getHubId()).orElse(asset.getHub()));
+        }
+        if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
+            asset.setImageUrl(request.getImageUrl());
+        }
+        if (request.getSerialNumber() != null) {
+            asset.setSerialNumber(request.getSerialNumber());
+        }
+        if (request.getDailyRate() != null) {
+            asset.setDailyRate(request.getDailyRate());
+        }
+        if (request.getDepositAmount() != null) {
+            asset.setDepositAmount(request.getDepositAmount());
+        }
+        if (request.getPurchaseCost() != null) {
+            asset.setPurchaseCost(request.getPurchaseCost());
+        }
+        if (request.getOperatorRequired() != null) {
+            asset.setOperatorRequired(request.getOperatorRequired());
+        }
+        if (request.getConditionNotes() != null) {
+            asset.setConditionNotes(request.getConditionNotes());
+        }
+        if (request.getAccessoriesIncluded() != null) {
+            asset.setAccessoriesIncluded(request.getAccessoriesIncluded());
+        }
+        if (request.getBillingUnit() != null && request.getBillingUnit() != BillingUnit.NA) {
+            asset.setBillingUnit(request.getBillingUnit());
+        }
+        if (request.getWorkingHoursLimit() != null) {
+            asset.setWorkingHoursLimit(request.getWorkingHoursLimit());
+        }
+        if (request.getShiftTerms() != null) {
+            asset.setShiftTerms(request.getShiftTerms());
+        }
+
+        Asset updated = assetRepository.save(asset);
+        auditService.log("ASSET", updated.getAssetTag(), "UPDATE", performedBy != null ? performedBy : "SYSTEM",
+                "Updated asset: " + updated.getName() + ", billingUnit=" + updated.getBillingUnit());
+        return updated;
     }
 
     @Override
@@ -213,6 +275,16 @@ public class AssetServiceImpl implements IAssetService {
                         .orElse(null);
             }
 
+            BillingUnit effectiveUnit = rep.getBillingUnit();
+            if (effectiveUnit == null || effectiveUnit == BillingUnit.NA) {
+                effectiveUnit = resolveDefaultBillingUnit(rep.getName(), rep.getAssetTag());
+            }
+
+            String effectiveShift = rep.getShiftTerms();
+            if (effectiveShift == null || effectiveShift.isBlank()) {
+                effectiveShift = resolveDefaultShiftTerms(rep.getName(), rep.getAssetTag(), effectiveUnit, rep.getDepositAmount());
+            }
+
             result.add(WebsiteMachineModelResponse.builder()
                     .id(rep.getId())
                     .assetTag(rep.getAssetTag())
@@ -230,10 +302,58 @@ public class AssetServiceImpl implements IAssetService {
                     .primaryHub(rep.getHub())
                     .availableHubNames(hubNames)
                     .availableHubIds(hubIds)
+                    .manufacturerName(rep.getManufacturer() != null ? rep.getManufacturer().getName() : (rep.getModel() != null && rep.getModel().getManufacturer() != null ? rep.getModel().getManufacturer().getName() : null))
+                    .modelNumber(rep.getModel() != null ? rep.getModel().getModelNumber() : null)
+                    .typeName(rep.getType() != null ? rep.getType().getName() : null)
+                    .typeCode(rep.getType() != null ? rep.getType().getCode() : null)
+                    .accessoriesIncluded(rep.getAccessoriesIncluded())
+                    .conditionNotes(rep.getConditionNotes())
+                    .engineHours(rep.getEngineHours())
+                    .specs(rep.getModel() != null ? rep.getModel().getSpecs() : null)
+                    .serialNumber(rep.getSerialNumber())
+                    .billingUnit(effectiveUnit)
+                    .workingHoursLimit(rep.getWorkingHoursLimit())
+                    .shiftTerms(effectiveShift)
                     .build());
         }
 
         return result;
+    }
+
+    private BillingUnit resolveDefaultBillingUnit(String name, String tag) {
+        String upper = ((name != null ? name : "") + " " + (tag != null ? tag : "")).toUpperCase();
+        if (upper.contains("AUGER") || upper.contains("HOLE") || upper.contains("DIGGER") || upper.contains("AUG")) {
+            return BillingUnit.PER_HOLE;
+        }
+        if (upper.contains("PUMP") || upper.contains("TRASH") || upper.contains("DEWATER") || upper.contains("PMP")) {
+            return BillingUnit.HOURLY;
+        }
+        if (upper.contains("TROLLEY") || upper.contains("TRIP")) {
+            return BillingUnit.PER_TRIP;
+        }
+        if (upper.contains("ACRE") || upper.contains("SPRAYER")) {
+            return BillingUnit.PER_ACRE;
+        }
+        return BillingUnit.DAILY;
+    }
+
+    private String resolveDefaultShiftTerms(String name, String tag, BillingUnit billingUnit, BigDecimal deposit) {
+        if (billingUnit == BillingUnit.PER_HOLE) {
+            return "Per hole drilled • Includes 6\" & 8\" bits • Zero time boundation";
+        }
+        if (billingUnit == BillingUnit.HOURLY) {
+            return "Hourly metered operation • Pay for actual run time";
+        }
+        if (billingUnit == BillingUnit.PER_TRIP) {
+            return "Per transport trip • No daily shift restriction";
+        }
+        if (billingUnit == BillingUnit.PER_ACRE) {
+            return "Per acre worked • Rate based on land area covered";
+        }
+        if (deposit != null && deposit.compareTo(BigDecimal.ZERO) == 0) {
+            return "Full 24-hr day site deployment • Zero security deposit required";
+        }
+        return "Full 24-hr day site deployment • Flexible field usage";
     }
 
     private String getHindiName(String name) {
@@ -254,6 +374,10 @@ public class AssetServiceImpl implements IAssetService {
             return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
         if (upper.contains("AUGER") || upper.contains("HOLE"))
             return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
+        if (upper.contains("TROLLEY") || upper.contains("TIPPER") || upper.contains("TRL"))
+            return "हाइड्रोलिक ट्रैक्टर ट्रॉली (Tractor Tipper Trailer)";
+        if (upper.contains("TANKER") || upper.contains("SPRAYER") || upper.contains("TNK"))
+            return "वाटर टैंकर व स्प्रेयर (Mobile Water Tanker)";
         return name;
     }
 

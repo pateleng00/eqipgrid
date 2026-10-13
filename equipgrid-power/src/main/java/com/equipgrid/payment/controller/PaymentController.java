@@ -1,6 +1,7 @@
 package com.equipgrid.payment.controller;
 
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.payment.dto.request.RecordPaymentRequest;
 import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.service.IPaymentService;
@@ -37,6 +38,7 @@ public class PaymentController {
     }
 
     @PostMapping
+    @RateLimited(name = "payment_record")
     @Operation(summary = "Record receipt of advance, deposit or settlement")
     public ResponseEntity<ApiResponse<Payment>> recordPayment(@Valid @RequestBody RecordPaymentRequest request, Principal principal) {
         String actor = principal != null ? principal.getName() : "CASHIER";

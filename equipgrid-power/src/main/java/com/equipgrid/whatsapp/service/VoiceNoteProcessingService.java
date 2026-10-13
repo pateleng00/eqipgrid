@@ -46,7 +46,7 @@ public class VoiceNoteProcessingService {
     private final ObjectMapper objectMapper;
     @Value("${equipgrid.intelligence.gemini.api-key:}")
     private String geminiApiKey;
-    @Value("${equipgrid.intelligence.gemini.model:gemini-2.5-flash}")
+    @Value("${equipgrid.intelligence.gemini.model:gemini-1.5-flash}")
     private String geminiModel;
 
     /**
@@ -60,7 +60,7 @@ public class VoiceNoteProcessingService {
     public VoiceBookingIntent processVoiceNote(String audioUrl, String mimeType, String senderName) {
         log.info("[VoiceBot] Processing voice note from {} | mimeType: {} | url: {}", senderName, mimeType, audioUrl);
 
-        String apiKey = geminiApiKey != null ? geminiApiKey.trim() : "";
+        String apiKey = resolveGeminiApiKey();
         if (StringUtils.isBlank(apiKey)) {
             log.warn("[VoiceBot] Gemini API key not configured, falling back to empty transcript");
             return VoiceBookingIntent.builder()
@@ -99,7 +99,7 @@ public class VoiceNoteProcessingService {
 
         log.info("[VoiceBot] Parsing pre-transcribed text for intent: '{}'", transcript);
 
-        String apiKey = geminiApiKey != null ? geminiApiKey.trim() : "";
+        String apiKey = resolveGeminiApiKey();
         if (StringUtils.isNotBlank(apiKey)) {
             try {
                 return callGeminiForIntentParsing(transcript, apiKey);
@@ -110,6 +110,17 @@ public class VoiceNoteProcessingService {
 
         // Fallback: keyword-based intent extraction
         return keywordBasedIntentExtraction(transcript);
+    }
+
+    private String resolveGeminiApiKey() {
+        String envKey = System.getenv("GEMINI_API_KEY");
+        if (StringUtils.isNotBlank(envKey)) {
+            return envKey.trim();
+        }
+        if (StringUtils.isNotBlank(geminiApiKey) && !"AIzaSyALaFipN7rgB6apqXKznEYrUFBDhdFkG4Q".equals(geminiApiKey.trim())) {
+            return geminiApiKey.trim();
+        }
+        return null;
     }
 
     // ─── Gemini API calls ──────────────────────────────────────────────────────

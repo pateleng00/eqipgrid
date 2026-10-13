@@ -1,9 +1,11 @@
 package com.equipgrid.asset.dto.request;
 
 import com.equipgrid.asset.enums.AssetCategory;
+import com.equipgrid.asset.enums.BillingUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -47,8 +49,8 @@ public class CreateAssetRequest {
     @Positive
     private BigDecimal dailyRate;
 
-    @NotNull(message = "Deposit amount is required")
-    @Positive
+    @NotNull(message = "Deposit amount is required (can be 0 for zero deposit)")
+    @PositiveOrZero(message = "Deposit amount must be 0 or positive")
     private BigDecimal depositAmount;
 
     private BigDecimal purchaseCost;
@@ -58,4 +60,11 @@ public class CreateAssetRequest {
 
     private String conditionNotes;
     private String accessoriesIncluded;
+
+    @Builder.Default
+    private BillingUnit billingUnit = BillingUnit.DAILY;
+
+    private BigDecimal workingHoursLimit;
+    
+    private String shiftTerms;
 }
