@@ -10,9 +10,23 @@ import java.util.List;
 public interface MachineModelRepository extends JpaRepository<MachineModel, Long> {
     List<MachineModel> findByActiveTrueOrderByNameAsc();
 
+    List<MachineModel> findAllByOrderByNameAsc();
+
     List<MachineModel> findByTypeIdAndActiveTrueOrderByNameAsc(Long typeId);
+
+    List<MachineModel> findByTypeIdOrderByNameAsc(Long typeId);
 
     List<MachineModel> findByManufacturerIdAndActiveTrueOrderByNameAsc(Long manufacturerId);
 
+    List<MachineModel> findByManufacturerIdOrderByNameAsc(Long manufacturerId);
+
     List<MachineModel> findByTypeIdAndManufacturerIdAndActiveTrueOrderByNameAsc(Long typeId, Long manufacturerId);
+
+    List<MachineModel> findByTypeIdAndManufacturerIdOrderByNameAsc(Long typeId, Long manufacturerId);
+
+    boolean existsByTypeId(Long typeId);
+
+    boolean existsByManufacturerId(Long manufacturerId);
+
+    boolean existsByNameIgnoreCase(String name);
 }

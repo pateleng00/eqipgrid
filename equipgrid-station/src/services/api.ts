@@ -474,7 +474,15 @@ export class ApiStore {
       this._typesLoading = true;
       request<any[]>('/masters/types').then(res => {
         this._types = (res || []).map((t: any) => ({
-          id: t.id, name: t.name, code: t.code, category: mapCategory(t.category), description: t.description, active: Boolean(t.active ?? true)
+          id: t.id,
+          name: t.name,
+          code: t.code,
+          category: mapCategory(t.category),
+          description: t.description,
+          hindiName: t.hindiName,
+          localLanguageName: t.localLanguageName,
+          hindiDescription: t.hindiDescription,
+          active: Boolean(t.active ?? true),
         }));
         this.notify();
       });
@@ -922,99 +930,282 @@ export class ApiStore {
   }
 
   // --- MACHINE MASTERS METHODS ---
-  getEquipmentTypes(): EquipmentType[] {
-    return this.types.filter((t) => t.active);
+  async fetchEquipmentTypes(includeInactive = true): Promise<EquipmentType[]> {
+    const res = await request<any[]>(`/masters/types?includeInactive=${includeInactive}`);
+    this._types = (res || []).map((t: any) => ({
+      id: t.id,
+      name: t.name,
+      code: t.code,
+      category: mapCategory(t.category),
+      description: t.description,
+      hindiName: t.hindiName,
+      localLanguageName: t.localLanguageName,
+      hindiDescription: t.hindiDescription,
+      active: Boolean(t.active ?? true),
+    }));
+    this.notify();
+    return this._types;
   }
 
-  addEquipmentType(data: { name: string; code: string; category: AssetCategory; description?: string }): EquipmentType {
-    const newType: EquipmentType = {
-      id: Date.now(),
-      name: data.name,
-      code: data.code.toUpperCase(),
-      category: data.category,
-      description: data.description,
-      active: true,
-    };
-    this.types.push(newType);
-    this.notify();
+  getEquipmentTypes(includeInactive = false): EquipmentType[] {
+    return includeInactive ? this.types : this.types.filter((t) => t.active);
+  }
 
-    request<any>('/masters/types', {
+  async addEquipmentType(data: {
+    name: string;
+    code?: string;
+    category: AssetCategory;
+    description?: string;
+    hindiName?: string;
+    localLanguageName?: string;
+    hindiDescription?: string;
+    active?: boolean;
+  }): Promise<EquipmentType> {
+    const raw = await request<any>('/masters/types', {
       method: 'POST',
       body: JSON.stringify({
         name: data.name,
-        code: data.code.toUpperCase(),
+        code: data.code ? data.code.toUpperCase() : undefined,
         category: data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1,
         description: data.description,
+        hindiName: data.hindiName,
+        localLanguageName: data.localLanguageName,
+        hindiDescription: data.hindiDescription,
+        active: data.active ?? true,
       }),
-    }).then((raw) => {
-      if (raw?.id) newType.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist equipment type:', e));
-
+    });
+    const newType: EquipmentType = {
+      id: raw.id,
+      name: raw.name,
+      code: raw.code,
+      category: mapCategory(raw.category),
+      description: raw.description,
+      hindiName: raw.hindiName,
+      localLanguageName: raw.localLanguageName,
+      hindiDescription: raw.hindiDescription,
+      active: Boolean(raw.active ?? true),
+    };
+    this.types.push(newType);
+    this.notify();
     return newType;
   }
 
-  getManufacturers(): Manufacturer[] {
-    return this.manufacturers.filter((m) => m.active);
+  async updateEquipmentType(id: number, data: Partial<EquipmentType>): Promise<EquipmentType> {
+    const raw = await request<any>(`/masters/types/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: data.name,
+        code: data.code ? data.code.toUpperCase() : undefined,
+        category: data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1,
+        description: data.description,
+        hindiName: data.hindiName,
+        localLanguageName: data.localLanguageName,
+        hindiDescription: data.hindiDescription,
+        active: data.active,
+      }),
+    });
+    const updated: EquipmentType = {
+      id: raw.id,
+      name: raw.name,
+      code: raw.code,
+      category: mapCategory(raw.category),
+      description: raw.description,
+      hindiName: raw.hindiName,
+      localLanguageName: raw.localLanguageName,
+      hindiDescription: raw.hindiDescription,
+      active: Boolean(raw.active ?? true),
+    };
+    const idx = this.types.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      this.types[idx] = updated;
+    }
+    this.notify();
+    return updated;
   }
 
-  addManufacturer(name: string, code: string, country = 'India'): Manufacturer {
+  async deleteEquipmentType(id: number): Promise<void> {
+    await request<any>(`/masters/types/${id}`, {
+      method: 'DELETE',
+    });
+    this.types = this.types.filter((t) => t.id !== id);
+    this.notify();
+  }
+
+  async checkEquipmentTypeAvailability(name: string, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+    const params = new URLSearchParams({ name });
+    if (excludeId) params.append('excludeId', String(excludeId));
+    return request(`/masters/types/check-availability?${params.toString()}`);
+  }
+
+  // --- MANUFACTURERS (OEM) ---
+  async fetchManufacturers(includeInactive = true): Promise<Manufacturer[]> {
+    const res = await request<any[]>(`/masters/manufacturers?includeInactive=${includeInactive}`);
+    this._manufacturers = (res || []).map((m: any) => ({
+      id: m.id,
+      name: m.name,
+      code: m.code,
+      country: m.country || 'India',
+      active: Boolean(m.active ?? true),
+    }));
+    this.notify();
+    return this._manufacturers;
+  }
+
+  getManufacturers(includeInactive = false): Manufacturer[] {
+    return includeInactive ? this.manufacturers : this.manufacturers.filter((m) => m.active);
+  }
+
+  async addManufacturer(name: string, code: string, country = 'India', active = true): Promise<Manufacturer> {
+    const raw = await request<any>('/masters/manufacturers', {
+      method: 'POST',
+      body: JSON.stringify({ name, code: code.toUpperCase(), country, active }),
+    });
     const newMfg: Manufacturer = {
-      id: Date.now(),
-      name,
-      code: code.toUpperCase(),
-      country,
-      active: true,
+      id: raw.id,
+      name: raw.name,
+      code: raw.code,
+      country: raw.country || country,
+      active: Boolean(raw.active ?? true),
     };
     this.manufacturers.push(newMfg);
     this.notify();
-
-    request<any>('/masters/manufacturers', {
-      method: 'POST',
-      body: JSON.stringify({ name, code: code.toUpperCase(), country }),
-    }).then((raw) => {
-      if (raw?.id) newMfg.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist manufacturer:', e));
-
     return newMfg;
   }
 
-  getMachineModels(typeId?: number, manufacturerId?: number): MachineModel[] {
-    let list = this.models.filter((m) => m.active);
+  async updateManufacturer(id: number, data: Partial<Manufacturer>): Promise<Manufacturer> {
+    const raw = await request<any>(`/masters/manufacturers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: data.name,
+        code: data.code ? data.code.toUpperCase() : undefined,
+        country: data.country,
+        active: data.active,
+      }),
+    });
+    const updated: Manufacturer = {
+      id: raw.id,
+      name: raw.name,
+      code: raw.code,
+      country: raw.country || 'India',
+      active: Boolean(raw.active ?? true),
+    };
+    const idx = this.manufacturers.findIndex((m) => m.id === id);
+    if (idx !== -1) {
+      this.manufacturers[idx] = updated;
+    }
+    this.notify();
+    return updated;
+  }
+
+  async deleteManufacturer(id: number): Promise<void> {
+    await request<any>(`/masters/manufacturers/${id}`, {
+      method: 'DELETE',
+    });
+    this.manufacturers = this.manufacturers.filter((m) => m.id !== id);
+    this.notify();
+  }
+
+  async checkManufacturerAvailability(name: string, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+    const params = new URLSearchParams({ name });
+    if (excludeId) params.append('excludeId', String(excludeId));
+    return request(`/masters/manufacturers/check-availability?${params.toString()}`);
+  }
+
+  // --- MACHINE MODELS ---
+  async fetchMachineModels(typeId?: number, manufacturerId?: number, includeInactive = true): Promise<MachineModel[]> {
+    const params = new URLSearchParams({ includeInactive: String(includeInactive) });
+    if (typeId) params.append('typeId', String(typeId));
+    if (manufacturerId) params.append('manufacturerId', String(manufacturerId));
+    const res = await request<any[]>(`/masters/models?${params.toString()}`);
+    this._models = (res || []).map((m: any) => ({
+      id: m.id,
+      typeId: m.type?.id || m.typeId,
+      manufacturerId: m.manufacturer?.id || m.manufacturerId,
+      name: m.name,
+      modelNumber: m.modelNumber,
+      specs: m.specs,
+      active: Boolean(m.active ?? true),
+    }));
+    this.notify();
+    return this._models;
+  }
+
+  getMachineModels(typeId?: number, manufacturerId?: number, includeInactive = false): MachineModel[] {
+    let list = includeInactive ? this.models : this.models.filter((m) => m.active);
     if (typeId) list = list.filter((m) => m.typeId === typeId);
     if (manufacturerId) list = list.filter((m) => m.manufacturerId === manufacturerId);
     return list;
   }
 
-  addMachineModel(data: {
+  async addMachineModel(data: {
     typeId: number;
     manufacturerId: number;
     name: string;
-    modelNumber: string;
+    modelNumber?: string;
     specs?: string;
-  }): MachineModel {
+    active?: boolean;
+  }): Promise<MachineModel> {
+    const raw = await request<any>('/masters/models', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
     const newModel: MachineModel = {
-      id: Date.now(),
-      typeId: data.typeId,
-      manufacturerId: data.manufacturerId,
-      name: data.name,
-      modelNumber: data.modelNumber,
-      specs: data.specs,
-      active: true,
+      id: raw.id,
+      typeId: raw.type?.id || raw.typeId || data.typeId,
+      manufacturerId: raw.manufacturer?.id || raw.manufacturerId || data.manufacturerId,
+      name: raw.name,
+      modelNumber: raw.modelNumber,
+      specs: raw.specs,
+      active: Boolean(raw.active ?? true),
     };
     this.models.push(newModel);
     this.notify();
-
-    request<any>('/masters/models', {
-      method: 'POST',
-      body: JSON.stringify(data),
-    }).then((raw) => {
-      if (raw?.id) newModel.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist machine model:', e));
-
     return newModel;
+  }
+
+  async updateMachineModel(id: number, data: Partial<MachineModel>): Promise<MachineModel> {
+    const raw = await request<any>(`/masters/models/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        typeId: data.typeId,
+        manufacturerId: data.manufacturerId,
+        name: data.name,
+        modelNumber: data.modelNumber,
+        specs: data.specs,
+        active: data.active,
+      }),
+    });
+    const updated: MachineModel = {
+      id: raw.id,
+      typeId: raw.type?.id || raw.typeId || data.typeId!,
+      manufacturerId: raw.manufacturer?.id || raw.manufacturerId || data.manufacturerId!,
+      name: raw.name,
+      modelNumber: raw.modelNumber,
+      specs: raw.specs,
+      active: Boolean(raw.active ?? true),
+    };
+    const idx = this.models.findIndex((m) => m.id === id);
+    if (idx !== -1) {
+      this.models[idx] = updated;
+    }
+    this.notify();
+    return updated;
+  }
+
+  async deleteMachineModel(id: number): Promise<void> {
+    await request<any>(`/masters/models/${id}`, {
+      method: 'DELETE',
+    });
+    this.models = this.models.filter((m) => m.id !== id);
+    this.notify();
+  }
+
+  async checkMachineModelAvailability(name: string, typeId?: number, manufacturerId?: number, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+    const params = new URLSearchParams({ name });
+    if (typeId) params.append('typeId', String(typeId));
+    if (manufacturerId) params.append('manufacturerId', String(manufacturerId));
+    if (excludeId) params.append('excludeId', String(excludeId));
+    return request(`/masters/models/check-availability?${params.toString()}`);
   }
 
   getBillingUnits(): BillingUnitMaster[] {

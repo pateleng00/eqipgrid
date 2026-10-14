@@ -9,4 +9,10 @@ import java.util.List;
 @Repository
 public interface EquipmentTypeRepository extends JpaRepository<EquipmentType, Long> {
     List<EquipmentType> findByActiveTrueOrderByNameAsc();
+
+    List<EquipmentType> findAllByOrderByNameAsc();
+
+    boolean existsByCodeIgnoreCase(String code);
+
+    boolean existsByNameIgnoreCase(String name);
 }

@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
   Truck, Plus, Search, RotateCcw, Zap, Building2, MapPin,
   Clock, UserCheck, Play, Pause, ChevronLeft, ChevronRight,
   Video, Images, X, Maximize2, Volume2, VolumeX, Star, Trash2,
+  Layers, Cpu
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -16,6 +17,9 @@ import { Asset, AssetMedia, getBillingUnitLabel, getBillingUnitShiftTerms } from
 import { AddMachineModal } from './AddMachineModal';
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { getUrlParam, setUrlParam } from '../../lib/navigationState';
+import { ManufacturerManagementView } from './ManufacturerManagementView';
+import { EquipmentTypeManagementView } from './EquipmentTypeManagementView';
+import { MachineModelManagementView } from './MachineModelManagementView';
 
 interface EquipmentCatalogViewProps {
   onSelectForBooking: (asset: Asset) => void;
@@ -572,6 +576,37 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const [lightboxAsset, setLightboxAsset] = useState<Asset | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
+  // Sub-tabs under Assets: Fleet Machinery | Manufacturers (OEM) | Equipment Types | Asset Models
+  type AssetSubTab = 'fleet' | 'manufacturers' | 'types' | 'models';
+  const [activeSubTab, setActiveSubTab] = useState<AssetSubTab>(() => {
+    const param = getUrlParam('subtab');
+    if (param === 'manufacturers' || param === 'types' || param === 'models') {
+      return param;
+    }
+    return 'fleet';
+  });
+
+  const handleSubTabChange = (tab: AssetSubTab) => {
+    setActiveSubTab(tab);
+    setUrlParam('subtab', tab === 'fleet' ? null : tab);
+  };
+
+  const [mfgCount, setMfgCount] = useState<number>(() => api.getManufacturers(true).length);
+  const [typeCount, setTypeCount] = useState<number>(() => api.getEquipmentTypes(true).length);
+  const [modelCount, setModelCount] = useState<number>(() => api.getMachineModels(undefined, undefined, true).length);
+
+  useEffect(() => {
+    api.fetchManufacturers(true).then((m) => setMfgCount(m.length)).catch(() => {});
+    api.fetchEquipmentTypes(true).then((t) => setTypeCount(t.length)).catch(() => {});
+    api.fetchMachineModels(undefined, undefined, true).then((md) => setModelCount(md.length)).catch(() => {});
+
+    return api.subscribe(() => {
+      setMfgCount(api.getManufacturers(true).length);
+      setTypeCount(api.getEquipmentTypes(true).length);
+      setModelCount(api.getMachineModels(undefined, undefined, true).length);
+    });
+  }, []);
+
   const handleDeleteAssetConfirm = async () => {
     if (!assetToDelete) return;
     try {
@@ -680,8 +715,85 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const statsOnRent    = filteredAssets.filter(a => a.status === 'ON_RENT').length;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 gap-2">
-      {/* Header */}
+    <div className="flex-1 flex flex-col min-h-0 gap-3">
+      {/* Sub-tabs Navigation Bar under Assets */}
+      <div className={`flex-shrink-0 flex items-center justify-between p-1.5 rounded-2xl border transition-all ${
+        isDaylight
+          ? 'bg-slate-100/90 border-slate-200/90 shadow-sm'
+          : 'bg-slate-900/90 border-slate-800 shadow-md backdrop-blur-md'
+      }`}>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full">
+          {[
+            {
+              id: 'fleet' as const,
+              label: 'Fleet Machinery',
+              icon: Truck,
+              count: assetsList.length,
+            },
+            {
+              id: 'manufacturers' as const,
+              label: 'Manufacturers (OEM)',
+              icon: Building2,
+              count: mfgCount,
+            },
+            {
+              id: 'types' as const,
+              label: 'Equipment Types',
+              icon: Layers,
+              count: typeCount,
+            },
+            {
+              id: 'models' as const,
+              label: 'Asset Models',
+              icon: Cpu,
+              count: modelCount,
+            },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = activeSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleSubTabChange(tab.id)}
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? isDaylight
+                      ? 'bg-white text-slate-950 shadow-sm border border-slate-200/80 ring-1 ring-slate-300/40'
+                      : 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/5'
+                    : isDaylight
+                    ? 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                }`}
+              >
+                <Icon className={`h-4 w-4 ${isActive ? (isDaylight ? 'text-amber-600' : 'text-amber-400') : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+                {tab.count > 0 && (
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
+                    isActive
+                      ? isDaylight
+                        ? 'bg-amber-100 text-amber-900'
+                        : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                      : isDaylight
+                      ? 'bg-slate-200 text-slate-700'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Subtab Views */}
+      {activeSubTab === 'manufacturers' && <ManufacturerManagementView />}
+      {activeSubTab === 'types' && <EquipmentTypeManagementView />}
+      {activeSubTab === 'models' && <MachineModelManagementView />}
+
+      {activeSubTab === 'fleet' && (
+        <div className="flex-1 flex flex-col min-h-0 gap-2">
+          {/* Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h2 className={`text-lg sm:text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
@@ -944,6 +1056,8 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
         confirmLabel="Confirm Permanent Delete"
         showCancel={true}
       />
+        </div>
+      )}
     </div>
   );
 };

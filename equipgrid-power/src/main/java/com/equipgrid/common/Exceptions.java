@@ -21,4 +21,18 @@ public class Exceptions {
         }
     }
 
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public static class ForbiddenException extends EquipGridException {
+        public ForbiddenException(String message) {
+            super(EquipGridExceptionEnum.EG_403.name(), message);
+        }
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public static class DuplicateResourceException extends EquipGridException {
+        public DuplicateResourceException(String message) {
+            super("EG_DUPLICATE_RESOURCE", message);
+        }
+    }
+
 }

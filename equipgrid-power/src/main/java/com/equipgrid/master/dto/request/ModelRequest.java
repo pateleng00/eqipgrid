@@ -25,4 +25,7 @@ public class ModelRequest {
     private String modelNumber;
 
     private String specs;
+
+    @Builder.Default
+    private Boolean active = true;
 }
