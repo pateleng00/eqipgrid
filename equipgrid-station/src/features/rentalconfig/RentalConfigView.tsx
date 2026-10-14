@@ -258,11 +258,12 @@ export const RentalConfigView: React.FC = () => {
     const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
     const resolvedTypeId = formTypeId ? Number(formTypeId) : (modelObj?.typeId || undefined);
 
+    const parsedRate = parseFloat(formBaseRate);
     const added = api.addRentalConfig({
       hubId: Number(formHubId),
       assetId: formAssetId ? Number(formAssetId) : undefined,
       typeId: resolvedTypeId,
-      baseDailyRate: parseFloat(formBaseRate) || 1000,
+      baseDailyRate: !isNaN(parsedRate) ? parsedRate : 1000,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
       operatorDailyRate: formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
       freeDeliveryDistanceKm: formFreeKm !== '' && !isNaN(parseFloat(formFreeKm)) ? parseFloat(formFreeKm) : 0,
@@ -285,8 +286,9 @@ export const RentalConfigView: React.FC = () => {
     const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
     const resolvedTypeId = formTypeId ? Number(formTypeId) : (modelObj?.typeId || undefined);
 
+    const parsedRate = parseFloat(formBaseRate);
     const updated = api.updateRentalConfig(editingConfig.id, {
-      baseDailyRate: parseFloat(formBaseRate) || editingConfig.baseDailyRate,
+      baseDailyRate: !isNaN(parsedRate) ? parsedRate : editingConfig.baseDailyRate,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
       operatorDailyRate: formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
       freeDeliveryDistanceKm: formFreeKm !== '' && !isNaN(parseFloat(formFreeKm)) ? parseFloat(formFreeKm) : 0,
@@ -924,8 +926,8 @@ export const RentalConfigView: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          step="10"
-                          placeholder="e.g. 900 for acre, 650 for trip, 2200 for day"
+                          step="any"
+                          placeholder="e.g. 1, 900 for acre, 650 for trip, 2200 for day"
                           value={formBaseRate}
                           onChange={(e) => setFormBaseRate(e.target.value)}
                           className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none focus:border-amber-600"
@@ -940,7 +942,7 @@ export const RentalConfigView: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          step="50"
+                          step="any"
                           placeholder="0, 200, 500, etc."
                           value={formDeposit}
                           onChange={(e) => setFormDeposit(e.target.value)}
@@ -1002,8 +1004,8 @@ export const RentalConfigView: React.FC = () => {
                         </label>
                         <input
                           type="number"
-                          min="1"
-                          step="1"
+                          min="0"
+                          step="any"
                           placeholder="e.g. 8, 10, 12, or leave empty"
                           value={formWorkingHours}
                           onChange={(e) => setFormWorkingHours(e.target.value)}
@@ -1032,7 +1034,7 @@ export const RentalConfigView: React.FC = () => {
                             type="number"
                             min="0"
                             max="50"
-                            step="0.5"
+                            step="any"
                             placeholder="0.0 or 5.0 (leave blank or 0 for no surcharge)"
                             value={formFreeKm}
                             onChange={(e) => setFormFreeKm(e.target.value)}
@@ -1048,7 +1050,7 @@ export const RentalConfigView: React.FC = () => {
                           <input
                             type="number"
                             min="0"
-                            step="1"
+                            step="any"
                             placeholder="0.0 or 10.0 (leave blank or 0 for per-trip)"
                             value={formRatePerKm}
                             onChange={(e) => setFormRatePerKm(e.target.value)}
@@ -1068,7 +1070,7 @@ export const RentalConfigView: React.FC = () => {
                         <input
                           type="number"
                           min="0"
-                          step="50"
+                          step="any"
                           placeholder="e.g. 0 or 500 (blank = not required)"
                           value={formOperatorRate}
                           onChange={(e) => setFormOperatorRate(e.target.value)}
