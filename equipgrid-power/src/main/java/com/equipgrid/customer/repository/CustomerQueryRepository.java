@@ -38,13 +38,31 @@ public class CustomerQueryRepository {
     }
 
     public Optional<Customer> fetchByPhone(String phone) {
-        if (phone == null) {
+        if (phone == null || phone.isBlank()) {
             return Optional.empty();
         }
+        String trimmed = phone.trim();
+        String digits = trimmed.replaceAll("[^0-9]", "");
+
+        com.querydsl.core.BooleanBuilder predicate = new com.querydsl.core.BooleanBuilder();
+        predicate.or(qCustomer.phone.eq(trimmed));
+        if (!digits.isBlank()) {
+            predicate.or(qCustomer.phone.eq(digits));
+            if (digits.length() >= 10) {
+                String last10 = digits.substring(digits.length() - 10);
+                predicate.or(qCustomer.phone.eq(last10));
+                predicate.or(qCustomer.phone.eq("+91" + last10));
+                predicate.or(qCustomer.phone.eq("91" + last10));
+                predicate.or(qCustomer.phone.eq("0" + last10));
+                predicate.or(qCustomer.phone.endsWith(last10));
+            }
+        }
+
         return Optional.ofNullable(
                 queryFactory.selectFrom(qCustomer)
-                        .where(qCustomer.phone.eq(phone.trim()))
-                        .fetchOne()
+                        .where(predicate)
+                        .orderBy(qCustomer.id.asc())
+                        .fetchFirst()
         );
     }
 }

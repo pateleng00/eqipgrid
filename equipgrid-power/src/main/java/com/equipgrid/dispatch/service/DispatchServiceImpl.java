@@ -72,7 +72,7 @@ public class DispatchServiceImpl implements IDispatchService {
                 .challanNumber(challan)
                 .booking(booking)
                 .asset(asset)
-                .fuelLevel(request.getFuelLevel() != null ? request.getFuelLevel() : "100%")
+                .fuelLevel(request.getFuelLevel() != null && !request.getFuelLevel().isBlank() ? request.getFuelLevel() : null)
                 .engineHoursOut(request.getEngineHoursOut() != null ? request.getEngineHoursOut() : asset.getEngineHours())
                 .accessoriesVerified(request.getAccessoriesVerified() == null || request.getAccessoriesVerified())
                 .conditionNotes(request.getConditionNotes())

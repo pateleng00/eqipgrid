@@ -16,10 +16,12 @@ import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.repository.BookingRepository;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.entity.Customer;
+import com.equipgrid.customer.repository.CustomerRepository;
 import com.equipgrid.customer.service.ICustomerService;
 import com.equipgrid.auth.otp.OtpVerificationService;
 import com.equipgrid.farmlocation.entity.FarmLocation;
 import com.equipgrid.farmlocation.service.IFarmLocationService;
+import com.equipgrid.location.entity.Hub;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ public class BookingServiceImpl implements IBookingService {
     private final AssetQueryRepository assetQueryRepository;
     private final IAssetService assetService;
     private final ICustomerService customerService;
+    private final CustomerRepository customerRepository;
     private final IFarmLocationService farmLocationService;
     private final PricingEngine pricingEngine;
     private final DistanceCalculator distanceCalculator;
@@ -120,6 +123,9 @@ public class BookingServiceImpl implements IBookingService {
         Asset asset = assetService.getAssetById(request.getAssetId());
         FarmLocation farmLocation = request.getFarmLocationId() == null ? null
                 : farmLocationService.getCustomerLocation(customer.getId(), request.getFarmLocationId());
+
+        // Automatically map dispatch Hub yard to customer when booking is created
+        autoMapCustomerHub(customer, asset);
 
         Long typeId = asset.getType() != null ? asset.getType().getId() : null;
         Long hubId = asset.getHub() != null ? asset.getHub().getId() : null;
@@ -243,6 +249,11 @@ public class BookingServiceImpl implements IBookingService {
 
         Booking updated = bookingRepository.save(booking);
 
+        if (newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.ALLOCATED ||
+                newStatus == BookingStatus.DISPATCH_READY || newStatus == BookingStatus.DISPATCHED) {
+            autoMapCustomerHub(booking.getCustomer(), booking.getAsset());
+        }
+
         if (newStatus == BookingStatus.CANCELLED) {
             Asset bookedAsset = booking.getAsset();
             if (bookedAsset != null && (bookedAsset.getStatus() == AssetStatus.RESERVED || bookedAsset.getStatus() == AssetStatus.DISPATCH_READY)) {
@@ -257,6 +268,18 @@ public class BookingServiceImpl implements IBookingService {
                 performedBy != null ? performedBy : "STAFF",
                 "Status transitioned from " + oldStatus + " to " + newStatus);
         return updated;
+    }
+
+    private void autoMapCustomerHub(Customer customer, Asset asset) {
+        if (customer != null && asset != null && asset.getHub() != null) {
+            Hub dispatchHub = asset.getHub();
+            if (customer.getHub() == null || !customer.getHub().getId().equals(dispatchHub.getId())) {
+                log.info("[Booking Service] Auto-mapping customer ID={} ('{}') to dispatch Hub ID={} ('{}')",
+                        customer.getId(), customer.getFullName(), dispatchHub.getId(), dispatchHub.getName());
+                customer.setHub(dispatchHub);
+                customerRepository.save(customer);
+            }
+        }
     }
 
     private String generateUniqueBookingNumber() {

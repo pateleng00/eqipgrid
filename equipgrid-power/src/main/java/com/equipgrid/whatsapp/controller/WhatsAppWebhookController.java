@@ -1,7 +1,5 @@
 package com.equipgrid.whatsapp.controller;
 
-import com.equipgrid.booking.entity.Booking;
-import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.whatsapp.dto.model.UpiPaymentDetails;
@@ -9,7 +7,10 @@ import com.equipgrid.whatsapp.dto.request.WhatsAppInboundRequest;
 import com.equipgrid.whatsapp.dto.request.WhatsAppNotificationRequest;
 import com.equipgrid.whatsapp.dto.response.WhatsAppMessageResponse;
 import com.equipgrid.whatsapp.entity.WhatsAppConversation;
-import com.equipgrid.whatsapp.service.*;
+import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
+import com.equipgrid.whatsapp.service.IWhatsAppBotService;
+import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
+import com.equipgrid.whatsapp.service.IWhatsAppWebhookService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,7 +22,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -30,27 +33,17 @@ import java.util.List;
 @Tag(name = "WhatsApp Service", description = "WhatsApp bot, UPI QR code generation, and mobile-identified rental lifecycle")
 public class WhatsAppWebhookController {
 
+    private final IWhatsAppWebhookService whatsAppWebhookService;
     private final IWhatsAppBotService whatsAppBotService;
     private final IWhatsAppNotificationService whatsAppNotificationService;
     private final IUpiQrGeneratorService upiQrGeneratorService;
-    private final BookingQueryRepository bookingQueryRepository;
-
-    private final MetaWhatsAppClientService metaWhatsAppClientService;
-    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-    private final com.equipgrid.whatsapp.security.MetaSignatureValidator metaSignatureValidator;
-
-    @org.springframework.beans.factory.annotation.Value("${equipgrid.whatsapp.meta.verify-token:eq_whk_default_token}")
-    private String metaVerifyToken;
 
     @Operation(summary = "Meta Webhook Verification Challenge", description = "Responds to Meta Cloud API webhook verification GET request")
     @GetMapping("/webhook")
-    public ResponseEntity<String> verifyMetaWebhook(
-            @RequestParam(value = "hub.mode", required = false) String mode,
-            @RequestParam(value = "hub.verify_token", required = false) String token,
-            @RequestParam(value = "hub.challenge", required = false) String challenge) {
+    public ResponseEntity<String> verifyMetaWebhook(@RequestParam(value = "hub.mode", required = false) String mode, @RequestParam(value = "hub.verify_token", required = false) String token, @RequestParam(value = "hub.challenge", required = false) String challenge) {
         log.info("[Meta Webhook] Verification request: mode={}, token={}", mode, token);
 
-        if ("subscribe".equals(mode) && metaVerifyToken.equals(token)) {
+        if (whatsAppWebhookService.verifyWebhookChallenge(mode, token)) {
             log.info("[Meta Webhook] Verify token challenge accepted. Mode={}, token={}", mode, token);
             return ResponseEntity.ok(challenge != null ? challenge : "OK");
         }
@@ -61,36 +54,12 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "WhatsApp Inbound Webhook (JSON)", description = "Receives incoming WhatsApp messages from Meta Cloud API or direct JSON")
     @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingJsonWebhook(
-            @RequestHeader(value = "X-Hub-Signature-256", required = false) String signatureHeader,
-            @RequestBody String rawPayload) {
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingJsonWebhook(@RequestHeader(value = "X-Hub-Signature-256", required = false) String signatureHeader, @RequestBody String rawPayload) {
 
-        if (!metaSignatureValidator.isValidSignature(rawPayload, signatureHeader)) {
-            log.warn("[WhatsApp Webhook] Signature verification failed! signature={}", signatureHeader);
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(ApiResponse.buildFail("EG_403", "Invalid or missing X-Hub-Signature-256 header", null));
-        }
-
-        com.fasterxml.jackson.databind.JsonNode payload;
-        try {
-            payload = objectMapper.readTree(rawPayload);
-        } catch (Exception e) {
-            log.error("[WhatsApp Webhook] Failed to parse JSON body: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(ApiResponse.buildFail("EG_400", "Malformed JSON body", null));
-        }
-
-        WhatsAppInboundRequest request = parseInboundPayload(payload);
-        if (request == null) {
+        WhatsAppMessageResponse response = whatsAppWebhookService.processJsonWebhook(signatureHeader, rawPayload);
+        if (response == null) {
             log.info("[WhatsApp Webhook] Received non-message event (e.g. delivery/status receipt), acknowledged with 200 OK");
             return ResponseEntity.ok(ApiResponse.buildSuccess("EVENT_ACK", "Event acknowledged", null));
-        }
-        log.info("Received WhatsApp webhook message from {} | mediaType: {} | mediaId: {}",
-                request.getFrom(), request.getMediaType(), request.getMediaId());
-        WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
-
-        // Automatically dispatch bot response back to farmer via Meta Cloud API
-        if (response != null && response.getMessage() != null && !response.getMessage().isBlank()) {
-            metaWhatsAppClientService.sendTextMessage(request.getFrom(), response.getMessage());
         }
 
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
@@ -98,183 +67,9 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "WhatsApp Inbound Webhook (Twilio Form)", description = "Receives incoming WhatsApp messages from Twilio form-urlencoded webhooks")
     @PostMapping(value = "/webhook", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingTwilioWebhook(@RequestParam java.util.Map<String, String> formParams) {
-        String from = formParams.getOrDefault("From", "").replace("whatsapp:", "").replace("+", "").trim();
-        String body = formParams.getOrDefault("Body", "").trim();
-        String profileName = formParams.getOrDefault("ProfileName", "Farmer");
-
-        if (from.isBlank()) {
-            return ResponseEntity.badRequest().body(ApiResponse.buildFail("INVALID_SENDER", "Missing From parameter", null));
-        }
-
-        WhatsAppInboundRequest.WhatsAppInboundRequestBuilder builder = WhatsAppInboundRequest.builder()
-                .from(from)
-                .message(body)
-                .userName(profileName)
-                .messageId(formParams.get("MessageSid"))
-                .timestamp(System.currentTimeMillis() / 1000);
-
-        String mediaContentType = formParams.get("MediaContentType0");
-        String mediaUrl = formParams.get("MediaUrl0");
-        String transcriptionText = formParams.get("TranscriptionText");
-
-        if (mediaContentType != null && (mediaContentType.startsWith("audio/") || mediaContentType.contains("audio") || mediaContentType.contains("ogg"))) {
-            builder.mediaType("audio")
-                    .mediaUrl(mediaUrl)
-                    .mimeType(mediaContentType);
-            if (transcriptionText != null && !transcriptionText.isBlank()) {
-                builder.transcribedText(transcriptionText);
-            }
-        } else if (mediaContentType != null && mediaContentType.startsWith("image/")) {
-            builder.mediaType("image")
-                    .mediaUrl(mediaUrl)
-                    .mimeType(mediaContentType);
-        }
-
-        WhatsAppInboundRequest request = builder.build();
-
-        log.info("[Twilio Webhook] Received incoming message from {}, body: {}, mediaType: {}", from, body, request.getMediaType());
-        WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
+    public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> handleIncomingTwilioWebhook(@RequestParam Map<String, String> formParams) {
+        WhatsAppMessageResponse response = whatsAppWebhookService.processTwilioWebhook(formParams);
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
-    }
-
-    private WhatsAppInboundRequest parseInboundPayload(com.fasterxml.jackson.databind.JsonNode root) {
-        if (root == null) return null;
-
-        // 1. Check if direct WhatsAppInboundRequest format
-        if (root.has("from") && !root.path("from").asText().isBlank()) {
-            try {
-                WhatsAppInboundRequest direct = objectMapper.treeToValue(root, WhatsAppInboundRequest.class);
-                if (root.has("audio") && (direct.getMediaType() == null || direct.getMediaType().isBlank())) {
-                    com.fasterxml.jackson.databind.JsonNode audioNode = root.path("audio");
-                    direct.setMediaType("audio");
-                    if (audioNode.has("id") && (direct.getMediaId() == null || direct.getMediaId().isBlank())) {
-                        direct.setMediaId(audioNode.path("id").asText());
-                    }
-                    if (audioNode.has("mime_type") && (direct.getMimeType() == null || direct.getMimeType().isBlank())) {
-                        direct.setMimeType(audioNode.path("mime_type").asText());
-                    }
-                    if (audioNode.has("url") && (direct.getMediaUrl() == null || direct.getMediaUrl().isBlank())) {
-                        direct.setMediaUrl(audioNode.path("url").asText());
-                    } else if (audioNode.has("link") && (direct.getMediaUrl() == null || direct.getMediaUrl().isBlank())) {
-                        direct.setMediaUrl(audioNode.path("link").asText());
-                    }
-                    if (audioNode.has("transcription") && (direct.getTranscribedText() == null || direct.getTranscribedText().isBlank())) {
-                        direct.setTranscribedText(audioNode.path("transcription").asText());
-                    }
-                }
-                return direct;
-            } catch (Exception e) {
-                log.warn("Failed to deserialize direct WhatsAppInboundRequest: {}", e.getMessage());
-            }
-        }
-
-        // 2. Check if Meta Cloud API nested structure
-        if (root.has("entry")) {
-            com.fasterxml.jackson.databind.JsonNode entry = root.path("entry");
-            if (entry.isArray() && !entry.isEmpty()) {
-                com.fasterxml.jackson.databind.JsonNode changes = entry.get(0).path("changes");
-                if (changes.isArray() && !changes.isEmpty()) {
-                    com.fasterxml.jackson.databind.JsonNode value = changes.get(0).path("value");
-
-                    // Check for incoming customer messages
-                    com.fasterxml.jackson.databind.JsonNode messages = value.path("messages");
-                    if (messages.isArray() && !messages.isEmpty()) {
-                        com.fasterxml.jackson.databind.JsonNode msg = messages.get(0);
-                        String from = msg.path("from").asText();
-                        String text = "";
-                        if (msg.has("text")) {
-                            text = msg.path("text").path("body").asText();
-                        } else if (msg.has("button")) {
-                            text = msg.path("button").path("text").asText();
-                        } else if (msg.has("interactive")) {
-                            com.fasterxml.jackson.databind.JsonNode interactive = msg.path("interactive");
-                            if (interactive.has("button_reply")) {
-                                text = interactive.path("button_reply").path("title").asText();
-                            } else if (interactive.has("list_reply")) {
-                                text = interactive.path("list_reply").path("title").asText();
-                            }
-                        }
-
-                        String userName = "Farmer";
-                        com.fasterxml.jackson.databind.JsonNode contacts = value.path("contacts");
-                        if (contacts.isArray() && !contacts.isEmpty()) {
-                            userName = contacts.get(0).path("profile").path("name").asText("Farmer");
-                        }
-
-                        WhatsAppInboundRequest.WhatsAppInboundRequestBuilder builder = WhatsAppInboundRequest.builder()
-                                .from(from)
-                                .message(text)
-                                .userName(userName)
-                                .messageId(msg.path("id").asText())
-                                .timestamp(msg.path("timestamp").asLong(System.currentTimeMillis() / 1000));
-
-                        // ── Audio / Voice Note extraction ──
-                        String type = msg.path("type").asText("");
-                        if ("audio".equalsIgnoreCase(type) || "voice".equalsIgnoreCase(type) || msg.has("audio") || msg.has("voice")) {
-                            com.fasterxml.jackson.databind.JsonNode audioNode = msg.has("audio") ? msg.path("audio") : msg.path("voice");
-                            builder.mediaType("audio");
-                            if (audioNode.has("id")) {
-                                builder.mediaId(audioNode.path("id").asText());
-                            }
-                            if (audioNode.has("mime_type")) {
-                                builder.mimeType(audioNode.path("mime_type").asText());
-                            }
-                            if (audioNode.has("link")) {
-                                builder.mediaUrl(audioNode.path("link").asText());
-                            } else if (audioNode.has("url")) {
-                                builder.mediaUrl(audioNode.path("url").asText());
-                            }
-                            if (audioNode.has("transcription")) {
-                                builder.transcribedText(audioNode.path("transcription").asText());
-                            } else if (audioNode.has("text")) {
-                                builder.transcribedText(audioNode.path("text").asText());
-                            }
-                        } else if ("image".equalsIgnoreCase(type) || msg.has("image")) {
-                            com.fasterxml.jackson.databind.JsonNode imgNode = msg.path("image");
-                            builder.mediaType("image");
-                            if (imgNode.has("id")) {
-                                builder.mediaId(imgNode.path("id").asText());
-                            }
-                            if (imgNode.has("mime_type")) {
-                                builder.mimeType(imgNode.path("mime_type").asText());
-                            }
-                            if (imgNode.has("link")) {
-                                builder.mediaUrl(imgNode.path("link").asText());
-                            } else if (imgNode.has("url")) {
-                                builder.mediaUrl(imgNode.path("url").asText());
-                            }
-                            if (imgNode.has("caption") && text.isBlank()) {
-                                text = imgNode.path("caption").asText();
-                                builder.message(text);
-                            }
-                        }
-
-                        // Handle location pin
-                        if (msg.has("location")) {
-                            com.fasterxml.jackson.databind.JsonNode loc = msg.path("location");
-                            builder.latitude(loc.path("latitude").asDouble())
-                                    .longitude(loc.path("longitude").asDouble())
-                                    .locationName(loc.path("name").asText(null))
-                                    .locationAddress(loc.path("address").asText(null));
-                        }
-
-                        return builder.build();
-                    }
-
-                    // Status receipt (delivered/read/failed)
-                    com.fasterxml.jackson.databind.JsonNode statuses = value.path("statuses");
-                    if (statuses.isArray() && !statuses.isEmpty()) {
-                        com.fasterxml.jackson.databind.JsonNode st = statuses.get(0);
-                        log.info("[Meta Status Webhook] Status: {}, recipient: {}, id: {}",
-                                st.path("status").asText(), st.path("recipient_id").asText(), st.path("id").asText());
-                        return null; // Acknowledged without triggering bot
-                    }
-                }
-            }
-        }
-
-        return null;
     }
 
     @Operation(summary = "Simulate WhatsApp Conversation", description = "Interactive testing endpoint for rural mobile booking, UPI QR generation, and tracking")
@@ -289,22 +84,7 @@ public class WhatsAppWebhookController {
     @Operation(summary = "Generate Dynamic UPI QR Code Image (PNG)", description = "Renders scannable UPI QR code PNG for a booking's advance & security deposit")
     @GetMapping(value = "/qr/{bookingNumber}", produces = MediaType.IMAGE_PNG_VALUE)
     public ResponseEntity<byte[]> getUpiQrCodeImage(@PathVariable String bookingNumber) {
-        if ("merchant".equalsIgnoreCase(bookingNumber) || "desk".equalsIgnoreCase(bookingNumber) || "quick".equalsIgnoreCase(bookingNumber)) {
-            return getMerchantUpiQrCodeImage(null, null);
-        }
-
-        Booking booking = bookingQueryRepository.fetchByBookingNumber(bookingNumber)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingNumber));
-
-        String upiUri = upiQrGeneratorService.generateUpiPaymentUri(
-                null,
-                null,
-                booking.getTotalAmount(),
-                "Rent & Deposit for " + booking.getBookingNumber(),
-                booking.getBookingNumber()
-        );
-
-        byte[] qrBytes = upiQrGeneratorService.generateQrCodeBytes(upiUri, 350, 350);
+        byte[] qrBytes = whatsAppWebhookService.generateBookingQrCodeImage(bookingNumber);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
@@ -315,19 +95,8 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "Generate Merchant Desk UPI QR Code Image (PNG)", description = "Renders scannable merchant UPI QR code PNG for the rental yard desk")
     @GetMapping(value = {"/qr/merchant", "/qr/desk"}, produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> getMerchantUpiQrCodeImage(
-            @RequestParam(required = false) java.math.BigDecimal amount,
-            @RequestParam(required = false) String note
-    ) {
-        String upiUri = upiQrGeneratorService.generateUpiPaymentUri(
-                null,
-                null,
-                amount != null ? amount : java.math.BigDecimal.ZERO,
-                note != null && !note.isBlank() ? note : "EquipGrid Rental Desk Payment",
-                "EQ-DESK-" + System.currentTimeMillis()
-        );
-
-        byte[] qrBytes = upiQrGeneratorService.generateQrCodeBytes(upiUri, 350, 350);
+    public ResponseEntity<byte[]> getMerchantUpiQrCodeImage(@RequestParam(required = false) BigDecimal amount, @RequestParam(required = false) String note) {
+        byte[] qrBytes = whatsAppWebhookService.generateMerchantQrCodeImage(amount, note);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.IMAGE_PNG);
@@ -338,7 +107,7 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "Get Merchant Desk UPI Payment Details", description = "Returns active VPA, payee name, and generated QR code base64/URL")
     @GetMapping("/qr/merchant/details")
-    public ResponseEntity<ApiResponse<UpiPaymentDetails>> getMerchantUpiDetails(@RequestParam(required = false) java.math.BigDecimal amount, @RequestParam(required = false) String note) {
+    public ResponseEntity<ApiResponse<UpiPaymentDetails>> getMerchantUpiDetails(@RequestParam(required = false) BigDecimal amount, @RequestParam(required = false) String note) {
         UpiPaymentDetails details = upiQrGeneratorService.getMerchantUpiDetails(amount, note);
         return ResponseEntity.ok(ApiResponse.buildSuccess(details));
     }
@@ -375,8 +144,7 @@ public class WhatsAppWebhookController {
             description = "Proactively notifies customer that their WhatsApp damage checklist is ready — sent when recovery vehicle is dispatched")
     @PostMapping("/notify/checklist/{bookingId}")
     public ResponseEntity<ApiResponse<WhatsAppMessageResponse>> notifyDamageChecklistReady(@PathVariable Long bookingId) {
-        WhatsAppMessageResponse response = ((WhatsAppNotificationServiceImpl) whatsAppNotificationService)
-                .notifyDamageChecklistReady(bookingId);
+        WhatsAppMessageResponse response = whatsAppNotificationService.notifyDamageChecklistReady(bookingId);
         return ResponseEntity.ok(ApiResponse.buildSuccess(response));
     }
 
@@ -402,8 +170,7 @@ public class WhatsAppWebhookController {
 
     @Operation(summary = "Get WhatsApp Conversation by Phone", description = "Gets conversation context and history for a specific phone number")
     @GetMapping("/conversations/{phone}")
-    public ResponseEntity<ApiResponse<WhatsAppConversation>> getConversationByPhone(
-            @PathVariable String phone) {
+    public ResponseEntity<ApiResponse<WhatsAppConversation>> getConversationByPhone(@PathVariable String phone) {
         return whatsAppBotService.getConversationByPhone(phone)
                 .map(c -> ResponseEntity.ok(ApiResponse.buildSuccess(c)))
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.buildFail("SGO_404", "Conversation not found for phone: " + phone, null)));

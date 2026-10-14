@@ -463,7 +463,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
   const depositPaid = data.depositPaid ?? booking.depositPaid ?? (booking.depositAmount || 0);
   const totalPaid = data.totalPaid ?? (advancePaid + depositPaid);
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : 'EquipGrid Hardoi Central Hub');
+  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
 
   const statusInfo = getFarmerFriendlyStatus(booking.status);
   const sourceMeta = getBookingSourceMeta(booking.bookingSource);
@@ -474,14 +474,26 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
 
   const billingUnitText = getBillingUnitDisplayName(booking.asset?.billingUnit || 'DAILY');
 
+  const categoryLabel = booking.asset.category === 'MULTIPURPOSE_FLEET'
+    ? 'Multipurpose Fleet (बहुउद्देशीय वाहन)'
+    : booking.asset.category === 'CONSTRUCTION'
+    ? 'Construction Equipment (निर्माण उपकरण)'
+    : 'Agricultural Machinery (कृषि उपकरण)';
+
+  const customerSiteTitle = booking.asset.category === 'CONSTRUCTION'
+    ? 'Customer & Site Details (ग्राहक व निर्माण स्थल)'
+    : booking.asset.category === 'MULTIPURPOSE_FLEET'
+    ? 'Customer & Destination Site (ग्राहक व कार्य स्थल विवरण)'
+    : 'Customer & Delivery Field (किसान व खेत विवरण)';
+
+  const modelDisplay = booking.asset.modelName ? `${booking.asset.name} (${booking.asset.modelName})` : booking.asset.name;
+
   const bodyHtml = `
     <div class="header">
       <div>
         <img src="${getLogoUrl()}" alt="EquipGrid" class="brand-logo" onerror="this.onerror=null; this.src='/logo-rectangle.png';" />
-        <div class="brand-sub">Agricultural & Construction Machinery Rental Station (ग्रामीण यांत्रिक सेवा)</div>
-        <div style="font-size: 11px; color: #475569; margin-top: 3px;">
-          ${escapeHtml(stationName)} · Toll-Free Helpline: <strong>1800 890 2424</strong> · Hub Phone: +91 94500 00000
-        </div>
+        <div class="brand-sub">Agricultural, Construction & Multipurpose Fleet Station (कृषि, निर्माण व बहुउद्देशीय यांत्रिक सेवा)</div>
+        ${stationName ? `<div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Dispatch &amp; Handover Desk</div>` : ''}
       </div>
       <div class="voucher-badge">
         <span class="badge-tag badge-emerald">${escapeHtml(statusInfo.farmerLabelHi)} · ${escapeHtml(statusInfo.farmerLabelEn)}</span>
@@ -503,7 +515,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
     <div class="grid-2">
       <div class="panel">
         <div class="panel-title">
-          <span>Customer & Delivery Field (किसान व खेत विवरण)</span>
+          <span>${escapeHtml(customerSiteTitle)}</span>
           ${isFreeDelivery ? '<span style="color: #047857; font-size: 9px; background: #ecfdf5; padding: 1px 6px; border-radius: 4px; border: 1px solid #a7f3d0;">🟢 0-5km Free Delivery</span>' : ''}
         </div>
         <div class="info-row"><span class="info-label">Customer Name:</span><span class="info-val">${escapeHtml(booking.customer.fullName)}</span></div>
@@ -546,7 +558,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
           <span style="color: #b45309; font-size: 9px; font-family: monospace;">${escapeHtml(booking.asset.assetTag)}</span>
         </div>
         <div class="info-row"><span class="info-label">Machinery:</span><span class="info-val">${escapeHtml(booking.asset.name)}</span></div>
-        <div class="info-row"><span class="info-label">Category / Model:</span><span class="info-val">${escapeHtml(booking.asset.modelName || 'Standard Heavy Duty')}</span></div>
+        <div class="info-row"><span class="info-label">Category / Model:</span><span class="info-val">${escapeHtml(categoryLabel)} · ${escapeHtml(modelDisplay)}</span></div>
         <div class="info-row"><span class="info-label">Rental Duration:</span><span class="info-val">${escapeHtml(booking.startDate)} to ${escapeHtml(booking.endDate)}</span></div>
         <div class="info-row"><span class="info-label">Billing Metric:</span><span class="info-val" style="color: #0369a1;">${escapeHtml(billingUnitText)}</span></div>
         ${booking.asset.shiftTerms ? `
@@ -665,18 +677,30 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
 export function printDispatchChallanPdf(data: DispatchVoucherData) {
   const { booking, challan } = data;
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : 'EquipGrid Hardoi Central Hub');
+  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
 
   const farmLocation = booking.farmLocation;
-  const driverPhone = data.driverPhone || challan.driverPhone || '+91 94500 12345';
-  const vehicleNumber = data.vehicleNumber || challan.vehicleNumber || 'UP-30-AT-8821 Flatbed';
+  const driverPhone = data.driverPhone || challan.driverPhone || '';
+  const vehicleNumber = data.vehicleNumber || challan.vehicleNumber || '';
+
+  const dispatchDestTitle = booking.asset?.category === 'CONSTRUCTION'
+    ? 'Customer & Construction Site (ग्राहक व निर्माण स्थल)'
+    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+    ? 'Customer & Destination Site (ग्राहक व कार्य स्थल)'
+    : 'Customer & Destination Farm (किसान व गंतव्य खेत)';
+
+  const destLabel = booking.asset?.category === 'CONSTRUCTION'
+    ? 'Site Destination:'
+    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+    ? 'Worksite Destination:'
+    : 'Field Destination:';
 
   const bodyHtml = `
     <div class="header">
       <div>
         <img src="${getLogoUrl()}" alt="EquipGrid" class="brand-logo" onerror="this.onerror=null; this.src='/logo-rectangle.png';" />
         <div class="brand-sub">Gate Pass & Outward Delivery Challan (मशीन डिलीवरी चालान व गेट पास)</div>
-        <div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Dispatch Desk</div>
+        ${stationName ? `<div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Dispatch Desk</div>` : ''}
       </div>
       <div class="voucher-badge">
         <span class="badge-tag badge-blue">मशीन रवाना · Dispatched</span>
@@ -687,11 +711,11 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
 
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title">Customer & Destination Farm (किसान व गंतव्य खेत)</div>
+        <div class="panel-title">${escapeHtml(dispatchDestTitle)}</div>
         <div class="info-row"><span class="info-label">Customer:</span><span class="info-val">${escapeHtml(booking.customer.fullName)}</span></div>
         <div class="info-row"><span class="info-label">WhatsApp:</span><span class="info-val">+91 ${escapeHtml(booking.customer.phone)}</span></div>
         <div class="info-row">
-          <span class="info-label">Field Destination:</span>
+          <span class="info-label">${escapeHtml(destLabel)}</span>
           <span class="info-val" style="color: #0369a1;">
             ${escapeHtml(farmLocation?.localName || booking.deliveryLocationName || booking.deliveryAddress)}
             ${farmLocation?.localNameHindi ? ` (${escapeHtml(farmLocation.localNameHindi)})` : ''}
@@ -700,19 +724,19 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
         ${farmLocation?.landmark ? `
         <div class="info-row"><span class="info-label">Landmark:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.landmark)}</span></div>` : ''}
         ${farmLocation?.village ? `
-        <div class="info-row"><span class="info-label">Village / Tehsil:</span><span class="info-val">${escapeHtml(farmLocation.village)}, ${escapeHtml(farmLocation.tehsil || '')}</span></div>` : ''}
+        <div class="info-row"><span class="info-label">Village / Tehsil:</span><span class="info-val">${escapeHtml(farmLocation.village)}${farmLocation.tehsil ? `, ${escapeHtml(farmLocation.tehsil)}` : ''}</span></div>` : ''}
         <div class="info-row"><span class="info-label">Site Receiver:</span><span class="info-val">${escapeHtml(farmLocation?.deliveryContactName || booking.customer.fullName)} (+91 ${escapeHtml(farmLocation?.deliveryContactPhone || booking.customer.phone)})</span></div>
         <div class="info-row"><span class="info-label">Booking Ref:</span><span class="info-val" style="font-family: monospace;">${escapeHtml(booking.bookingNumber)}</span></div>
       </div>
 
       <div class="panel">
         <div class="panel-title">Dispatch Vehicle & Driver (चालक व वाहन विवरण)</div>
-        <div class="info-row"><span class="info-label">Driver / Pilot:</span><span class="info-val">${escapeHtml(challan.driverName || 'Suraj Logistics')}</span></div>
-        <div class="info-row"><span class="info-label">Driver Phone:</span><span class="info-val">${escapeHtml(driverPhone)}</span></div>
-        <div class="info-row"><span class="info-label">Vehicle No:</span><span class="info-val" style="font-family: monospace; font-weight: 800;">${escapeHtml(vehicleNumber)}</span></div>
+        <div class="info-row"><span class="info-label">Driver / Pilot:</span><span class="info-val">${escapeHtml(challan.driverName || '—')}</span></div>
+        <div class="info-row"><span class="info-label">Driver Phone:</span><span class="info-val">${driverPhone ? `+91 ${escapeHtml(driverPhone)}` : '—'}</span></div>
+        <div class="info-row"><span class="info-label">Vehicle No:</span><span class="info-val" style="font-family: monospace; font-weight: 800;">${vehicleNumber ? escapeHtml(vehicleNumber) : '—'}</span></div>
         <div class="info-row"><span class="info-label">Machine Tag:</span><span class="info-val" style="font-family: monospace; color: #b45309;">${escapeHtml(challan.assetTag || booking.asset.assetTag)}</span></div>
-        <div class="info-row"><span class="info-label">Fuel Out:</span><span class="info-val" style="color: #047857;">${escapeHtml(challan.fuelLevel || '100% (Full Tank)')}</span></div>
-        <div class="info-row"><span class="info-label">Meter Reading Out:</span><span class="info-val">${challan.engineHoursOut || 14.5} hrs</span></div>
+        <div class="info-row"><span class="info-label">Fuel Out:</span><span class="info-val" style="color: #047857;">${escapeHtml(challan.fuelLevel || '—')}</span></div>
+        <div class="info-row"><span class="info-label">Meter Reading Out:</span><span class="info-val">${challan.engineHoursOut !== undefined && challan.engineHoursOut !== null ? `${challan.engineHoursOut} hrs` : '—'}</span></div>
       </div>
     </div>
 
@@ -749,7 +773,7 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
       </div>
       <div class="sign-box">
         Transporter / Driver Signature<br>
-        <span style="font-size: 9px; color: #64748b;">${escapeHtml(challan.driverName || 'Driver')}</span>
+        <span style="font-size: 9px; color: #64748b;">${escapeHtml(challan.driverName || '—')}</span>
       </div>
       <div class="sign-box">
         Customer Acceptance Signature<br>
@@ -769,21 +793,33 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
 export function printReturnSettlementPdf(data: SettlementVoucherData) {
   const { booking, inspection } = data;
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : 'EquipGrid Hardoi Central Hub');
+  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
 
   const farmLocation = booking.farmLocation;
-  const refundUtr = data.refundTransactionRef || 'UPI-SETTL-OK-' + booking.bookingNumber.replace('BK-', '');
-  const refundStatus = data.refundStatus || 'COMPLETED';
+  const refundUtr = data.refundTransactionRef || 'Pending Settlement Transfer';
+  const refundStatus = data.refundStatus || (data.refundTransactionRef ? 'COMPLETED' : 'PENDING');
+
+  const custTitle = booking.asset?.category === 'CONSTRUCTION'
+    ? 'Customer & Project Details (ग्राहक व परियोजना विवरण)'
+    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+    ? 'Customer & Operation Details (ग्राहक व परिचालन विवरण)'
+    : 'Customer & Booking Details (किसान विवरण)';
+
+  const siteLabel = booking.asset?.category === 'CONSTRUCTION'
+    ? 'Site Location:'
+    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+    ? 'Worksite Location:'
+    : 'Farm Location:';
 
   const bodyHtml = `
     <div class="header">
       <div>
         <img src="${getLogoUrl()}" alt="EquipGrid" class="brand-logo" onerror="this.onerror=null; this.src='/logo-rectangle.png';" />
         <div class="brand-sub">Return Inspection Audit & Deposit Settlement Statement (Form F-004 / अमानत राशि निपटान)</div>
-        <div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Accounts Clearance Desk</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 3px;">${stationName ? `${escapeHtml(stationName)} · ` : ''}Accounts Clearance Desk</div>
       </div>
       <div class="voucher-badge">
-        <span class="badge-tag badge-purple">खाता चुकता · Settled</span>
+        <span class="badge-tag badge-purple">${data.refundStatus === 'PENDING' ? 'प्रक्रियाधीन · Pending' : 'खाता चुकता · Settled'}</span>
         <div class="voucher-no">F-004-SET-${escapeHtml(booking.bookingNumber)}</div>
         <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Settled: ${escapeHtml(nowStr)}</div>
       </div>
@@ -791,12 +827,12 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
 
     <div class="grid-2">
       <div class="panel">
-        <div class="panel-title">Customer & Booking Details (किसान विवरण)</div>
+        <div class="panel-title">${escapeHtml(custTitle)}</div>
         <div class="info-row"><span class="info-label">Customer Name:</span><span class="info-val">${escapeHtml(booking.customer.fullName)}</span></div>
         <div class="info-row"><span class="info-label">UPI / Mobile Ref:</span><span class="info-val">+91 ${escapeHtml(data.refundDestination || booking.customer.phone)}</span></div>
         <div class="info-row"><span class="info-label">Booking Reference:</span><span class="info-val" style="font-family: monospace;">${escapeHtml(booking.bookingNumber)}</span></div>
         ${farmLocation || booking.deliveryLocationName ? `
-        <div class="info-row"><span class="info-label">Farm Location:</span><span class="info-val">${escapeHtml(farmLocation?.localName || booking.deliveryLocationName)}</span></div>` : ''}
+        <div class="info-row"><span class="info-label">${siteLabel}</span><span class="info-val">${escapeHtml(farmLocation?.localName || booking.deliveryLocationName)}</span></div>` : ''}
         <div class="info-row"><span class="info-label">Rental Duration:</span><span class="info-val">${escapeHtml(booking.startDate)} → ${escapeHtml(booking.endDate)}</span></div>
       </div>
 
@@ -804,7 +840,7 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
         <div class="panel-title">Inward Yard Audit Information (वापसी जांच विवरण)</div>
         <div class="info-row"><span class="info-label">Machine:</span><span class="info-val">${escapeHtml(booking.asset.name)}</span></div>
         <div class="info-row"><span class="info-label">Asset Tag:</span><span class="info-val" style="font-family: monospace; color: #b45309;">${escapeHtml(booking.asset.assetTag)}</span></div>
-        <div class="info-row"><span class="info-label">Inspected By:</span><span class="info-val">${escapeHtml(data.inspectorName || 'Rajesh Sharma (Lead Tech)')}</span></div>
+        <div class="info-row"><span class="info-label">Inspected By:</span><span class="info-val">${escapeHtml(data.inspectorName || '—')}</span></div>
         <div class="info-row"><span class="info-label">Yard Status Post-Return:</span><span class="info-val" style="color: ${data.damageCost > 0 ? '#b91c1c' : '#047857'}; font-weight: 800;">${data.damageCost > 0 ? 'MAINTENANCE REQUIRED' : 'AVAILABLE (READY FOR NEXT DEPLOYMENT)'}</span></div>
       </div>
     </div>
@@ -836,7 +872,7 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
         <tr>
           <td>
             <strong>Mechanical Damage / Refurbishment Deductions (मरम्मत कटौती)</strong>
-            <div style="font-size: 10.5px; color: #64748b;">${escapeHtml(data.damageNotes || 'No mechanical damages observed. Machine clean.')}</div>
+            <div style="font-size: 10.5px; color: #64748b;">${escapeHtml(data.damageNotes || 'No damages reported.')}</div>
           </td>
           <td style="text-align: right; color: ${data.damageCost > 0 ? '#b91c1c' : '#64748b'};">
             ${data.damageCost > 0 ? `-${formatINR(data.damageCost)}` : '₹0.00 (Zero Damage)'}
@@ -863,7 +899,7 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
     <div class="footer">
       <div class="sign-box">
         Hub Technical Inspector<br>
-        <span style="font-size: 9px; color: #64748b;">${escapeHtml(data.inspectorName || 'Rajesh Sharma')}</span>
+        <span style="font-size: 9px; color: #64748b;">${escapeHtml(data.inspectorName || '—')}</span>
       </div>
       <div class="sign-box">
         Accounts Desk Clearance<br>

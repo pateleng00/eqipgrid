@@ -320,7 +320,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         for (Hub h : hubs) {
             sb.append("   - ").append(h.getName()).append(" (").append(h.getAddress()).append(") - Phone: ").append(h.getContactPhone()).append(", Radius: ").append(h.getOperatingRadiusKm()).append("km\n");
         }
-        sb.append("6. **24x7 Helpline**: Toll-free 1800-889-AGRI (1800-889-2474) and WhatsApp: +1 555 630-0171.\n\n");
+        sb.append("6. **24x7 Helpline**: Helpline +91 94674 79922 and WhatsApp: +91 94674 79922.\n\n");
         sb.append("### Live Tool Calling Rules:\n");
         sb.append("- You have access to real-time tools connected directly to the EquipGrid inventory database and pricing engine.\n");
         sb.append("- ALWAYS invoke `searchAvailableFleet` whenever the user asks about machinery availability, machine types, or rates (e.g. weeders, reapers, augers, concrete mixers, pumps, compactors).\n");
@@ -344,13 +344,13 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
                     + "- **Instant UPI Return**: As soon as your rental period ends, our yard technician completes a rapid 2-minute visual check.\n"
                     + "- **120-Minute Direct Credit**: The full deposit amount is credited back directly to your original UPI ID or bank account within **2 hours (120 minutes)**.\n"
                     + "- **Zero Hidden Deductions**: Transparent billing with no paperwork hassles.\n\n"
-                    + "Need assistance with an existing deposit? Our billing desk is on standby at **1800-889-2474**.";
+                    + "Need assistance with an existing deposit? Our billing desk is on standby at **+91 94674 79922**.";
         }
 
         if (lower.contains("breakdown") || lower.contains("repair") || lower.contains("stopped") || lower.contains("sla") || lower.contains("service")) {
             return "### 🚨 90-Minute Zero-Breakdown Guarantee\n\n"
                     + "We understand that field downtime means lost harvest windows or construction delays:\n\n"
-                    + "- **Rapid Mobile Response**: In the rare event of mechanical failure, call **1800-889-AGRI**.\n"
+                    + "- **Rapid Mobile Response**: In the rare event of mechanical failure, call **+91 94674 79922**.\n"
                     + "- **90-Min Resolution SLA**: A certified field technician or a fresh replacement machine will arrive on site within **90 minutes** from our nearest operational hub.\n"
                     + "- **Downtime Credit**: Lost operational hours are automatically credited back to your rental invoice.";
         }
@@ -358,9 +358,9 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         if (lower.contains("hub") || lower.contains("location") || lower.contains("hardoi") || lower.contains("sandila") || lower.contains("bilgram") || lower.contains("yard")) {
             return "### 📍 EquipGrid Operational Hubs & Delivery Network\n\n"
                     + "We operate 3 regional equipment hubs across Uttar Pradesh with direct field delivery:\n\n"
-                    + "1. **Hardoi Central Yard**: Bilgram Road Industrial Area (Serving 30km radius - Shahabad, Tadiyawan) • Phone: `+91 94500 01100`\n"
-                    + "2. **Sandila Industrial Hub**: UPSIDC Phase 2, Lucknow-Hardoi Highway (Serving 25km radius - Beniganj, UPSIDC) • Phone: `+91 94500 02200`\n"
-                    + "3. **Bilgram Agro Yard**: Near Mandi Parishad (Serving 20km radius - Mallawan, Madhoganj) • Phone: `+91 94500 03300`\n\n"
+                    + "1. **Hardoi Central Yard**: Bilgram Road Industrial Area (Serving 30km radius - Shahabad, Tadiyawan) • Phone: `+91 94674 79922`\n"
+                    + "2. **Sandila Industrial Hub**: UPSIDC Phase 2, Lucknow-Hardoi Highway (Serving 25km radius - Beniganj, UPSIDC) • Phone: `+91 94674 79922`\n"
+                    + "3. **Bilgram Agro Yard**: Near Mandi Parishad (Serving 20km radius - Mallawan, Madhoganj) • Phone: `+91 94674 79922`\n\n"
                     + "🚚 **Doorstep & Field Delivery**: We drop machinery right at your farm GPS headland or construction plot via our tractor-trailer fleet.";
         }
 
@@ -397,8 +397,8 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         if (lower.contains("contact") || lower.contains("phone") || lower.contains("call") || lower.contains("help") || lower.contains("support") || lower.contains("whatsapp")) {
             return "### 📞 Contact EquipGrid 24/7 Operations Desk\n\n"
                     + "We are here round the clock to support farmers and construction teams:\n\n"
-                    + "- **Toll-Free Helpline**: 📞 `1800-889-AGRI` (`1800-889-2474`)\n"
-                    + "- **Instant WhatsApp Bot**: 💬 `+1 (555) 630-0171`\n"
+                    + "- **24/7 Helpline**: 📞 `+91 94674 79922`\n"
+                    + "- **Instant WhatsApp Bot**: 💬 `+91 94674 79922`\n"
                     + "- **Billing & Refund Desk**: Bilgram Road Industrial Area, Hardoi\n\n"
                     + "You can also search or book machinery directly through this chat window!";
         }

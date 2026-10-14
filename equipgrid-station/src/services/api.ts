@@ -2056,9 +2056,9 @@ export class ApiStore {
 
     return {
       id: raw.id || Date.now(),
-      challanNumber: raw.challanNumber || `CH-2026-${String(Math.floor(Math.random() * 900) + 100)}`,
+      challanNumber: raw.challanNumber || `CH-2026-${String(data.bookingId).padStart(4, '0')}`,
       bookingId: data.bookingId,
-      assetTag: b?.asset.assetTag || 'C-MIX-001',
+      assetTag: raw.asset?.assetTag || b?.asset.assetTag || '',
       dispatchTimestamp: raw.dispatchTimestamp || new Date().toISOString(),
       fuelLevel: data.fuelLevel,
       engineHoursOut: data.engineHoursOut,
@@ -2066,6 +2066,25 @@ export class ApiStore {
       conditionNotes: data.conditionNotes,
       driverName: data.driverName,
       customerSignatureConfirmed: true,
+    };
+  }
+
+  async getDispatchByBooking(bookingId: number): Promise<DispatchRecord> {
+    const raw = await request<any>(`/dispatch/booking/${bookingId}`);
+    return {
+      id: raw.id,
+      challanNumber: raw.challanNumber,
+      bookingId: raw.booking?.id || bookingId,
+      assetTag: raw.asset?.assetTag || '',
+      dispatchTimestamp: raw.dispatchTimestamp || new Date().toISOString(),
+      fuelLevel: raw.fuelLevel || '—',
+      engineHoursOut: raw.engineHoursOut !== undefined && raw.engineHoursOut !== null ? Number(raw.engineHoursOut) : 0,
+      accessoriesVerified: raw.accessoriesVerified ?? true,
+      conditionNotes: raw.conditionNotes || '',
+      driverName: raw.driverName || '—',
+      driverPhone: raw.driverPhone || '',
+      vehicleNumber: raw.vehicleNumber || '',
+      customerSignatureConfirmed: raw.customerSignatureConfirmed ?? true,
     };
   }
 
@@ -2077,7 +2096,11 @@ export class ApiStore {
     damageCost: number;
     fuelDeltaCharge: number;
     damageDescription?: string;
+    fuelLevelReturn?: string;
+    engineHoursIn?: number;
+    accessoriesReturnedOk?: boolean;
   }): Promise<ReturnInspection> {
+    const b = this.bookings.find((bk) => bk.id === data.bookingId);
     const nextAction = data.hasDamage ? 'MAINTENANCE' : 'AVAILABLE';
     const raw = await request<any>('/returns', {
       method: 'POST',
@@ -2089,13 +2112,12 @@ export class ApiStore {
         fuelDeltaCharge: data.fuelDeltaCharge,
         damageDescription: data.damageDescription,
         nextAction,
-        fuelLevelReturn: '100%',
-        engineHoursIn: 25.0,
-        accessoriesReturnedOk: true,
+        fuelLevelReturn: data.fuelLevelReturn || '—',
+        engineHoursIn: data.engineHoursIn !== undefined ? data.engineHoursIn : (b?.asset.engineHours || 0),
+        accessoriesReturnedOk: data.accessoriesReturnedOk ?? true,
       }),
     });
 
-    const b = this.bookings.find((bk) => bk.id === data.bookingId);
     if (b) {
       b.status = 'CLOSED';
       const asset = this.assets.find((a) => a.id === b.asset.id);
@@ -2107,18 +2129,38 @@ export class ApiStore {
     return {
       id: raw.id || Date.now(),
       bookingId: data.bookingId,
-      assetTag: b?.asset.assetTag || 'C-MIX-001',
+      assetTag: raw.asset?.assetTag || b?.asset.assetTag || '',
       returnTimestamp: raw.returnTimestamp || new Date().toISOString(),
-      fuelLevelReturn: raw.fuelLevelReturn || '100%',
-      fuelDeltaCharge: Number(raw.fuelDeltaCharge || data.fuelDeltaCharge),
-      engineHoursIn: Number(raw.engineHoursIn || 25.0),
+      fuelLevelReturn: raw.fuelLevelReturn || data.fuelLevelReturn || '—',
+      fuelDeltaCharge: Number(raw.fuelDeltaCharge !== undefined ? raw.fuelDeltaCharge : data.fuelDeltaCharge),
+      engineHoursIn: Number(raw.engineHoursIn !== undefined ? raw.engineHoursIn : (data.engineHoursIn || b?.asset.engineHours || 0)),
       accessoriesReturnedOk: Boolean(raw.accessoriesReturnedOk ?? true),
       hasDamage: Boolean(raw.hasDamage ?? data.hasDamage),
-      damageCost: Number(raw.damageCost || data.damageCost),
+      damageCost: Number(raw.damageCost !== undefined ? raw.damageCost : data.damageCost),
       damageDescription: raw.damageDescription || data.damageDescription,
       inspectorName: data.inspectorName,
       nextAction: data.hasDamage ? 'MAINTENANCE' : 'AVAILABLE',
     };
+  }
+
+  async getInspectionsByBooking(bookingId: number): Promise<ReturnInspection[]> {
+    const rawList = await request<any[]>(`/returns/booking/${bookingId}`);
+    if (!Array.isArray(rawList)) return [];
+    return rawList.map((raw) => ({
+      id: raw.id,
+      bookingId: raw.booking?.id || bookingId,
+      assetTag: raw.asset?.assetTag || '',
+      returnTimestamp: raw.createdAt || raw.returnTimestamp || new Date().toISOString(),
+      fuelLevelReturn: raw.fuelLevelReturn || '—',
+      fuelDeltaCharge: Number(raw.fuelDeltaCharge || 0),
+      engineHoursIn: Number(raw.engineHoursIn || 0),
+      accessoriesReturnedOk: Boolean(raw.accessoriesReturnedOk ?? true),
+      hasDamage: Boolean(raw.hasDamage ?? false),
+      damageCost: Number(raw.damageCost || 0),
+      damageDescription: raw.damageDescription || '',
+      inspectorName: raw.inspectorName || '—',
+      nextAction: raw.nextAction || 'AVAILABLE',
+    }));
   }
 
   // --- DEALER OPERATIONS ---

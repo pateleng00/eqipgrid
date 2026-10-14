@@ -57,10 +57,10 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
     try {
       const challan = await api.executeDispatch({
         bookingId: booking.id,
-        driverName: driverName.trim() || 'EquipGrid Fleet / Self Pickup',
-        fuelLevel: fuelLevel.trim() || '100% (Full Tank)',
+        driverName: driverName.trim(),
+        fuelLevel: fuelLevel.trim(),
         engineHoursOut: typeof engineHoursOut === 'number' ? engineHoursOut : (parseFloat(String(engineHoursOut)) || 0),
-        conditionNotes: conditionNotes.trim() || 'Standard Outward Check Completed',
+        conditionNotes: conditionNotes.trim(),
       });
 
       setIssuedChallan(challan);
@@ -241,7 +241,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   type="text"
                   value={driverName}
                   onChange={(e) => setDriverName(e.target.value)}
-                  placeholder="e.g. Suraj Logistics (E-Rickshaw 3W)"
+                  placeholder="Driver / transporter name"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors',
                     isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
@@ -257,7 +257,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   type="text"
                   value={fuelLevel}
                   onChange={(e) => setFuelLevel(e.target.value)}
-                  placeholder="e.g. 100% (Full Tank)"
+                  placeholder="e.g. 100%, 75%"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors font-medium',
                     isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
@@ -274,7 +274,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   step="0.1"
                   value={engineHoursOut}
                   onChange={(e) => setEngineHoursOut(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                  placeholder="e.g. 14.5"
+                  placeholder="Meter hours reading"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs font-mono font-medium focus:outline-none transition-colors',
                     isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'

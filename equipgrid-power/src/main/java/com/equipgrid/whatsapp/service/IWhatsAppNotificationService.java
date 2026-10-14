@@ -24,4 +24,9 @@ public interface IWhatsAppNotificationService {
      * Notify customer on return inspection completion and security deposit refund.
      */
     WhatsAppMessageResponse notifyReturnSettlement(Long bookingId);
+
+    /**
+     * Notify customer that their WhatsApp return damage checklist is ready.
+     */
+    WhatsAppMessageResponse notifyDamageChecklistReady(Long bookingId);
 }

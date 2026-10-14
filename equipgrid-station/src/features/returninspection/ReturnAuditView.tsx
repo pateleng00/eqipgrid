@@ -101,7 +101,22 @@ export const ReturnAuditView: React.FC = () => {
 
   const [completedInspection, setCompletedInspection] = useState<ReturnInspection | null>(null);
   const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
+  const [whatsAppModalInspection, setWhatsAppModalInspection] = useState<ReturnInspection | null>(null);
   const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({ isOpen: false, message: '' });
+
+  const handleOpenWhatsAppModal = async (b: Booking) => {
+    setWhatsAppModalBooking(b);
+    try {
+      const inspections = await api.getInspectionsByBooking(b.id);
+      if (inspections && inspections.length > 0) {
+        setWhatsAppModalInspection(inspections[inspections.length - 1]);
+      } else {
+        setWhatsAppModalInspection(null);
+      }
+    } catch {
+      setWhatsAppModalInspection(null);
+    }
+  };
 
   const depositPaid = selectedBooking?.depositPaid || 0;
   const netRefund = Math.max(0, depositPaid - (hasDamage ? damageCost : 0) - fuelDeltaCharge);
@@ -280,7 +295,7 @@ export const ReturnAuditView: React.FC = () => {
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
-                          onClick={() => setWhatsAppModalBooking(b)}
+                          onClick={() => handleOpenWhatsAppModal(b)}
                           data-tooltip="Circulate Return / Settlement Notice on WhatsApp"
                           data-tooltip-pos="left"
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
@@ -365,7 +380,7 @@ export const ReturnAuditView: React.FC = () => {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500">Fuel Delta / Refueling Surcharge:</span>
                     <span className={cn('font-bold font-mono', fuelDeltaCharge > 0 ? 'text-rose-600' : 'text-slate-500')}>
-                      {fuelDeltaCharge > 0 ? `-${formatINR(fuelDeltaCharge)}` : '₹0.00 (Full Tank)'}
+                      {fuelDeltaCharge > 0 ? `-${formatINR(fuelDeltaCharge)}` : '₹0.00 (No Charge)'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -605,67 +620,69 @@ export const ReturnAuditView: React.FC = () => {
       />
 
       {/* WhatsApp Circulation Modal */}
-      {whatsAppModalBooking && (
-        <WhatsAppCirculationModal
-          isOpen={!!whatsAppModalBooking}
-          onClose={() => setWhatsAppModalBooking(null)}
-          stageName="Return Settlement"
-          bookingNumber={whatsAppModalBooking.bookingNumber}
-          recipientName={whatsAppModalBooking.customer.fullName}
-          recipientPhone={whatsAppModalBooking.customer.phone}
-          message={getReturnSettlementWhatsAppMessage(
-            whatsAppModalBooking,
-            {
-              id: 0,
-              bookingId: whatsAppModalBooking.id,
-              assetTag: whatsAppModalBooking.asset.assetTag,
-              returnTimestamp: new Date().toISOString(),
-              fuelLevelReturn: '75%',
-              fuelDeltaCharge: 200,
-              engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
-              accessoriesReturnedOk: true,
-              inspectorName: currentUser?.name || 'Inspection Officer',
-              hasDamage: false,
-              damageCost: 0,
-              damageDescription: 'Clean return, no mechanical damage observed.',
-              nextAction: 'AVAILABLE',
-            },
-            {
-              originalDeposit: whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0,
-              fuelDeltaCharge: 200,
-              damageCost: 0,
-              netRefund: Math.max(0, (whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0) - 200),
+      {whatsAppModalBooking && (() => {
+        const realInspection = whatsAppModalInspection;
+        const deposit = whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0;
+        const fuelDelta = realInspection ? (realInspection.fuelDeltaCharge || 0) : 0;
+        const damage = realInspection ? (realInspection.damageCost || 0) : 0;
+        const net = Math.max(0, deposit - fuelDelta - damage);
+
+        const inspectionData: ReturnInspection = realInspection || {
+          id: whatsAppModalBooking.id,
+          bookingId: whatsAppModalBooking.id,
+          assetTag: whatsAppModalBooking.asset.assetTag,
+          returnTimestamp: new Date().toISOString(),
+          fuelLevelReturn: '—',
+          fuelDeltaCharge: 0,
+          engineHoursIn: whatsAppModalBooking.asset.engineHours,
+          accessoriesReturnedOk: true,
+          inspectorName: currentUser?.name || '—',
+          hasDamage: false,
+          damageCost: 0,
+          damageDescription: 'Satisfactory return condition.',
+          nextAction: 'AVAILABLE',
+        };
+
+        const settlementData = {
+          originalDeposit: deposit,
+          fuelDeltaCharge: fuelDelta,
+          damageCost: damage,
+          netRefund: net,
+          damageDescription: realInspection?.damageDescription || 'Clean return, no mechanical damage observed.',
+        };
+
+        return (
+          <WhatsAppCirculationModal
+            isOpen={!!whatsAppModalBooking}
+            onClose={() => {
+              setWhatsAppModalBooking(null);
+              setWhatsAppModalInspection(null);
+            }}
+            stageName="Return Settlement"
+            bookingNumber={whatsAppModalBooking.bookingNumber}
+            recipientName={whatsAppModalBooking.customer.fullName}
+            recipientPhone={whatsAppModalBooking.customer.phone}
+            message={getReturnSettlementWhatsAppMessage(
+              whatsAppModalBooking,
+              inspectionData,
+              settlementData
+            )}
+            onPrintPdf={() =>
+              printReturnSettlementPdf({
+                booking: whatsAppModalBooking,
+                inspection: inspectionData,
+                originalDeposit: deposit,
+                fuelDeltaCharge: fuelDelta,
+                damageCost: damage,
+                netRefund: net,
+                refundDestination: whatsAppModalBooking.customer.phone,
+                inspectorName: inspectionData.inspectorName,
+              })
             }
-          )}
-          onPrintPdf={() =>
-            printReturnSettlementPdf({
-              booking: whatsAppModalBooking,
-              inspection: {
-                id: 0,
-                bookingId: whatsAppModalBooking.id,
-                assetTag: whatsAppModalBooking.asset.assetTag,
-                returnTimestamp: new Date().toISOString(),
-                fuelLevelReturn: '75%',
-                fuelDeltaCharge: 200,
-                engineHoursIn: (whatsAppModalBooking.asset.engineHours || 14.5) + 8.0,
-                accessoriesReturnedOk: true,
-                inspectorName: currentUser?.name || 'Inspection Officer',
-                hasDamage: false,
-                damageCost: 0,
-                damageDescription: 'Clean return, no mechanical damage observed.',
-                nextAction: 'AVAILABLE',
-              },
-              originalDeposit: whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0,
-              fuelDeltaCharge: 200,
-              damageCost: 0,
-              netRefund: Math.max(0, (whatsAppModalBooking.depositPaid || whatsAppModalBooking.depositAmount || 0) - 200),
-              refundDestination: whatsAppModalBooking.customer.phone,
-              inspectorName: currentUser?.name || 'Inspection Officer',
-            })
-          }
-          pdfButtonLabel="Print Settlement Voucher (F-004)"
-        />
-      )}
+            pdfButtonLabel="Print Settlement Voucher (F-004)"
+          />
+        );
+      })()}
     </div>
   );
 };

@@ -10,4 +10,5 @@ public interface FarmLocationRepository extends JpaRepository<FarmLocation, Long
     List<FarmLocation> findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(Long customerId);
     Optional<FarmLocation> findByIdAndCustomerIdAndActiveTrue(Long id, Long customerId);
     Optional<FarmLocation> findFirstByCustomerIdAndLatitudeAndLongitude(Long customerId, java.math.BigDecimal latitude, java.math.BigDecimal longitude);
+    Optional<FarmLocation> findFirstByCustomerIdAndLocalNameIgnoreCaseAndActiveTrue(Long customerId, String localName);
 }

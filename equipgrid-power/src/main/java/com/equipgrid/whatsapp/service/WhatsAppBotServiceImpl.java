@@ -165,7 +165,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         // Check for universal reset/menu keywords
         if (isMenuKeyword(messageText)) {
-            return resetAndShowMainMenu(conversation, customer);
+            return resetAndShowMainMenu(conversation, customer, messageText);
         }
 
         WhatsAppConversationContext context = parseContext(conversation.getContextData());
@@ -199,7 +199,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             case DAMAGE_CHECKLIST_ACTIVE ->
                     response = handleDamageChecklistStep(request, messageText, conversation, customer, context);
             case PROCESSING_VOICE -> response = handleMainMenuSelection(messageText, conversation, customer, context);
-            default -> response = resetAndShowMainMenu(conversation, customer);
+            default -> response = resetAndShowMainMenu(conversation, customer, messageText);
         }
 
         // Persist updated conversation state and context
@@ -265,8 +265,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     .previewImageUrl(previewImg)
                     .demoVideoUrl(videoUrl)
                     .mediaUrls(images)
-                    .hubName(a.getHub() != null ? a.getHub().getName() : "Central Hub")
-                    .cityName(a.getHub() != null && a.getHub().getCity() != null ? a.getHub().getCity().getName() : "Uttar Pradesh")
+                    .hubName(a.getHub() != null ? a.getHub().getName() : null)
+                    .cityName(a.getHub() != null && a.getHub().getCity() != null ? a.getHub().getCity().getName() : null)
                     .build());
         }
         return catalog;
@@ -275,13 +275,25 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     // ==================== STATE HANDLERS ====================
 
     private WhatsAppMessageResponse resetAndShowMainMenu(WhatsAppConversation conv, Customer customer) {
+        return resetAndShowMainMenu(conv, customer, null);
+    }
+
+    private WhatsAppMessageResponse resetAndShowMainMenu(WhatsAppConversation conv, Customer customer, String userGreetingInput) {
         conv.setState(WhatsAppState.MAIN_MENU);
         conv.setContextData(null);
         conversationRepository.save(conv);
 
-        String menuText = """
-                🌾 *Namaste %s! Welcome to EquipGrid Rentals* 🚜
-                _(ग्रामीण भारत की विश्वसनीय कृषि व निर्माण उपकरण सेवा)_
+        List<FarmLocation> locations = farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId());
+        List<Booking> bookings = bookingQueryRepository.fetchByCustomerId(customer.getId());
+        boolean isReturning = !locations.isEmpty() || !bookings.isEmpty();
+
+        String greeting = resolvePersonalizedGreeting(userGreetingInput, customer, isReturning);
+
+        String hubInfo = customer.getHub() != null ? String.format("\n📍 *Registered Hub Station:* %s", customer.getHub().getName()) : "";
+
+        String menuText = String.format("""
+                %s
+                _(ग्रामीण भारत की विश्वसनीय कृषि व निर्माण उपकरण सेवा)_%s
                 
                 Please select an option (विकल्प चुनें):
                 *1* 🚜 *Browse Machinery & Rent* (मशीनें देखें और बुक करें)
@@ -292,7 +304,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 *6* 📞 *Kisan Helpline & Support* (सहायता केंद्र)
                 
                 💡 _Reply with 1, 2, 3, 4, 5, or 6. Type *MENU* anytime to return here._
-                """.formatted(customer.getFullName());
+                """, greeting, hubInfo);
 
         return WhatsAppMessageResponse.builder()
                 .to(conv.getPhoneNumber())
@@ -301,6 +313,70 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .suggestedOptions(List.of("1. Browse & Rent", "2. Choose Hub", "3. Pay UPI QR", "4. Track Status", "5. Return & Refund", "6. Help"))
                 .sessionReset(true)
                 .build();
+    }
+
+    private String formatCustomerNameWithJi(String fullName) {
+        if (fullName == null || fullName.isBlank()) return "Kisan Mitra";
+        String trimmed = fullName.trim();
+        if (trimmed.toLowerCase().endsWith(" ji") || trimmed.toLowerCase().endsWith("ji")
+                || trimmed.endsWith(" जी") || trimmed.endsWith("जी")) {
+            return trimmed;
+        }
+        return trimmed + " ji";
+    }
+
+    private String resolvePersonalizedGreeting(String input, Customer customer, boolean isReturning) {
+        String fullName = customer != null && customer.getFullName() != null ? customer.getFullName() : "Kisan Mitra";
+        String nameWithJi = formatCustomerNameWithJi(fullName);
+        String lower = input != null ? input.toLowerCase().trim() : "";
+
+        String salutation;
+        if (lower.contains("ram ram") || lower.contains("ramram") || lower.contains("राम राम") || lower.contains("रामराम")) {
+            salutation = String.format("🌾 *राम राम %s! (Ram Ram %s)*", nameWithJi, nameWithJi);
+        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("प्रणाम") || lower.contains("charan sparsh")) {
+            salutation = String.format("🌾 *प्रणाम %s! (Pranam %s)*", nameWithJi, nameWithJi);
+        } else if (lower.contains("jai shree ram") || lower.contains("जय श्री राम")) {
+            salutation = String.format("🌾 *जय श्री राम %s! (Jai Shree Ram %s)*", nameWithJi, nameWithJi);
+        } else if (lower.contains("radhe") || lower.contains("राधे")) {
+            salutation = String.format("🌾 *राधे राधे %s! (Radhe Radhe %s)*", nameWithJi, nameWithJi);
+        } else if (lower.contains("sat sri akal") || lower.contains("सत श्री अकाल") || lower.contains("satsriakal")) {
+            salutation = String.format("🌾 *सत श्री अकाल %s! (Sat Sri Akal %s)*", nameWithJi, nameWithJi);
+        } else if (lower.contains("hello")) {
+            salutation = String.format("🌾 *Hello %s!*", nameWithJi);
+        } else if (lower.contains("hi") && !lower.contains("chahiye")) {
+            salutation = String.format("🌾 *Hi %s!*", nameWithJi);
+        } else {
+            salutation = isReturning
+                    ? String.format("🌾 *Namaste %s!*", nameWithJi)
+                    : String.format("🌾 *Namaste %s!*", fullName);
+        }
+
+        return isReturning
+                ? salutation + " Welcome back to EquipGrid Rentals 🚜"
+                : salutation + " Welcome to EquipGrid Rentals 🚜";
+    }
+
+    private String resolveSalutationOnly(String input, Customer customer) {
+        String fullName = customer != null && customer.getFullName() != null ? customer.getFullName() : "Kisan Mitra";
+        String nameWithJi = formatCustomerNameWithJi(fullName);
+        String lower = input != null ? input.toLowerCase().trim() : "";
+
+        if (lower.contains("ram ram") || lower.contains("ramram") || lower.contains("राम राम") || lower.contains("रामराम")) {
+            return String.format("🌾 *राम राम %s! (Ram Ram %s)*\n", nameWithJi, nameWithJi);
+        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("प्रणाम") || lower.contains("charan sparsh")) {
+            return String.format("🌾 *प्रणाम %s! (Pranam %s)*\n", nameWithJi, nameWithJi);
+        } else if (lower.contains("jai shree ram") || lower.contains("जय श्री राम")) {
+            return String.format("🌾 *जय श्री राम %s! (Jai Shree Ram %s)*\n", nameWithJi, nameWithJi);
+        } else if (lower.contains("radhe") || lower.contains("राधे")) {
+            return String.format("🌾 *राधे राधे %s! (Radhe Radhe %s)*\n", nameWithJi, nameWithJi);
+        } else if (lower.contains("sat sri akal") || lower.contains("सत श्री अकाल") || lower.contains("satsriakal")) {
+            return String.format("🌾 *सत श्री अकाल %s! (Sat Sri Akal %s)*\n", nameWithJi, nameWithJi);
+        } else if (lower.contains("hello")) {
+            return String.format("🌾 *Hello %s!*\n", nameWithJi);
+        } else if (lower.contains("hi") && !lower.contains("chahiye")) {
+            return String.format("🌾 *Hi %s!*\n", nameWithJi);
+        }
+        return "";
     }
 
     private WhatsAppMessageResponse handleMainMenuSelection(String input, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
@@ -319,7 +395,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         } else if (trimmed.equals("6") || trimmed.contains("HELP") || trimmed.contains("SUPPORT") || trimmed.contains("CALL")) {
             return showHelplineResponse(conv);
         } else {
-            return resetAndShowMainMenu(conv, customer);
+            return resetAndShowMainMenu(conv, customer, input);
         }
     }
 
@@ -333,18 +409,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 _(आप किस प्रकार के उपकरण ढूंढ रहे हैं?)_
                 
                 *1.* 🌾 *Agriculture Machinery* (कृषि उपकरण - जुताई, बुवाई, कटाई व निराई-गुड़ाई)
-                *2.* 🏗️ *Construction Equipment* (निर्माण उपकरण - कंक्रीट मिलाने की मशीन, वाइब्रेटर, पम्प, जनरेटर)
+                *2.* 🏗️ *Construction Equipment* (निर्माण उपकरण - कंक्रीट मिक्सर, वाइब्रेटर, पम्प, जनरेटर, जेसीबी)
+                *3.* 🚜 *Multipurpose Fleet* (बहुउद्देशीय वाहन - ट्रैक्टर, ट्रॉली, ट्रेलर, वाटर टैंकर, लोडर)
                 
-                👉 *Reply with 1 or 2:*
+                👉 *Reply with 1, 2, or 3:*
                 • *1* for Agriculture (कृषि उपकरण)
                 • *2* for Construction (निर्माण उपकरण)
+                • *3* for Dual-Use Fleet (डुअल यूज़ / बहुउद्देशीय वाहन)
                 """;
 
         return WhatsAppMessageResponse.builder()
                 .to(conv.getPhoneNumber())
                 .message(text)
                 .state(WhatsAppState.SELECTING_CATEGORY)
-                .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️", "MENU"))
+                .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️", "3. Dual-Use Fleet 🚜", "MENU"))
                 .build();
     }
 
@@ -357,13 +435,25 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         } else if (trimmed.equals("2") || trimmed.contains("CONST") || trimmed.contains("NIRMAN") || trimmed.contains("BUILD") || trimmed.contains("CIVIL")) {
             context.setAssetCategory("CONSTRUCTION");
             context.setSelectedCategory("CONSTRUCTION");
+        } else if (trimmed.equals("3") || trimmed.contains("DUAL") || trimmed.contains("MULTI") || trimmed.contains("FLEET") || trimmed.contains("BAHU") || trimmed.contains("TROLL") || trimmed.contains("TRAILER") || trimmed.contains("TANKER") || trimmed.contains("TRACTOR")) {
+            context.setAssetCategory("MULTIPURPOSE_FLEET");
+            context.setSelectedCategory("MULTIPURPOSE_FLEET");
         } else {
             return WhatsAppMessageResponse.builder()
                     .to(conv.getPhoneNumber())
-                    .message("⚠️ Please reply *1* for Agriculture Machinery (कृषि) or *2* for Construction Equipment (निर्माण), or type *MENU*.")
+                    .message("⚠️ Please reply *1* for Agriculture Machinery (कृषि), *2* for Construction Equipment (निर्माण), or *3* for Dual-Use Fleet (डुअल यूज़ वाहन), or type *MENU*.")
                     .state(WhatsAppState.SELECTING_CATEGORY)
-                    .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️", "MENU"))
+                    .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️", "3. Dual-Use Fleet 🚜", "MENU"))
                     .build();
+        }
+
+        // If customer has a registered hub and context has no hub selected yet, pre-populate it
+        if (context.getSelectedHubId() == null && customer.getHub() != null) {
+            context.setSelectedHubId(customer.getHub().getId());
+            context.setSelectedHubName(customer.getHub().getName());
+            if (customer.getHub().getCity() != null) {
+                context.setSelectedCityName(customer.getHub().getCity().getName());
+            }
         }
 
         // If the user has not yet selected a Station Hub, prompt Hub/City selection to narrow down search space
@@ -385,6 +475,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             catSub = " for *🌾 Agriculture Machinery*";
         } else if ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory())) {
             catSub = " for *🏗️ Construction Equipment*";
+        } else if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(context.getAssetCategory())) {
+            catSub = " for *🚜 Dual-Use & Multipurpose Fleet*";
         }
 
         sb.append("🏙️ *Select Your Nearest EquipGrid Station Hub").append(catSub).append(":*\n");
@@ -453,6 +545,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             }
         }
 
+        if (context.getSelectedHubId() != null) {
+            hubRepository.findById(context.getSelectedHubId()).ifPresent(h -> {
+                if (customer.getHub() == null || !customer.getHub().getId().equals(h.getId())) {
+                    customer.setHub(h);
+                    customerRepository.save(customer);
+                    log.info("[WhatsApp Bot] Auto-mapped customer ID={} to selected Hub ID={} ('{}')",
+                            customer.getId(), h.getId(), h.getName());
+                }
+            });
+        }
+
         // If user hasn't selected category yet (e.g. from Main Menu option 2), ask category now
         if (context.getAssetCategory() == null) {
             return promptCategorySelection(conv, context);
@@ -466,7 +569,11 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         String catStr = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory())
                 ? "🌾 Agriculture Machinery (कृषि उपकरण)"
-                : ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory()) ? "🏗️ Construction Equipment (निर्माण उपकरण)" : "Machinery");
+                : ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory())
+                        ? "🏗️ Construction Equipment (निर्माण उपकरण)"
+                        : ("MULTIPURPOSE_FLEET".equalsIgnoreCase(context.getAssetCategory())
+                                ? "🚜 Dual-Use & Multipurpose Fleet (डुअल यूज़ / बहुउद्देशीय वाहन)"
+                                : "Machinery"));
         String hubStr = context.getSelectedHubName() != null ? " at *" + context.getSelectedHubName() + "*" : "";
 
         String msg = String.format("""
@@ -502,9 +609,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             catFilter = AssetCategory.AGRICULTURE;
         } else if ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory())) {
             catFilter = AssetCategory.CONSTRUCTION;
+        } else if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(context.getAssetCategory())) {
+            catFilter = AssetCategory.MULTIPURPOSE_FLEET;
         }
 
         List<Asset> allAvailable = assetQueryRepository.fetchAssets(catFilter, AssetStatus.AVAILABLE);
+        if (catFilter == AssetCategory.MULTIPURPOSE_FLEET && allAvailable.isEmpty()) {
+            allAvailable = assetQueryRepository.fetchAssets(null, AssetStatus.AVAILABLE).stream()
+                    .filter(a -> {
+                        String n = (a.getName() != null ? a.getName() : "") + " " + (a.getAssetTag() != null ? a.getAssetTag() : "");
+                        String u = n.toUpperCase();
+                        return u.contains("TRACTOR") || u.contains("TROLL") || u.contains("TRAILER") || u.contains("TANKER") || u.contains("FLEET") || u.contains("TRAC");
+                    })
+                    .toList();
+        }
 
         List<Asset> filtered = allAvailable;
         if (context.getSelectedHubId() != null) {
@@ -525,7 +643,11 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         String catLabel = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory())
                 ? "🌾 Agriculture Machinery (कृषि उपकरण)"
-                : ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory()) ? "🏗️ Construction Equipment (निर्माण उपकरण)" : "Machinery");
+                : ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory())
+                        ? "🏗️ Construction Equipment (निर्माण उपकरण)"
+                        : ("MULTIPURPOSE_FLEET".equalsIgnoreCase(context.getAssetCategory())
+                                ? "🚜 Dual-Use & Multipurpose Fleet (डुअल यूज़ व बहुउद्देशीय वाहन)"
+                                : "Machinery"));
         String stationHeader = context.getSelectedHubName() != null ? " at *" + context.getSelectedHubName() + "*" : "";
         String dateSub = context.getStartDate() != null && context.getEndDate() != null
                 ? String.format("\n🗓️ *Window: %s to %s (%d Days)*", context.getStartDate(), context.getEndDate(), context.getRentalDays())
@@ -538,7 +660,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     : "at this time";
             return WhatsAppMessageResponse.builder()
                     .to(conv.getPhoneNumber())
-                    .message(String.format("⚠️ All machinery in this yard is currently booked %s.\n\nPlease reply *1* to try another date range, or call our Kisan & Contractor Helpline (1800-889-AGRI) for advance reservation.", datesStr))
+                    .message(String.format("⚠️ All machinery in this yard is currently booked %s.\n\nPlease reply *1* to try another date range, or call our Kisan & Contractor Helpline (+91 94674 79922) for advance reservation.", datesStr))
                     .state(WhatsAppState.MAIN_MENU)
                     .suggestedOptions(List.of("1. Try Other Dates", "6. Kisan Helpline", "MENU"))
                     .build();
@@ -551,12 +673,14 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         List<String> options = new ArrayList<>();
         int index = 1;
         for (Asset asset : filtered) {
-            String hubStr = asset.getHub() != null ? asset.getHub().getName() : "Central Hub";
+            String hubStr = asset.getHub() != null ? asset.getHub().getName() : null;
             String hindiName = getEquipmentHindiName(asset.getName(), asset.getAssetTag());
 
             sb.append(String.format("*%d.* *%s* (`%s`)\n", index, asset.getName(), asset.getAssetTag()));
             sb.append(String.format("   👉 *%s*\n", hindiName));
-            sb.append(String.format("   • 📍 Yard: %s\n", hubStr));
+            if (hubStr != null && !hubStr.isBlank()) {
+                sb.append(String.format("   • 📍 Yard: %s\n", hubStr));
+            }
             sb.append(String.format("   • 💰 Daily Rent: ₹%,.0f/day\n", asset.getDailyRate()));
             sb.append(String.format("   • 🛡️ Deposit: ₹%,.0f (100%% Refundable)\n", asset.getDepositAmount()));
             sb.append("   • 📸 4 Photos & 🎥 10-sec Demo Video Available\n\n");
@@ -587,9 +711,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             catFilter = AssetCategory.AGRICULTURE;
         } else if ("CONSTRUCTION".equalsIgnoreCase(context.getAssetCategory())) {
             catFilter = AssetCategory.CONSTRUCTION;
+        } else if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(context.getAssetCategory())) {
+            catFilter = AssetCategory.MULTIPURPOSE_FLEET;
         }
 
         List<Asset> availableAssets = assetQueryRepository.fetchAssets(catFilter, AssetStatus.AVAILABLE);
+        if (catFilter == AssetCategory.MULTIPURPOSE_FLEET && availableAssets.isEmpty()) {
+            availableAssets = assetQueryRepository.fetchAssets(null, AssetStatus.AVAILABLE).stream()
+                    .filter(a -> {
+                        String n = (a.getName() != null ? a.getName() : "") + " " + (a.getAssetTag() != null ? a.getAssetTag() : "");
+                        String u = n.toUpperCase();
+                        return u.contains("TRACTOR") || u.contains("TROLL") || u.contains("TRAILER") || u.contains("TANKER") || u.contains("FLEET") || u.contains("TRAC");
+                    })
+                    .toList();
+        }
 
         if (context.getSelectedHubId() != null) {
             List<Asset> hubFiltered = availableAssets.stream()
@@ -652,6 +787,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             if (selected.getHub().getCity() != null) {
                 context.setSelectedCityName(selected.getHub().getCity().getName());
             }
+            if (customer.getHub() == null || !customer.getHub().getId().equals(selected.getHub().getId())) {
+                customer.setHub(selected.getHub());
+                customerRepository.save(customer);
+                log.info("[WhatsApp Bot] Auto-mapped customer ID={} to machine dispatch Hub ID={} ('{}')",
+                        customer.getId(), selected.getHub().getId(), selected.getHub().getName());
+            }
         }
 
         // Fetch S3 media items for this machine (4 photos + 1 10-second demo video)
@@ -704,71 +845,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         // If dates are already known from the previous step:
         if (context.getRentalDays() != null && context.getStartDate() != null) {
-            boolean isAgri = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory());
-            String hubNote = context.getSelectedHubName() != null ? " (Dispatched from " + context.getSelectedHubName() + ")" : "";
+            WhatsAppMessageResponse prompt = promptDeliveryDestinationOrLocation(conv, customer, context);
+            String fullMessage = sb.toString() + "\n" + prompt.getMessage();
 
-            if (isAgri) {
-                conv.setState(WhatsAppState.SELECTING_DELIVERY_DESTINATION);
-                sb.append(String.format("""
-                                🗓️ Rental Period: *%d Days* (%s to %s)%s
-                                
-                                🌾 *Where do you need this equipment delivered?*
-                                _(उपकरण कहाँ डिलीवर करवाना चाहते हैं?)_
-                                
-                                *1.* 🏠 *Home / Village Address* (घर या गाँव का पता)
-                                *2.* 🚜 *Direct Farm / Field (Khet) Geo-Tag* (खेत पर डिलीवरी - सटीक लोकेशन पिन)
-                                
-                                💡 *Kisan Tip:*
-                                _Selecting *Farm (2)* ensures our delivery trailer reaches right to your field gate without getting stuck in narrow village lanes._
-                                
-                                👉 *Reply with 1 or 2:*
-                                • Reply *1* for Home / Village
-                                • Reply *2* for Farm Field Geo-Tag
-                                """,
-                        context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote
-                ));
-
-                return WhatsAppMessageResponse.builder()
-                        .to(conv.getPhoneNumber())
-                        .message(sb.toString())
-                        .state(WhatsAppState.SELECTING_DELIVERY_DESTINATION)
-                        .suggestedOptions(List.of("1. Home / Village 🏠", "2. Farm / Field 🚜"))
-                        .previewImageUrl(previewImgUrl)
-                        .demoVideoUrl(demoVideoUrl)
-                        .mediaUrls(photoUrls)
-                        .hubName(context.getSelectedHubName())
-                        .cityName(context.getSelectedCityName())
-                        .build();
-            } else {
-                context.setDeliveryDestinationType("SITE");
-                conv.setState(WhatsAppState.ENTERING_LOCATION);
-                sb.append(String.format("""
-                                🗓️ Rental Period: *%d Days* (%s to %s)%s
-                                
-                                🏗️ *Construction Site Delivery Location:*
-                                _(निर्माण स्थल का पता या लोकेशन)_
-                                
-                                You can provide the site location in either of 2 ways:
-                                📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
-                                ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
-                                
-                                👉 Please send your location pin or type the address below:
-                                """,
-                        context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote
-                ));
-
-                return WhatsAppMessageResponse.builder()
-                        .to(conv.getPhoneNumber())
-                        .message(sb.toString())
-                        .state(WhatsAppState.ENTERING_LOCATION)
-                        .suggestedOptions(List.of("Share Location Pin 📍", "Type Site Address ✍️"))
-                        .previewImageUrl(previewImgUrl)
-                        .demoVideoUrl(demoVideoUrl)
-                        .mediaUrls(photoUrls)
-                        .hubName(context.getSelectedHubName())
-                        .cityName(context.getSelectedCityName())
-                        .build();
-            }
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(fullMessage)
+                    .state(prompt.getState())
+                    .suggestedOptions(prompt.getSuggestedOptions())
+                    .previewImageUrl(previewImgUrl)
+                    .demoVideoUrl(demoVideoUrl)
+                    .mediaUrls(photoUrls)
+                    .hubName(context.getSelectedHubName())
+                    .cityName(context.getSelectedCityName())
+                    .build();
         }
 
         // Fallback: Ask dates if not set yet
@@ -839,12 +929,59 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             return displayAvailableMachinery(conv, context);
         }
 
-        return promptDeliveryDestinationOrLocation(conv, context);
+        return promptDeliveryDestinationOrLocation(conv, customer, context);
     }
 
-    private WhatsAppMessageResponse promptDeliveryDestinationOrLocation(WhatsAppConversation conv, WhatsAppConversationContext context) {
+    private WhatsAppMessageResponse promptDeliveryDestinationOrLocation(WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
         String hubNote = context.getSelectedHubName() != null ? " (Dispatched from " + context.getSelectedHubName() + ")" : "";
         boolean isAgri = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory());
+
+        List<FarmLocation> savedLocations = farmLocationRepository
+                .findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId());
+
+        if (!savedLocations.isEmpty()) {
+            conv.setState(WhatsAppState.SELECTING_DELIVERY_DESTINATION);
+            StringBuilder sb = new StringBuilder();
+            sb.append(String.format("""
+                    🗓️ Rental Duration: *%d Days*
+                    • Start: *%s*
+                    • End: *%s*%s
+                    
+                    🌾 *Where do you need this equipment delivered?*
+                    _(उपकरण कहाँ डिलीवर करवाना चाहते हैं? अपने सुरक्षित पते चुनें या नया लोकेशन दें:)_
+                    
+                    📍 *Your Previously Saved Locations:*
+                    """, context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote));
+
+            List<String> options = new ArrayList<>();
+            int idx = 1;
+            for (FarmLocation loc : savedLocations) {
+                String typeIcon = loc.getLocationType() == FarmLocationType.HOME ? "🏠" : (loc.getLocationType() == FarmLocationType.SITE ? "🏗️" : "🌾");
+                String defBadge = Boolean.TRUE.equals(loc.getIsDefault()) ? " [Default ⭐]" : "";
+                String hindiSuffix = loc.getLocalNameHindi() != null && !loc.getLocalNameHindi().isBlank() ? " (" + loc.getLocalNameHindi() + ")" : "";
+
+                sb.append(String.format("*%d.* %s *%s*%s%s\n", idx, typeIcon, loc.getLocalName(), hindiSuffix, defBadge));
+                if (loc.getLandmark() != null && !loc.getLandmark().isBlank()) {
+                    sb.append(String.format("   📍 Landmark: %s\n", loc.getLandmark()));
+                } else if (loc.getLatitude() != null && loc.getLongitude() != null) {
+                    sb.append(String.format("   📍 GPS: %.4f°N, %.4f°E\n", loc.getLatitude(), loc.getLongitude()));
+                }
+                options.add(idx + ". " + loc.getLocalName());
+                idx++;
+            }
+
+            sb.append(String.format("\n*%d.* 📍 *Add New Location / Direct Farm / Field Geo-Tag* (नया पता या नया लोकेशन पिन भेजें)\n\n", idx));
+            options.add(idx + ". Add New Location 📍");
+
+            sb.append(String.format("👉 *Reply with 1 to %d* to select a saved destination, or *%d* to enter a new location pin.", idx - 1, idx));
+
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(sb.toString())
+                    .state(WhatsAppState.SELECTING_DELIVERY_DESTINATION)
+                    .suggestedOptions(options)
+                    .build();
+        }
 
         if (isAgri) {
             conv.setState(WhatsAppState.SELECTING_DELIVERY_DESTINATION);
@@ -904,6 +1041,34 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     private WhatsAppMessageResponse handleDeliveryDestinationSelection(String input, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
         String trimmed = input.toUpperCase().trim();
+        List<FarmLocation> savedLocations = farmLocationRepository
+                .findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId());
+
+        if (!savedLocations.isEmpty()) {
+            // Check numeric selection
+            try {
+                int chosenIdx = Integer.parseInt(trimmed) - 1;
+                if (chosenIdx >= 0 && chosenIdx < savedLocations.size()) {
+                    FarmLocation loc = savedLocations.get(chosenIdx);
+                    return applySavedLocationAndQuote(loc, conv, customer, context);
+                } else if (chosenIdx == savedLocations.size()) {
+                    return promptNewLocationInput(conv, context);
+                }
+            } catch (NumberFormatException ignored) {}
+
+            // Check name matching against saved locations
+            for (FarmLocation loc : savedLocations) {
+                if ((loc.getLocalName() != null && loc.getLocalName().toUpperCase().contains(trimmed)) ||
+                        (loc.getLocalNameHindi() != null && loc.getLocalNameHindi().toUpperCase().contains(trimmed)) ||
+                        (loc.getLandmark() != null && loc.getLandmark().toUpperCase().contains(trimmed))) {
+                    return applySavedLocationAndQuote(loc, conv, customer, context);
+                }
+            }
+
+            if (trimmed.contains("NEW") || trimmed.contains("ADD") || trimmed.contains("NAYA") || trimmed.contains("PIN")) {
+                return promptNewLocationInput(conv, context);
+            }
+        }
 
         if (trimmed.equals("1") || trimmed.contains("HOME") || trimmed.contains("GHAR") || trimmed.contains("VILLAGE") || trimmed.contains("GAON")) {
             context.setDeliveryDestinationType("HOME");
@@ -954,13 +1119,78 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     .build();
 
         } else {
+            String guidance = !savedLocations.isEmpty()
+                    ? String.format("⚠️ Please reply with a number from *1* to *%d* for your saved locations, or *%d* to add a new location pin.",
+                    savedLocations.size(), savedLocations.size() + 1)
+                    : "⚠️ Please reply *1* for Home / Village delivery, or *2* for Farm (Khet) Geo-Tag delivery.";
             return WhatsAppMessageResponse.builder()
                     .to(conv.getPhoneNumber())
-                    .message("⚠️ Please reply *1* for Home / Village delivery, or *2* for Farm (Khet) Geo-Tag delivery.")
+                    .message(guidance)
                     .state(WhatsAppState.SELECTING_DELIVERY_DESTINATION)
                     .suggestedOptions(List.of("1. Home / Village 🏠", "2. Farm / Field 🚜"))
                     .build();
         }
+    }
+
+    private WhatsAppMessageResponse promptNewLocationInput(WhatsAppConversation conv, WhatsAppConversationContext context) {
+        boolean isAgri = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory());
+        conv.setState(WhatsAppState.ENTERING_LOCATION);
+        if (isAgri) {
+            context.setDeliveryDestinationType("FARM");
+            String message = """
+                    🚜 *Direct Farm / Field (Khet) Geo-Tag Delivery Selected*
+                    _(सीधे खेत पर डिलीवरी - सटीक जियो-टैग)_
+                    
+                    📍 *Please share your Farm's WhatsApp Location Pin:*
+                    _(अपने खेत पर पहुँचकर व्हाट्सएप 📎 ➡️ 📍 Location बटन से पिन भेजें)_
+                    
+                    💡 *Ordering from Home right now?*
+                    • You can share a Google Maps link to your field road, or
+                    • Type the field landmark & approach road (e.g. *Khet near Sharda Canal, Chak Road No. 3, Gram Rampur*), or
+                    • Share your current location pin when you reach the field!
+                    
+                    👉 Send your WhatsApp Location Pin or type field landmark:
+                    """;
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(message)
+                    .state(WhatsAppState.ENTERING_LOCATION)
+                    .suggestedOptions(List.of("Share Farm Pin 📍", "Type Farm Landmark ✍️"))
+                    .build();
+        } else {
+            context.setDeliveryDestinationType("SITE");
+            String message = """
+                    🏗️ *Construction Site Delivery Location:*
+                    _(निर्माण स्थल का पता या लोकेशन)_
+                    
+                    📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
+                    ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
+                    
+                    👉 Please send your location pin or type the address below:
+                    """;
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(message)
+                    .state(WhatsAppState.ENTERING_LOCATION)
+                    .suggestedOptions(List.of("Share Location Pin 📍", "Type Site Address ✍️"))
+                    .build();
+        }
+    }
+
+    private WhatsAppMessageResponse applySavedLocationAndQuote(FarmLocation loc, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
+        context.setSelectedFarmLocationId(loc.getId());
+        context.setDeliveryAddress(loc.displayAddress());
+        context.setDeliveryDestinationType(loc.getLocationType() != null ? loc.getLocationType().name() : "FARM");
+        if (loc.getLatitude() != null && loc.getLongitude() != null) {
+            context.setLatitude(loc.getLatitude().doubleValue());
+            context.setLongitude(loc.getLongitude().doubleValue());
+            context.setIsGeoLocation(true);
+            context.setGoogleMapsUrl("https://www.google.com/maps?q=" + loc.getLatitude() + "," + loc.getLongitude());
+        }
+        loc.setLastUsedAt(LocalDateTime.now());
+        farmLocationRepository.save(loc);
+
+        return generateAndShowQuote(conv, customer, context);
     }
 
     private WhatsAppMessageResponse handleLocationInput(WhatsAppInboundRequest request, String input, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
@@ -1033,7 +1263,10 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             }
         }
 
-        // Calculate live quotation
+        return generateAndShowQuote(conv, customer, context);
+    }
+
+    private WhatsAppMessageResponse generateAndShowQuote(WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
         saveFarmLocationFromConversation(customer, context);
         QuoteRequest quoteRequest = QuoteRequest.builder()
                 .assetId(context.getSelectedAssetId())
@@ -1114,22 +1347,82 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     }
 
     private void saveFarmLocationFromConversation(Customer customer, WhatsAppConversationContext context) {
-        if (context.getLatitude() == null || context.getLongitude() == null) return;
-        java.math.BigDecimal latitude = java.math.BigDecimal.valueOf(context.getLatitude());
-        java.math.BigDecimal longitude = java.math.BigDecimal.valueOf(context.getLongitude());
-        FarmLocation location = farmLocationRepository.findFirstByCustomerIdAndLatitudeAndLongitude(customer.getId(), latitude, longitude)
-                .orElseGet(() -> FarmLocation.builder().customer(customer).latitude(latitude).longitude(longitude).build());
-        if (location.getId() == null) {
-            String name = context.getDeliveryAddress() != null ? context.getDeliveryAddress().replaceFirst("^[^:]+: ", "") : "Saved Farm";
-            location.setLocalName(name.length() > 120 ? name.substring(0, 120) : name);
-            location.setLocationType("HOME".equalsIgnoreCase(context.getDeliveryDestinationType())
-                    ? FarmLocationType.HOME : FarmLocationType.FARM);
-            location.setLandmark(context.getDeliveryAddress());
-            location.setActive(true);
-            location.setIsDefault(farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId()).isEmpty());
+        if (context.getSelectedFarmLocationId() != null) {
+            farmLocationRepository.findByIdAndCustomerIdAndActiveTrue(context.getSelectedFarmLocationId(), customer.getId())
+                    .ifPresent(loc -> {
+                        loc.setLastUsedAt(LocalDateTime.now());
+                        farmLocationRepository.save(loc);
+                    });
+            return;
         }
-        location.setLastUsedAt(LocalDateTime.now());
-        farmLocationRepository.save(location);
+
+        List<FarmLocation> existingLocs = farmLocationRepository
+                .findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customer.getId());
+
+        if (context.getLatitude() != null && context.getLongitude() != null) {
+            double lat = context.getLatitude();
+            double lng = context.getLongitude();
+
+            // Near-proximity match within ~50 meters (~0.0005 degrees)
+            for (FarmLocation el : existingLocs) {
+                if (el.getLatitude() != null && el.getLongitude() != null) {
+                    double dLat = Math.abs(el.getLatitude().doubleValue() - lat);
+                    double dLng = Math.abs(el.getLongitude().doubleValue() - lng);
+                    if (dLat < 0.0005 && dLng < 0.0005) {
+                        log.info("[WhatsApp Bot] Reusing existing farm location ID={} for customer ID={}", el.getId(), customer.getId());
+                        el.setLastUsedAt(LocalDateTime.now());
+                        context.setSelectedFarmLocationId(el.getId());
+                        farmLocationRepository.save(el);
+                        return;
+                    }
+                }
+            }
+
+            java.math.BigDecimal latitude = java.math.BigDecimal.valueOf(lat);
+            java.math.BigDecimal longitude = java.math.BigDecimal.valueOf(lng);
+            String name = context.getDeliveryAddress() != null ? context.getDeliveryAddress().replaceFirst("^[^:]+: ", "") : "Saved Farm";
+            FarmLocation newLoc = FarmLocation.builder()
+                    .customer(customer)
+                    .latitude(latitude)
+                    .longitude(longitude)
+                    .localName(name.length() > 120 ? name.substring(0, 120) : name)
+                    .locationType("HOME".equalsIgnoreCase(context.getDeliveryDestinationType())
+                            ? FarmLocationType.HOME
+                            : ("SITE".equalsIgnoreCase(context.getDeliveryDestinationType()) ? FarmLocationType.SITE : FarmLocationType.FARM))
+                    .landmark(context.getDeliveryAddress())
+                    .active(true)
+                    .isDefault(existingLocs.isEmpty())
+                    .lastUsedAt(LocalDateTime.now())
+                    .build();
+            FarmLocation saved = farmLocationRepository.save(newLoc);
+            context.setSelectedFarmLocationId(saved.getId());
+            log.info("[WhatsApp Bot] Created new farm location ID={} for customer ID={}", saved.getId(), customer.getId());
+        } else if (context.getDeliveryAddress() != null && !context.getDeliveryAddress().isBlank()) {
+            String cleanAddr = context.getDeliveryAddress().replaceFirst("^[^:]+: ", "").trim();
+            for (FarmLocation el : existingLocs) {
+                if (el.getLocalName() != null && el.getLocalName().equalsIgnoreCase(cleanAddr)) {
+                    el.setLastUsedAt(LocalDateTime.now());
+                    context.setSelectedFarmLocationId(el.getId());
+                    farmLocationRepository.save(el);
+                    return;
+                }
+            }
+
+            FarmLocation newLoc = FarmLocation.builder()
+                    .customer(customer)
+                    .localName(cleanAddr.length() > 120 ? cleanAddr.substring(0, 120) : cleanAddr)
+                    .locationType("HOME".equalsIgnoreCase(context.getDeliveryDestinationType())
+                            ? FarmLocationType.HOME
+                            : ("SITE".equalsIgnoreCase(context.getDeliveryDestinationType()) ? FarmLocationType.SITE : FarmLocationType.FARM))
+                    .landmark(context.getDeliveryAddress())
+                    .active(true)
+                    .isDefault(existingLocs.isEmpty())
+                    .lastUsedAt(LocalDateTime.now())
+                    .build();
+            FarmLocation saved = farmLocationRepository.save(newLoc);
+            context.setSelectedFarmLocationId(saved.getId());
+            log.info("[WhatsApp Bot] Created new text address location ID={} for customer ID={}", saved.getId(), customer.getId());
+        }
     }
 
     // ─── Booking Confirmation & UPI QR ────────────────────────────────────────
@@ -1150,6 +1443,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     .startDate(context.getStartDate())
                     .endDate(context.getEndDate())
                     .deliveryAddress(deliveryAddr)
+                    .farmLocationId(context.getSelectedFarmLocationId())
                     .distanceKm(new BigDecimal("15"))
                     .operatorRequired(false)
                     .notes("Booked via WhatsApp by " + customer.getFullName() +
@@ -1544,8 +1838,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String helpline = """
                 📞 *EquipGrid Kisan & Civil Sahayata Helpline*
                 ━━━━━━━━━━━━━━━━━━━━━━
-                • Toll-Free: *1800-889-AGRI* (24x7)
-                • WhatsApp Support: *+91 98765 00000*
+                • 24x7 Support & Booking: *+91 94674 79922*
+                • WhatsApp Support: *+91 94674 79922*
                 • Active Stations: Hardoi, Lucknow, Kanpur
                 
                 Services Provided:
@@ -1654,8 +1948,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String intentCode = intent.getIntent() != null ? intent.getIntent().toUpperCase() : "UNKNOWN";
         switch (intentCode) {
             case "BROWSE_RENT" -> {
+                String salutation = resolveSalutationOnly(transcriptDisplay, customer);
                 String ack = String.format("""
-                        🎤 *आवाज़ सन्देश प्राप्त हुआ!* (Voice Note Received)
+                        %s🎤 *आवाज़ सन्देश प्राप्त हुआ!* (Voice Note Received)
                         ━━━━━━━━━━━━━━━━━━━━━━
                         📝 आपने कहा: _%s_
                         
@@ -1663,21 +1958,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                         
                         ✅ समझ गए! अभी मशीन बुकिंग शुरू कर रहे हैं...
                         _(Understood! Starting equipment booking...)_
-                        """, transcriptDisplay, understood);
+                        """, salutation, transcriptDisplay, understood);
 
                 // Emit acknowledgment first, then route to appropriate state
                 conv.setState(WhatsAppState.MAIN_MENU);
                 if (context.getAssetCategory() != null && !context.getAssetCategory().isBlank()) {
                     if (context.getRentalDays() != null) {
-                        // Both category and days known — go straight to machine listing
-                        WhatsAppMessageResponse ackResp = WhatsAppMessageResponse.builder()
-                                .to(conv.getPhoneNumber())
-                                .message(ack)
-                                .state(WhatsAppState.SELECTING_ASSET)
-                                .suggestedOptions(List.of("1. Agriculture 🌾", "2. Construction 🏗️"))
-                                .build();
-                        // Route to machine listing (caller will save context)
-                        return displayAvailableMachinery(conv, context);
+                        // Both category and days known — route to machine listing with voice ack
+                        return ackResponseThenState(conv, customer, context, ack,
+                                displayAvailableMachinery(conv, context));
                     } else {
                         return ackResponseThenState(conv, customer, context, ack,
                                 promptRentalDates(conv, context));
@@ -1721,6 +2010,10 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             }
             case "HELP" -> {
                 return showHelplineResponse(conv);
+            }
+            case "GREETING", "MENU" -> {
+                conv.setState(WhatsAppState.MAIN_MENU);
+                return resetAndShowMainMenu(conv, customer, intent.getTranscript());
             }
             default -> {
                 // UNKNOWN intent — show transcript and ask what they want
@@ -1787,9 +2080,13 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         StringBuilder sb = new StringBuilder();
         sb.append("🤖 *समझा (Understood):*\n");
         if (intent.getAssetCategory() != null && !intent.getAssetCategory().isBlank()) {
-            sb.append("AGRICULTURE".equals(intent.getAssetCategory())
-                    ? "🌾 श्रेणी: कृषि उपकरण (Agriculture)\n"
-                    : "🏗️ श्रेणी: निर्माण उपकरण (Construction)\n");
+            if ("AGRICULTURE".equalsIgnoreCase(intent.getAssetCategory())) {
+                sb.append("🌾 श्रेणी: कृषि उपकरण (Agriculture)\n");
+            } else if ("CONSTRUCTION".equalsIgnoreCase(intent.getAssetCategory())) {
+                sb.append("🏗️ श्रेणी: निर्माण उपकरण (Construction)\n");
+            } else if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(intent.getAssetCategory())) {
+                sb.append("🚜 श्रेणी: डुअल यूज़ व बहुउद्देशीय वाहन (Dual-Use Fleet)\n");
+            }
         }
         if (intent.getMachineNameHint() != null && !intent.getMachineNameHint().isBlank()) {
             sb.append("🚜 मशीन: ").append(intent.getMachineNameHint()).append("\n");
@@ -2087,8 +2384,25 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     }
 
     private Customer getOrCreateCustomer(String phone, String name) {
-        return customerQueryRepository.fetchByPhone(phone).orElseGet(() -> {
-            log.info("[WhatsApp Bot] Auto-onboarding customer for phone: {}", phone);
+        return customerQueryRepository.fetchByPhone(phone).map(existing -> {
+            log.info("[WhatsApp Bot] Recognized existing customer ID={} (phone: '{}', name: '{}')",
+                    existing.getId(), existing.getPhone(), existing.getFullName());
+            boolean hasPlaceholderName = existing.getFullName() == null
+                    || existing.getFullName().isBlank()
+                    || existing.getFullName().startsWith("Farmer");
+            boolean incomingHasRealName = name != null
+                    && !name.isBlank()
+                    && !name.equalsIgnoreCase("Farmer")
+                    && !name.startsWith("Farmer");
+            if (hasPlaceholderName && incomingHasRealName) {
+                log.info("[WhatsApp Bot] Updating customer ID={} name from '{}' to '{}'",
+                        existing.getId(), existing.getFullName(), name);
+                existing.setFullName(name);
+                return customerRepository.save(existing);
+            }
+            return existing;
+        }).orElseGet(() -> {
+            log.info("[WhatsApp Bot] Auto-onboarding new customer for phone: {}", phone);
             Customer newCust = Customer.builder()
                     .phone(phone)
                     .fullName(name != null && !name.isBlank() ? name : "Farmer (" + phone + ")")
@@ -2114,9 +2428,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     private String normalizePhoneNumber(String raw) {
         if (raw == null) return "";
-        String cleaned = raw.replaceAll("[^0-9]", "");
+        String cleaned = raw.replace("whatsapp:", "").replaceAll("[^0-9]", "");
         if (cleaned.length() > 10 && cleaned.startsWith("91")) {
             return cleaned.substring(2);
+        }
+        if (cleaned.length() == 11 && cleaned.startsWith("0")) {
+            return cleaned.substring(1);
+        }
+        if (cleaned.length() > 10) {
+            return cleaned.substring(cleaned.length() - 10);
         }
         return cleaned;
     }
@@ -2124,9 +2444,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private boolean isMenuKeyword(String text) {
         if (text == null) return false;
         String upper = text.toUpperCase().trim();
-        return upper.equals("MENU") || upper.equals("HI") || upper.equals("HELLO") ||
-                upper.equals("NAMASTE") || upper.equals("START") || upper.equals("RESET") ||
-                upper.equals("0");
+        String lower = text.toLowerCase().trim();
+
+        // If message has rental/action intents, let state machine / intent parser handle it
+        if (lower.contains("chahiye") || lower.contains("rent") || lower.contains("book") ||
+                lower.contains("tractor") || lower.contains("jcb") || lower.contains("trolley") ||
+                lower.contains("track") || lower.contains("status") || lower.contains("pay") ||
+                lower.contains("kahan") || lower.contains("wapas") || lower.contains("return")) {
+            return false;
+        }
+
+        return upper.equals("MENU") || upper.equals("HI") || upper.equals("HELLO") || upper.equals("HEY") ||
+                upper.equals("NAMASTE") || upper.equals("NAMASKAR") || upper.equals("START") || upper.equals("RESET") ||
+                upper.equals("0") ||
+                lower.contains("ram ram") || lower.contains("ramram") || lower.contains("राम राम") ||
+                lower.contains("pranam") || lower.contains("parnaam") || lower.contains("प्रणाम") ||
+                lower.contains("jai shree ram") || lower.contains("जय श्री राम") ||
+                lower.contains("radhe radhe") || lower.contains("राधे राधे") ||
+                lower.contains("sat sri akal") || lower.contains("सत श्री अकाल");
     }
 
     private boolean isMediaKeyword(String text) {

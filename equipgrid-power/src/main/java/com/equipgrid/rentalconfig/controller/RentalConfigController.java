@@ -1,160 +1,54 @@
 package com.equipgrid.rentalconfig.controller;
 
-import com.equipgrid.asset.entity.Asset;
-import com.equipgrid.asset.enums.BillingUnit;
-import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.common.dto.rest.ApiResponse;
-import com.equipgrid.common.dto.rest.MessageApiResponse;
-import com.equipgrid.location.entity.Hub;
-import com.equipgrid.location.repository.HubRepository;
-import com.equipgrid.master.entity.EquipmentType;
-import com.equipgrid.master.repository.EquipmentTypeRepository;
+import com.equipgrid.rentalconfig.dto.request.CreateRentalConfigRequest;
+import com.equipgrid.rentalconfig.dto.request.UpdateRentalConfigRequest;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
-import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
+import com.equipgrid.rentalconfig.service.IRentalConfigService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/rental-configs")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Rental Configuration", description = "Base daily rates, security deposits, operator and delivery pricing per hub/asset")
 public class RentalConfigController {
 
-    private final RentalConfigurationRepository rentalConfigurationRepository;
-    private final HubRepository hubRepository;
-    private final AssetRepository assetRepository;
-    private final EquipmentTypeRepository equipmentTypeRepository;
-    private final com.equipgrid.master.repository.BillingUnitMasterRepository billingUnitMasterRepository;
+    private final IRentalConfigService rentalConfigService;
 
     @GetMapping
+    @Operation(summary = "Get rental configurations filtered by hub or asset")
     public ResponseEntity<ApiResponse<List<RentalConfiguration>>> getRentalConfigs(
             @RequestParam(required = false) Long hubId,
             @RequestParam(required = false) Long assetId) {
-        List<RentalConfiguration> configs;
-        if (hubId != null) {
-            configs = rentalConfigurationRepository.findByHubIdAndActiveTrue(hubId);
-        } else if (assetId != null) {
-            configs = rentalConfigurationRepository.findByAssetIdAndActiveTrue(assetId);
-        } else {
-            configs = rentalConfigurationRepository.findByActiveTrueOrderByIdDesc();
-        }
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Rental configurations fetched"), configs, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Rental configurations fetched", rentalConfigService.getRentalConfigs(hubId, assetId)));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<RentalConfiguration>> createRentalConfig(@RequestBody CreateRentalConfigRequest request) {
-        Hub hub = hubRepository.findById(request.hubId())
-                .orElseThrow(() -> new IllegalArgumentException("Hub not found: " + request.hubId()));
-        Asset asset = request.assetId() != null
-                ? assetRepository.findById(request.assetId()).orElse(null)
-                : null;
-        EquipmentType type = request.typeId() != null
-                ? equipmentTypeRepository.findById(request.typeId()).orElse(null)
-                : null;
-
-        RentalConfiguration config = RentalConfiguration.builder()
-                .hub(hub)
-                .asset(asset)
-                .type(type)
-                .baseDailyRate(request.baseDailyRate())
-                .depositAmount(request.depositAmount())
-                .operatorDailyRate(request.operatorDailyRate() != null ? request.operatorDailyRate() : new BigDecimal("500.00"))
-                .freeDeliveryDistanceKm(request.freeDeliveryDistanceKm() != null ? request.freeDeliveryDistanceKm() : new BigDecimal("5.00"))
-                .ratePerKmAfterFree(request.ratePerKmAfterFree() != null ? request.ratePerKmAfterFree() : new BigDecimal("10.00"))
-                .billingUnit(request.billingUnit() != null && request.billingUnit() != null ? request.billingUnit() : BillingUnit.DAILY)
-                .workingHoursLimit(request.workingHoursLimit())
-                .shiftTerms(request.shiftTerms())
-                .notes(request.notes())
-                .active(true)
-                .build();
-
-        if (request.billingUnitId() != null) {
-            billingUnitMasterRepository.findById(request.billingUnitId()).ifPresent(bu -> {
-                config.setBillingUnitMaster(bu);
-                config.setBillingUnit(com.equipgrid.asset.enums.BillingUnit.fromValue(bu.getCode()));
-                if (config.getShiftTerms() == null || config.getShiftTerms().isBlank()) {
-                    config.setShiftTerms(bu.getDefaultShiftTerms());
-                }
-            });
-        }
-
-        RentalConfiguration saved = rentalConfigurationRepository.save(config);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Rental configuration created"), saved, null));
+    @Operation(summary = "Create rental configuration")
+    public ResponseEntity<ApiResponse<RentalConfiguration>> createRentalConfig(@Valid @RequestBody CreateRentalConfigRequest request) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Rental configuration created", rentalConfigService.createRentalConfig(request)));
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Update rental configuration")
     public ResponseEntity<ApiResponse<RentalConfiguration>> updateRentalConfig(
             @PathVariable Long id,
-            @RequestBody UpdateRentalConfigRequest request) {
-        RentalConfiguration config = rentalConfigurationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Rental configuration not found: " + id));
-
-        if (request.baseDailyRate() != null) config.setBaseDailyRate(request.baseDailyRate());
-        if (request.depositAmount() != null) config.setDepositAmount(request.depositAmount());
-        if (request.operatorDailyRate() != null) config.setOperatorDailyRate(request.operatorDailyRate());
-        if (request.freeDeliveryDistanceKm() != null)
-            config.setFreeDeliveryDistanceKm(request.freeDeliveryDistanceKm());
-        if (request.ratePerKmAfterFree() != null) config.setRatePerKmAfterFree(request.ratePerKmAfterFree());
-        if (request.billingUnitId() != null) {
-            billingUnitMasterRepository.findById(request.billingUnitId()).ifPresent(bu -> {
-                config.setBillingUnitMaster(bu);
-                config.setBillingUnit(com.equipgrid.asset.enums.BillingUnit.fromValue(bu.getCode()));
-                if (request.shiftTerms() == null && bu.getDefaultShiftTerms() != null) {
-                    config.setShiftTerms(bu.getDefaultShiftTerms());
-                }
-            });
-        } else if (request.billingUnit() != null) {
-            config.setBillingUnit(request.billingUnit());
-        }
-        if (request.workingHoursLimit() != null) config.setWorkingHoursLimit(request.workingHoursLimit());
-        if (request.shiftTerms() != null) config.setShiftTerms(request.shiftTerms());
-        if (request.notes() != null) config.setNotes(request.notes());
-
-        RentalConfiguration saved = rentalConfigurationRepository.save(config);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Rental configuration updated"), saved, null));
+            @Valid @RequestBody UpdateRentalConfigRequest request) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Rental configuration updated", rentalConfigService.updateRentalConfig(id, request)));
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Deactivate rental configuration")
     public ResponseEntity<ApiResponse<Void>> deleteRentalConfig(@PathVariable Long id) {
-        RentalConfiguration config = rentalConfigurationRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Rental configuration not found: " + id));
-        config.setActive(false);
-        rentalConfigurationRepository.save(config);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Rental configuration removed"), null, null));
-    }
-
-    public record CreateRentalConfigRequest(
-            Long hubId,
-            Long assetId,
-            Long typeId,
-            BigDecimal baseDailyRate,
-            BigDecimal depositAmount,
-            BigDecimal operatorDailyRate,
-            BigDecimal freeDeliveryDistanceKm,
-            BigDecimal ratePerKmAfterFree,
-            com.equipgrid.asset.enums.BillingUnit billingUnit,
-            Long billingUnitId,
-            BigDecimal workingHoursLimit,
-            String shiftTerms,
-            String notes
-    ) {
-    }
-
-    public record UpdateRentalConfigRequest(
-            BigDecimal baseDailyRate,
-            BigDecimal depositAmount,
-            BigDecimal operatorDailyRate,
-            BigDecimal freeDeliveryDistanceKm,
-            BigDecimal ratePerKmAfterFree,
-            com.equipgrid.asset.enums.BillingUnit billingUnit,
-            Long billingUnitId,
-            BigDecimal workingHoursLimit,
-            String shiftTerms,
-            String notes
-    ) {
+        rentalConfigService.deleteRentalConfig(id);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Rental configuration removed", null));
     }
 }

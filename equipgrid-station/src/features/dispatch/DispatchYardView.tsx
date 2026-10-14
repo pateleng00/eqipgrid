@@ -108,6 +108,17 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
 
   const [paymentModalBooking, setPaymentModalBooking] = useState<Booking | null>(null);
   const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
+  const [whatsAppModalDispatch, setWhatsAppModalDispatch] = useState<DispatchRecord | null>(null);
+
+  const handleOpenWhatsAppModal = async (b: Booking) => {
+    setWhatsAppModalBooking(b);
+    try {
+      const record = await api.getDispatchByBooking(b.id);
+      setWhatsAppModalDispatch(record);
+    } catch {
+      setWhatsAppModalDispatch(null);
+    }
+  };
 
   const availableCities = useMemo(() =>
     cities.filter((c) => selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)),
@@ -317,7 +328,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
   // Handover form state
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [driverName, setDriverName] = useState<string>('');
-  const [fuelLevel, setFuelLevel] = useState<string>('100% (Full Tank)');
+  const [fuelLevel, setFuelLevel] = useState<string>('');
   const [engineHoursOut, setEngineHoursOut] = useState<number>(0);
   const [conditionNotes, setConditionNotes] = useState<string>('');
   const [checkEngine, setCheckEngine] = useState(true);
@@ -333,8 +344,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
     setSelectedBooking(b);
     setIssuedChallan(null);
     setDriverName('');
-    setFuelLevel('100% (Full Tank)');
-    setEngineHoursOut(0);
+    setFuelLevel('');
+    setEngineHoursOut(b.asset.engineHours || 0);
     setConditionNotes('');
     setCheckEngine(true);
     setCheckAccessories(true);
@@ -1012,7 +1023,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                           <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setWhatsAppModalBooking(b)}
+                              onClick={() => handleOpenWhatsAppModal(b)}
                               data-tooltip="Circulate Dispatch Update on WhatsApp"
                               data-tooltip-pos="left"
                               className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400 dark:hover:bg-emerald-900/50"
@@ -1530,6 +1541,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         type="text"
                         value={fuelLevel}
                         onChange={(e) => setFuelLevel(e.target.value)}
+                        placeholder="e.g. 100%, 75%"
                         className={cn('w-full rounded-lg border px-3 py-2 text-xs focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
                       />
                     </div>
@@ -1542,6 +1554,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         step="0.1"
                         value={engineHoursOut}
                         onChange={(e) => setEngineHoursOut(parseFloat(e.target.value))}
+                        placeholder="Current engine meter hours"
                         className={cn('w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
                       />
                     </div>
@@ -1553,6 +1566,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         type="text"
                         value={driverName}
                         onChange={(e) => setDriverName(e.target.value)}
+                        placeholder="Enter driver name or transport fleet"
                         className={cn('w-full rounded-lg border px-3 py-2 text-xs focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
                       />
                     </div>
@@ -1647,37 +1661,40 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {whatsAppModalBooking && (
         <WhatsAppCirculationModal
           isOpen={!!whatsAppModalBooking}
-          onClose={() => setWhatsAppModalBooking(null)}
+          onClose={() => {
+            setWhatsAppModalBooking(null);
+            setWhatsAppModalDispatch(null);
+          }}
           stageName="Yard Dispatch Handover"
           bookingNumber={whatsAppModalBooking.bookingNumber}
           recipientName={whatsAppModalBooking.customer.fullName}
           recipientPhone={whatsAppModalBooking.customer.phone}
-          message={getDispatchWhatsAppMessage(whatsAppModalBooking, {
-            id: 0,
+          message={getDispatchWhatsAppMessage(whatsAppModalBooking, whatsAppModalDispatch || {
+            id: whatsAppModalBooking.id,
             bookingId: whatsAppModalBooking.id,
             assetTag: whatsAppModalBooking.asset.assetTag,
-            challanNumber: `DC-${new Date().getFullYear()}-DISP`,
-            fuelLevel: '100% (Full Tank)',
-            engineHoursOut: whatsAppModalBooking.asset.engineHours || 14.5,
+            challanNumber: `DC-${new Date().getFullYear()}-${String(whatsAppModalBooking.id).padStart(4, '0')}`,
+            fuelLevel: '',
+            engineHoursOut: whatsAppModalBooking.asset.engineHours,
             accessoriesVerified: true,
-            conditionNotes: 'All mechanical systems operational. Dispatched to farm site.',
-            driverName: 'Suraj Logistics (E-Rickshaw 3W)',
+            conditionNotes: '',
+            driverName: '',
             customerSignatureConfirmed: true,
             dispatchTimestamp: new Date().toISOString(),
           })}
           onPrintPdf={() =>
             printDispatchChallanPdf({
               booking: whatsAppModalBooking,
-              challan: {
-                id: 0,
+              challan: whatsAppModalDispatch || {
+                id: whatsAppModalBooking.id,
                 bookingId: whatsAppModalBooking.id,
                 assetTag: whatsAppModalBooking.asset.assetTag,
-                challanNumber: `DC-${new Date().getFullYear()}-DISP`,
-                fuelLevel: '100% (Full Tank)',
-                engineHoursOut: whatsAppModalBooking.asset.engineHours || 14.5,
+                challanNumber: `DC-${new Date().getFullYear()}-${String(whatsAppModalBooking.id).padStart(4, '0')}`,
+                fuelLevel: '',
+                engineHoursOut: whatsAppModalBooking.asset.engineHours,
                 accessoriesVerified: true,
-                conditionNotes: 'All mechanical systems operational.',
-                driverName: 'Suraj Logistics (E-Rickshaw 3W)',
+                conditionNotes: '',
+                driverName: '',
                 customerSignatureConfirmed: true,
                 dispatchTimestamp: new Date().toISOString(),
               },

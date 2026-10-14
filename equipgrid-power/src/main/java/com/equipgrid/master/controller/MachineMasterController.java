@@ -1,13 +1,15 @@
 package com.equipgrid.master.controller;
 
 import com.equipgrid.common.dto.rest.ApiResponse;
-import com.equipgrid.common.dto.rest.MessageApiResponse;
+import com.equipgrid.master.dto.request.ModelRequest;
+import com.equipgrid.master.entity.BillingUnitMaster;
 import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.entity.MachineModel;
 import com.equipgrid.master.entity.Manufacturer;
-import com.equipgrid.master.repository.EquipmentTypeRepository;
-import com.equipgrid.master.repository.MachineModelRepository;
-import com.equipgrid.master.repository.ManufacturerRepository;
+import com.equipgrid.master.service.IMachineMasterService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,94 +20,58 @@ import java.util.List;
 @RequestMapping("/masters")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Machine Master Data", description = "Equipment types, manufacturers, machine models and billing unit masters")
 public class MachineMasterController {
 
-    private final EquipmentTypeRepository equipmentTypeRepository;
-    private final ManufacturerRepository manufacturerRepository;
-    private final MachineModelRepository machineModelRepository;
-    private final com.equipgrid.master.repository.BillingUnitMasterRepository billingUnitMasterRepository;
+    private final IMachineMasterService machineMasterService;
 
     @GetMapping("/types")
+    @Operation(summary = "Get all active equipment types")
     public ResponseEntity<ApiResponse<List<EquipmentType>>> getTypes() {
-        List<EquipmentType> types = equipmentTypeRepository.findByActiveTrueOrderByNameAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Equipment types fetched"), types, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Equipment types fetched", machineMasterService.getAllEquipmentTypes()));
     }
 
     @PostMapping("/types")
-    public ResponseEntity<ApiResponse<EquipmentType>> createType(@RequestBody EquipmentType type) {
-        EquipmentType saved = equipmentTypeRepository.save(type);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Equipment type created"), saved, null));
+    @Operation(summary = "Create equipment type")
+    public ResponseEntity<ApiResponse<EquipmentType>> createType(@Valid @RequestBody EquipmentType type) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Equipment type created", machineMasterService.createEquipmentType(type)));
     }
 
     @GetMapping("/manufacturers")
+    @Operation(summary = "Get all active manufacturers")
     public ResponseEntity<ApiResponse<List<Manufacturer>>> getManufacturers() {
-        List<Manufacturer> manufacturers = manufacturerRepository.findByActiveTrueOrderByNameAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Manufacturers fetched"), manufacturers, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Manufacturers fetched", machineMasterService.getAllManufacturers()));
     }
 
     @PostMapping("/manufacturers")
-    public ResponseEntity<ApiResponse<Manufacturer>> createManufacturer(@RequestBody Manufacturer manufacturer) {
-        Manufacturer saved = manufacturerRepository.save(manufacturer);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Manufacturer created"), saved, null));
+    @Operation(summary = "Create manufacturer")
+    public ResponseEntity<ApiResponse<Manufacturer>> createManufacturer(@Valid @RequestBody Manufacturer manufacturer) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Manufacturer created", machineMasterService.createManufacturer(manufacturer)));
     }
 
     @GetMapping("/models")
+    @Operation(summary = "Get machine models filtered by type and/or manufacturer")
     public ResponseEntity<ApiResponse<List<MachineModel>>> getModels(
             @RequestParam(required = false) Long typeId,
             @RequestParam(required = false) Long manufacturerId) {
-        List<MachineModel> models;
-        if (typeId != null && manufacturerId != null) {
-            models = machineModelRepository.findByTypeIdAndManufacturerIdAndActiveTrueOrderByNameAsc(typeId, manufacturerId);
-        } else if (typeId != null) {
-            models = machineModelRepository.findByTypeIdAndActiveTrueOrderByNameAsc(typeId);
-        } else if (manufacturerId != null) {
-            models = machineModelRepository.findByManufacturerIdAndActiveTrueOrderByNameAsc(manufacturerId);
-        } else {
-            models = machineModelRepository.findByActiveTrueOrderByNameAsc();
-        }
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Machine models fetched"), models, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Machine models fetched", machineMasterService.getMachineModels(typeId, manufacturerId)));
     }
 
     @PostMapping("/models")
-    public ResponseEntity<ApiResponse<MachineModel>> createModel(@RequestBody ModelRequest request) {
-        EquipmentType type = equipmentTypeRepository.findById(request.typeId())
-                .orElseThrow(() -> new IllegalArgumentException("Type not found: " + request.typeId()));
-        Manufacturer manufacturer = manufacturerRepository.findById(request.manufacturerId())
-                .orElseThrow(() -> new IllegalArgumentException("Manufacturer not found: " + request.manufacturerId()));
-
-        MachineModel model = MachineModel.builder()
-                .type(type)
-                .manufacturer(manufacturer)
-                .name(request.name())
-                .modelNumber(request.modelNumber())
-                .specs(request.specs())
-                .active(true)
-                .build();
-        MachineModel saved = machineModelRepository.save(model);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Machine model created"), saved, null));
+    @Operation(summary = "Create machine model")
+    public ResponseEntity<ApiResponse<MachineModel>> createModel(@Valid @RequestBody ModelRequest request) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Machine model created", machineMasterService.createMachineModel(request)));
     }
+
     @GetMapping("/billing-units")
-    public ResponseEntity<ApiResponse<List<com.equipgrid.master.entity.BillingUnitMaster>>> getBillingUnits() {
-        List<com.equipgrid.master.entity.BillingUnitMaster> units = billingUnitMasterRepository.findByActiveTrueOrderByDisplayOrderAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Billing units fetched"), units, null));
+    @Operation(summary = "Get all active billing unit masters")
+    public ResponseEntity<ApiResponse<List<BillingUnitMaster>>> getBillingUnits() {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Billing units fetched", machineMasterService.getAllBillingUnits()));
     }
 
     @PostMapping("/billing-units")
-    public ResponseEntity<ApiResponse<com.equipgrid.master.entity.BillingUnitMaster>> createBillingUnit(@RequestBody com.equipgrid.master.entity.BillingUnitMaster unit) {
-        if (unit.getCode() == null || unit.getCode().isBlank()) {
-            throw new IllegalArgumentException("Billing unit code is required");
-        }
-        if (billingUnitMasterRepository.existsByCodeIgnoreCase(unit.getCode().trim())) {
-            throw new IllegalArgumentException("Billing unit with code already exists: " + unit.getCode());
-        }
-        unit.setCode(unit.getCode().trim().toUpperCase());
-        if (unit.getActive() == null) {
-            unit.setActive(true);
-        }
-        com.equipgrid.master.entity.BillingUnitMaster saved = billingUnitMasterRepository.save(unit);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Billing unit created"), saved, null));
-    }
-
-    public record ModelRequest(Long typeId, Long manufacturerId, String name, String modelNumber, String specs) {
+    @Operation(summary = "Create billing unit master")
+    public ResponseEntity<ApiResponse<BillingUnitMaster>> createBillingUnit(@Valid @RequestBody BillingUnitMaster unit) {
+        return ResponseEntity.ok(ApiResponse.buildSuccess("Billing unit created", machineMasterService.createBillingUnit(unit)));
     }
 }

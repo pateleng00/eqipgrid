@@ -11,7 +11,7 @@ export function cleanIndianPhoneNumber(rawPhone?: string): string {
   if (digits.length === 10) return `91${digits}`;
   if (digits.length === 12 && digits.startsWith('91')) return digits;
   if (digits.length > 10 && digits.startsWith('0')) return `91${digits.slice(1)}`;
-  return digits || '15556300171';
+  return digits || '';
 }
 
 function formatINR(val?: number): string {
@@ -27,14 +27,19 @@ export function getBookingWhatsAppMessage(booking: Booking, customRef?: string):
   const depositPaid = booking.depositPaid || booking.depositAmount || 0;
   const totalPaid = advancePaid + depositPaid;
 
+  const farm = booking.farmLocation;
+  const destination = farm
+    ? `${farm.localName}${farm.localNameHindi ? ` (${farm.localNameHindi})` : ''} — ${booking.deliveryAddress || farm.landmark || ''}`
+    : (booking.deliveryLocationName ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}` : (booking.deliveryAddress || booking.customer.address));
+
   return `🌾 *EquipGrid Booking & Payment Confirmed* 🚜
 ━━━━━━━━━━━━━━━━━━━━━━
-Dear ${booking.customer.fullName},
+नमस्ते ${booking.customer.fullName} जी (Dear ${booking.customer.fullName}),
 Your machinery reservation *${booking.bookingNumber}* is confirmed and payment has been verified!
 
 🚜 *Machine:* ${booking.asset.name} (\`${booking.asset.assetTag}\`)
 📅 *Rental Dates:* ${booking.startDate} to ${booking.endDate}
-📍 *Delivery Site:* ${booking.deliveryAddress || booking.customer.address}
+📍 *Delivery Site:* ${destination}
 
 💳 *Payment Breakdown:*
 • Advance Rent: *${formatINR(advancePaid)}* (Paid)
@@ -49,34 +54,38 @@ Your machinery reservation *${booking.bookingNumber}* is confirmed and payment h
 ${customRef ? `• Payment Ref: ${customRef}\n` : ''}
 Our yard operations team is staging the machine. You will receive a dispatch alert with driver and vehicle details as soon as it leaves the yard.
 
-📞 Helpline: +91 94500 00000
-🌐 EquipGrid Stations`;
+🌐 EquipGrid Stations • Support: +91 94674 79922`;
 }
 
 /**
  * 2. Yard Handover Delivery Challan Message
  */
 export function getDispatchWhatsAppMessage(booking: Booking, challan: DispatchRecord): string {
+  const farm = booking.farmLocation;
+  const destination = farm
+    ? `${farm.localName}${farm.localNameHindi ? ` (${farm.localNameHindi})` : ''} — ${booking.deliveryAddress || farm.landmark || ''}`
+    : (booking.deliveryLocationName ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}` : (booking.deliveryAddress || booking.customer.address));
+
   return `🚚 *Machinery Dispatched from Yard!* 🚜
 ━━━━━━━━━━━━━━━━━━━━━━
-Dear ${booking.customer.fullName},
+नमस्ते ${booking.customer.fullName} जी (Dear ${booking.customer.fullName}),
 Your rented machine is dispatched and en route to your site!
 
 📄 *Challan No:* *${challan.challanNumber}*
 🔖 *Booking Ref:* *${booking.bookingNumber}*
 🚜 *Equipment:* ${booking.asset.name} (\`${booking.asset.assetTag}\`)
-👨‍✈️ *Transporter / Driver:* ${challan.driverName || 'Suraj Logistics (E-Rickshaw 3W)'}
-⛽ *Outgoing Fuel:* ${challan.fuelLevel || '100% (Full Tank)'}
-⏱ *Meter Reading:* ${challan.engineHoursOut || 14.5} hrs
-📍 *Site Destination:* ${booking.deliveryAddress}
+👨‍✈️ *Transporter / Driver:* ${challan.driverName || '—'}${challan.driverPhone ? ` (${challan.driverPhone})` : ''}${challan.vehicleNumber ? ` [${challan.vehicleNumber}]` : ''}
+⛽ *Outgoing Fuel:* ${challan.fuelLevel || '—'}
+⏱ *Meter Reading:* ${challan.engineHoursOut !== undefined && challan.engineHoursOut !== null ? `${challan.engineHoursOut} hrs` : '—'}
+📍 *Site Destination:* ${destination}
 
-✅ *28-point mechanical checks & accessories verified.*
+✅ *Mechanical checks & accessories verified.*
 Handover Delivery Challan (DC) is active.
 
 Please ensure the unloading space and designated operator are ready.
 Reply *TRACK* or *3* anytime to check live delivery trip status.
 
-📞 Station Dispatch Desk: +91 94500 00000`;
+🌐 EquipGrid Dispatch Desk • 24x7 Helpline: +91 94674 79922`;
 }
 
 /**
@@ -97,7 +106,7 @@ export function getReturnSettlementWhatsAppMessage(
 
   return `✅ *Return Inspection & Deposit Settlement Completed!* 🌾
 ━━━━━━━━━━━━━━━━━━━━━━
-Dear ${booking.customer.fullName},
+नमस्ते ${booking.customer.fullName} जी (Dear ${booking.customer.fullName}),
 Your rented machine *${booking.asset.name}* (\`${booking.asset.assetTag}\`) has completed return yard inspection.
 
 📋 *Booking Ref:* *${booking.bookingNumber}*
@@ -116,7 +125,7 @@ Your rented machine *${booking.asset.name}* (\`${booking.asset.assetTag}\`) has 
 
 Thank you for choosing EquipGrid! We look forward to serving your next project.
 
-📞 Accounts & Settlement Desk: +91 94500 00000`;
+🌐 EquipGrid Settlement Desk • 24x7 Helpline: +91 94674 79922`;
 }
 
 /**

@@ -55,6 +55,10 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                 .add(booking.getBaseRent() != null ? booking.getBaseRent() : BigDecimal.ZERO);
         boolean isPaymentConfirmed = totalPaid.compareTo(BigDecimal.ZERO) > 0 && totalPaid.compareTo(requiredBarrier) >= 0;
 
+        String delivery = booking.getFarmLocation() != null
+                ? booking.getFarmLocation().getLocalName() + (booking.getFarmLocation().getLocalNameHindi() != null ? " (" + booking.getFarmLocation().getLocalNameHindi() + ")" : "") + " — " + booking.getDeliveryAddress()
+                : (booking.getDeliveryLocationName() != null ? booking.getDeliveryLocationName() + " — " + booking.getDeliveryAddress() : booking.getDeliveryAddress());
+
         String message;
         UpiPaymentDetails upi = null;
 
@@ -62,12 +66,12 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
             message = String.format("""
                             🌾 *EquipGrid Booking & Payment Confirmed* 🚜
                             ━━━━━━━━━━━━━━━━━━━━━━
-                            Dear %s,
+                            नमस्ते %s जी (Dear %s),
                             Your machinery reservation *%s* is confirmed and payment is verified!
                             
                             🚜 Machine: *%s* (`%s`)
                             📅 Rental Dates: *%s to %s*
-                            📍 Delivery Address: *%s*
+                            📍 Delivery Site: *%s*
                             
                             💳 *Payment Confirmation Breakdown:*
                             • Advance Rent: *₹%,.2f* (Paid)
@@ -83,12 +87,13 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                             Our yard operations team is inspecting and staging the machine. You will receive a dispatch alert with driver and vehicle details as soon as it leaves the yard.
                             """,
                     booking.getCustomer().getFullName(),
+                    booking.getCustomer().getFullName(),
                     booking.getBookingNumber(),
                     booking.getAsset().getName(),
                     booking.getAsset().getAssetTag(),
                     booking.getStartDate(),
                     booking.getEndDate(),
-                    booking.getDeliveryAddress(),
+                    delivery,
                     advancePaid,
                     depositPaid,
                     totalPaid,
@@ -104,12 +109,12 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
             message = String.format("""
                             🌾 *EquipGrid Booking Reservation* 🚜
                             ━━━━━━━━━━━━━━━━━━━━━━
-                            Dear %s,
+                            नमस्ते %s जी (Dear %s),
                             Your machinery reservation *%s* has been received!
                             
                             🚜 Machine: *%s* (`%s`)
                             📅 Dates: *%s to %s*
-                            📍 Delivery Address: *%s*
+                            📍 Delivery Site: *%s*
                             
                             💰 Initial Collection Due: *₹%,.2f*
                             _(Advance Rent: ₹%,.2f + 100%% Refundable Security Deposit: ₹%,.2f)_
@@ -120,12 +125,13 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                             Scan with PhonePe / Google Pay / Paytm to confirm dispatch.
                             """,
                     booking.getCustomer().getFullName(),
+                    booking.getCustomer().getFullName(),
                     booking.getBookingNumber(),
                     booking.getAsset().getName(),
                     booking.getAsset().getAssetTag(),
                     booking.getStartDate(),
                     booking.getEndDate(),
-                    booking.getDeliveryAddress(),
+                    delivery,
                     requiredBarrier,
                     booking.getBaseRent() != null ? booking.getBaseRent() : BigDecimal.ZERO,
                     booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO,
@@ -162,13 +168,14 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         String alertHeader = String.format("""
                         🚚 *मशीन भेजी गई है!* (Machine Dispatched) 🚜
                         ━━━━━━━━━━━━━━━━━━━━━━
-                        Dear *%s*,
+                        नमस्ते *%s* जी (Dear *%s*),
                         Your machine has left our yard and is en route!
                         
                         📍 Track delivery: Reply *4* or *TRACK*
                         
                         ━━━━━━━━━━━━━━━━━━━━━━
                         """,
+                booking.getCustomer().getFullName(),
                 booking.getCustomer().getFullName());
 
         // Combine alert + full digital challan document
@@ -198,7 +205,7 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                         📋 *Return Damage Checklist Ready!*
                         *(वापसी क्षति जाँच सूची तैयार है)*
                         ━━━━━━━━━━━━━━━━━━━━━━
-                        Dear *%s*,
+                        नमस्ते *%s* जी (Dear *%s*),
                         Our recovery vehicle is on its way to your site to pick up:
                         
                         🚜 Machine: *%s* (`%s`)
@@ -215,6 +222,7 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                         
                         👉 Reply *5* or *RETURN* to start checklist now.
                         """,
+                booking.getCustomer().getFullName(),
                 booking.getCustomer().getFullName(),
                 booking.getAsset().getName(),
                 booking.getAsset().getAssetTag(),
@@ -262,7 +270,7 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
         String message = String.format("""
                         ✅ *Return Inspection & Deposit Settlement Completed!* 🌾
                         ━━━━━━━━━━━━━━━━━━━━━━
-                        Dear %s,
+                        नमस्ते %s जी (Dear %s),
                         Your rented machinery *%s* (`%s`) has completed return yard inspection.
                         
                         📋 Booking Ref: *%s*
@@ -281,6 +289,7 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                         
                         Thank you for choosing EquipGrid! We look forward to serving your next project.
                         """,
+                booking.getCustomer().getFullName(),
                 booking.getCustomer().getFullName(),
                 booking.getAsset().getName(),
                 booking.getAsset().getAssetTag(),

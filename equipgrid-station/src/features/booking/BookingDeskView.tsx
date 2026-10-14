@@ -1191,22 +1191,41 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         {(b.status === 'ON_RENT' || b.status === 'DISPATCHED') && (
                           <button
                             type="button"
-                            onClick={() => {
-                              printDispatchChallanPdf({
-                                booking: b,
-                                challan: {
-                                  id: b.id,
-                                  challanNumber: `DC-2026-${String(b.id).padStart(4, '0')}`,
-                                  bookingId: b.id,
-                                  assetTag: b.asset.assetTag,
-                                  dispatchTimestamp: new Date().toISOString(),
-                                  fuelLevel: '100% (Full Tank)',
-                                  engineHoursOut: 14.5,
-                                  accessoriesVerified: true,
-                                  driverName: 'Suraj Logistics (E-Rickshaw 3W)',
-                                  customerSignatureConfirmed: true,
-                                },
-                              });
+                            onClick={async () => {
+                              try {
+                                const realChallan = await api.getDispatchByBooking(b.id);
+                                printDispatchChallanPdf({
+                                  booking: b,
+                                  challan: realChallan || {
+                                    id: b.id,
+                                    challanNumber: `DC-2026-${String(b.id).padStart(4, '0')}`,
+                                    bookingId: b.id,
+                                    assetTag: b.asset.assetTag,
+                                    dispatchTimestamp: new Date().toISOString(),
+                                    fuelLevel: '',
+                                    engineHoursOut: b.asset.engineHours,
+                                    accessoriesVerified: true,
+                                    driverName: '',
+                                    customerSignatureConfirmed: true,
+                                  },
+                                });
+                              } catch {
+                                printDispatchChallanPdf({
+                                  booking: b,
+                                  challan: {
+                                    id: b.id,
+                                    challanNumber: `DC-2026-${String(b.id).padStart(4, '0')}`,
+                                    bookingId: b.id,
+                                    assetTag: b.asset.assetTag,
+                                    dispatchTimestamp: new Date().toISOString(),
+                                    fuelLevel: '',
+                                    engineHoursOut: b.asset.engineHours,
+                                    accessoriesVerified: true,
+                                    driverName: '',
+                                    customerSignatureConfirmed: true,
+                                  },
+                                });
+                              }
                             }}
                             data-tooltip="Print / View Delivery Challan (DC)"
                             data-tooltip-pos="left"

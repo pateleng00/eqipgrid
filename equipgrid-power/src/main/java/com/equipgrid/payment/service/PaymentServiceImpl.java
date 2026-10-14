@@ -14,8 +14,11 @@ import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.repository.PaymentQueryRepository;
 import com.equipgrid.payment.repository.PaymentRepository;
+import com.equipgrid.customer.entity.Customer;
+import com.equipgrid.customer.repository.CustomerRepository;
 import com.equipgrid.fulfillment.entity.DeliveryJob;
 import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
+import com.equipgrid.location.entity.Hub;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +37,7 @@ public class PaymentServiceImpl implements IPaymentService {
     private final BookingRepository bookingRepository;
     private final BookingQueryRepository bookingQueryRepository;
     private final AssetRepository assetRepository;
+    private final CustomerRepository customerRepository;
     private final IAuditService auditService;
     private final DeliveryJobRepository deliveryJobRepository;
     private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService whatsAppNotificationService;
@@ -106,6 +110,18 @@ public class PaymentServiceImpl implements IPaymentService {
         }
 
         bookingRepository.save(booking);
+
+        // Auto-map dispatch Hub yard to customer when booking payment is recorded/confirmed
+        if (booking.getAsset() != null && booking.getAsset().getHub() != null && booking.getCustomer() != null) {
+            Customer cust = booking.getCustomer();
+            Hub hub = booking.getAsset().getHub();
+            if (cust.getHub() == null || !cust.getHub().getId().equals(hub.getId())) {
+                log.info("[Payment] Auto-mapping customer ID={} to dispatch Hub ID={} ('{}')",
+                        cust.getId(), hub.getId(), hub.getName());
+                cust.setHub(hub);
+                customerRepository.save(cust);
+            }
+        }
 
         // Notify customer on booking payment confirmation via WhatsApp
         try {

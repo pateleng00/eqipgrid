@@ -1,13 +1,16 @@
 package com.equipgrid.location.controller;
 
 import com.equipgrid.common.dto.rest.ApiResponse;
-import com.equipgrid.common.dto.rest.MessageApiResponse;
+import com.equipgrid.location.dto.request.CityRequest;
+import com.equipgrid.location.dto.request.HubRequest;
+import com.equipgrid.location.dto.response.StateHierarchyResponse;
 import com.equipgrid.location.entity.City;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.entity.State;
-import com.equipgrid.location.repository.CityRepository;
-import com.equipgrid.location.repository.HubRepository;
-import com.equipgrid.location.repository.StateRepository;
+import com.equipgrid.location.service.ILocationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,93 +21,66 @@ import java.util.List;
 @RequestMapping("/locations")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
+@Tag(name = "Location & Hub Management", description = "States, Cities, Station Hubs and Geographic Hierarchy APIs")
 public class LocationController {
 
-    private final StateRepository stateRepository;
-    private final CityRepository cityRepository;
-    private final HubRepository hubRepository;
+    private final ILocationService locationService;
 
     @GetMapping("/states")
+    @Operation(summary = "Get all active states")
     public ResponseEntity<ApiResponse<List<State>>> getStates() {
-        List<State> states = stateRepository.findByActiveTrueOrderByNameAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("States fetched"), states, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getStates()));
     }
 
     @PostMapping("/states")
-    public ResponseEntity<ApiResponse<State>> createState(@RequestBody State state) {
-        State saved = stateRepository.save(state);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("State created"), saved, null));
+    @Operation(summary = "Create state")
+    public ResponseEntity<ApiResponse<State>> createState(@Valid @RequestBody State state) {
+        State saved = locationService.createState(state);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "State created", saved));
     }
 
     @GetMapping("/states/{stateId}/cities")
+    @Operation(summary = "Get active cities by state ID")
     public ResponseEntity<ApiResponse<List<City>>> getCitiesByState(@PathVariable Long stateId) {
-        List<City> cities = cityRepository.findByStateIdAndActiveTrueOrderByNameAsc(stateId);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Cities fetched for state"), cities, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getCitiesByState(stateId)));
     }
 
     @GetMapping("/cities")
+    @Operation(summary = "Get all active cities")
     public ResponseEntity<ApiResponse<List<City>>> getAllCities() {
-        List<City> cities = cityRepository.findByActiveTrueOrderByNameAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("All cities fetched"), cities, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getAllCities()));
     }
 
     @PostMapping("/cities")
-    public ResponseEntity<ApiResponse<City>> createCity(@RequestBody CityRequest request) {
-        State state = stateRepository.findById(request.stateId())
-                .orElseThrow(() -> new IllegalArgumentException("State not found: " + request.stateId()));
-        City city = City.builder()
-                .state(state)
-                .name(request.name())
-                .pinCode(request.pinCode())
-                .active(true)
-                .build();
-        City saved = cityRepository.save(city);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("City created successfully"), saved, null));
+    @Operation(summary = "Create city under a state")
+    public ResponseEntity<ApiResponse<City>> createCity(@Valid @RequestBody CityRequest request) {
+        City saved = locationService.createCity(request);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "City created successfully", saved));
     }
 
     @GetMapping("/cities/{cityId}/hubs")
+    @Operation(summary = "Get active hubs in a city")
     public ResponseEntity<ApiResponse<List<Hub>>> getHubsByCity(@PathVariable Long cityId) {
-        List<Hub> hubs = hubRepository.findByCityIdAndActiveTrueOrderByNameAsc(cityId);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Hubs fetched for city"), hubs, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getHubsByCity(cityId)));
     }
 
     @GetMapping("/hubs")
+    @Operation(summary = "Get all active hubs")
     public ResponseEntity<ApiResponse<List<Hub>>> getAllHubs() {
-        List<Hub> hubs = hubRepository.findByActiveTrueOrderByNameAsc();
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("All hubs fetched"), hubs, null));
+        return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getAllHubs()));
     }
 
     @PostMapping("/hubs")
-    public ResponseEntity<ApiResponse<Hub>> createHub(@RequestBody HubRequest request) {
-        City city = cityRepository.findById(request.cityId())
-                .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.cityId()));
-        Hub hub = Hub.builder()
-                .city(city)
-                .name(request.name())
-                .code(request.code())
-                .address(request.address())
-                .contactPhone(request.contactPhone())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
-                .operatingRadiusKm(request.operatingRadiusKm() != null ? request.operatingRadiusKm() : new java.math.BigDecimal("25.0"))
-                .active(true)
-                .build();
-        Hub saved = hubRepository.save(hub);
-        return ResponseEntity.ok(new ApiResponse<>(true, new MessageApiResponse("Hub yard created successfully"), saved, null));
+    @Operation(summary = "Create hub yard in a city")
+    public ResponseEntity<ApiResponse<Hub>> createHub(@Valid @RequestBody HubRequest request) {
+        Hub saved = locationService.createHub(request);
+        return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Hub yard created successfully", saved));
     }
 
-    public record CityRequest(Long stateId, String name, String pinCode) {
-    }
-
-    public record HubRequest(
-            Long cityId,
-            String name,
-            String code,
-            String address,
-            String contactPhone,
-            java.math.BigDecimal operatingRadiusKm,
-            java.math.BigDecimal latitude,
-            java.math.BigDecimal longitude
-    ) {
+    @GetMapping("/hierarchy")
+    @Operation(summary = "Fetch active geographic hierarchy with mapped machines per hub")
+    public ResponseEntity<ApiResponse<List<StateHierarchyResponse>>> getLocationHierarchy() {
+        List<StateHierarchyResponse> hierarchy = locationService.getLocationHierarchy();
+        return ResponseEntity.ok(ApiResponse.buildSuccess("SG-200", "Location hierarchy with active machinery fetched successfully", hierarchy));
     }
 }

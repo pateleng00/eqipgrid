@@ -49,16 +49,20 @@ public class ChallanDocumentService {
         String delivery = booking.getFarmLocation() != null
                 ? booking.getFarmLocation().getLocalName() + (booking.getFarmLocation().getLocalNameHindi() != null ? " (" + booking.getFarmLocation().getLocalNameHindi() + ")" : "") + " — " + booking.getDeliveryAddress()
                 : (booking.getDeliveryLocationName() != null ? booking.getDeliveryLocationName() + " — " + booking.getDeliveryAddress() : booking.getDeliveryAddress());
-        String driver = dispatch.getDriverName() != null ? dispatch.getDriverName() : "EquipGrid Logistics";
-        String fuel = dispatch.getFuelLevel() != null ? dispatch.getFuelLevel() : "100%";
-        String hours = dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut().toPlainString() : "0.00";
+        String driver = dispatch.getDriverName() != null && !dispatch.getDriverName().isBlank() ? dispatch.getDriverName() : "—";
+        String fuel = dispatch.getFuelLevel() != null && !dispatch.getFuelLevel().isBlank() ? dispatch.getFuelLevel() : "—";
+        String hours = dispatch.getEngineHoursOut() != null ? dispatch.getEngineHoursOut().toPlainString() : "—";
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd-MMM-yyyy HH:mm"));
         boolean accessories = Boolean.TRUE.equals(dispatch.getAccessoriesVerified());
 
         // Resolve hub and city
-        String hub = booking.getAsset().getHub() != null ? booking.getAsset().getHub().getName() : "Central Hub";
+        String hub = booking.getAsset().getHub() != null ? booking.getAsset().getHub().getName()
+                : (booking.getCustomer() != null && booking.getCustomer().getHub() != null ? booking.getCustomer().getHub().getName() : "EquipGrid Station");
         String city = booking.getAsset().getHub() != null && booking.getAsset().getHub().getCity() != null
-                ? booking.getAsset().getHub().getCity().getName() : "Uttar Pradesh";
+                ? booking.getAsset().getHub().getCity().getName()
+                : (booking.getCustomer() != null && booking.getCustomer().getHub() != null && booking.getCustomer().getHub().getCity() != null
+                ? booking.getCustomer().getHub().getCity().getName() : "");
+        String hubWithCity = city.isBlank() ? hub : hub + " (" + city + ")";
 
         return """
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -75,7 +79,7 @@ public class ChallanDocumentService {
                 
                 *──────── Equipment Details ────────*
                 🚜 Machine: *%s* (`%s`)
-                🏢 Dispatched From: *%s* (%s)
+                🏢 Dispatched From: *%s*
                 ⛽ Fuel Level at Dispatch: *%s*
                 ⏱️ Engine Hours (Out): *%s hrs*
                 🧰 Accessories Pack: *%s*
@@ -92,15 +96,15 @@ public class ChallanDocumentService {
                 💰 Daily Rent: ₹%,.0f/day
                 🛡️ Security Deposit: ₹%,.0f (Held in Escrow)
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-                ✅ *Pre-dispatch 28-point inspection verified.*
+                ✅ *Pre-dispatch mechanical inspection verified.*
                 *Customer to confirm receipt by replying:* *GOT IT* or *MILI*
                 
-                _EquipGrid — Grameen Yantrik Seva | Hardoi | Lucknow | Kanpur_
+                _EquipGrid — Grameen Yantrik Seva_
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 """.formatted(
                 challanNo, bookingNo, timestamp,
                 customer, phone,
-                machineName, machineTag, hub, city,
+                machineName, machineTag, hubWithCity,
                 fuel, hours,
                 accessories ? "✅ Verified & Complete" : "⚠️ Partially Verified",
                 delivery,
@@ -130,6 +134,21 @@ public class ChallanDocumentService {
                     new ChecklistItem("CLEANING", "🧹 Cleanliness", "Machine drum/body cleaned of mud/crop residue?"),
                     new ChecklistItem("TYRES_WHEELS", "🔘 Tyres / Wheels", "Tyres intact, no punctures or missing wheels?"),
                     new ChecklistItem("SAFETY_GUARD", "🦺 Safety Guards", "All protective safety guards in place?")
+            );
+        } else if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(assetCategory)
+                || "MULTIPURPOSE".equalsIgnoreCase(assetCategory)
+                || "DUAL_USE".equalsIgnoreCase(assetCategory)
+                || "3".equals(assetCategory)) {
+            return List.of(
+                    new ChecklistItem("FUEL_LEVEL", "⛽ Fuel Level", "Is the fuel level same as when dispatched?"),
+                    new ChecklistItem("ENGINE_CONDITION", "🔧 Engine / Transmission", "Engine starts smoothly and transmission / brakes operate normally?"),
+                    new ChecklistItem("HITCH_LINKAGE", "🔗 Hitch & 3-Point Linkage", "Towing pin, 3-point linkage, and safety clips intact and secure?"),
+                    new ChecklistItem("HYDRAULICS_PTO", "⚙️ Hydraulics & PTO", "Hydraulic lift arms and PTO shaft splines operational without oil leaks?"),
+                    new ChecklistItem("TYRES_WHEELS", "🔘 Tyres / Wheels", "All tyres undamaged with correct inflation pressure?"),
+                    new ChecklistItem("BODY_FRAME", "🛡️ Body & Carriage Bed", "No cracks, bent drawbars, or structural chassis damage?"),
+                    new ChecklistItem("ELECTRICAL_LIGHTS", "💡 Lights & Electrical", "Headlamps, tail lights, horn, and indicators working properly?"),
+                    new ChecklistItem("ACCESSORIES", "🧰 Accessories", "All standard accessories present (as per dispatch challan)?"),
+                    new ChecklistItem("CLEANLINESS", "🧹 Cleanliness", "Vehicle bed and chassis cleaned of mud, haulage, or cargo residue?")
             );
         } else {
             // CONSTRUCTION
@@ -302,7 +321,7 @@ public class ChallanDocumentService {
                 🔗 Reference ID: *%s*
                 
                 _100%% Refundable Guarantee — EquipGrid Zero-Credit Policy_
-                _EquipGrid | Hardoi | Lucknow | Kanpur_
+                _EquipGrid — Grameen Yantrik Seva_
                 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
                 """.formatted(
                 booking.getBookingNumber(), timestamp,
@@ -340,6 +359,8 @@ public class ChallanDocumentService {
             if (label.startsWith("🥁")) return "🥁";
             if (label.startsWith("📳")) return "📳";
             if (label.startsWith("🔌")) return "🔌";
+            if (label.startsWith("🔗")) return "🔗";
+            if (label.startsWith("💡")) return "💡";
             if (label.startsWith("📷")) return "📷";
             return "📋";
         }

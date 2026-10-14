@@ -258,8 +258,8 @@ public class FleetIntelligenceTools {
                 node.put("deliverySla", "Doorstep tractor-trailer field delivery within operating radius");
             }
         }
-        res.put("tollFreeHelpLine", "1800-889-AGRI (1800-889-2474)");
-        res.put("whatsAppSupport", "+1 (555) 630-0171");
+        res.put("tollFreeHelpLine", "+91 94674 79922 (9467479922)");
+        res.put("whatsAppSupport", "+91 94674 79922");
         return res;
     }
 

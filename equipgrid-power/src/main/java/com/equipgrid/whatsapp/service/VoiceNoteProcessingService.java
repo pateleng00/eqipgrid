@@ -17,6 +17,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Arrays;
 
 /**
  * Service that processes WhatsApp voice notes (audio messages) using Google Gemini's
@@ -471,7 +472,7 @@ public class VoiceNoteProcessingService {
                   "transcript": "<original message, copied verbatim>",
                   "detected_language": "<ISO 639-1 code of the message language>",
                   "intent": "<BROWSE_RENT|TRACK_ORDER|PAY|RETURN|HELP|UNKNOWN>",
-                  "asset_category": "<AGRICULTURE|CONSTRUCTION|>",
+                  "asset_category": "<AGRICULTURE|CONSTRUCTION|MULTIPURPOSE_FLEET|>",
                   "machine_name": "<machine name or empty>",
                   "rental_days": <integer or null>,
                   "hub_name": "<hub/city or empty>",
@@ -489,9 +490,11 @@ public class VoiceNoteProcessingService {
                   HELP        = complaint, breakdown, how-to, or talk to support
                   UNKNOWN     = none of the above or unintelligible
                   If several apply, choose the primary action the customer wants.
-                - asset_category: AGRICULTURE for farm machines (tractor, rotavator, harvester, thresher,
-                  sprayer, seed drill, trolley, etc.); CONSTRUCTION for JCB, excavator, mixer, roller,
-                  compactor, crane, etc. If a machine is named, infer the category from it; otherwise "".
+                - asset_category:
+                  AGRICULTURE for farm-specific machinery (rotavator, harvester, thresher, sprayer, seed drill, reaper, weeder, harrow, etc.);
+                  CONSTRUCTION for building and civil equipment (JCB, excavator, concrete mixer, roller, compactor, crane, vibrator, etc.);
+                  MULTIPURPOSE_FLEET for dual-use equipment (tractor, trolley, trailer, water tanker, multi-axle carrier, loader, etc.) suitable for both farm and construction.
+                  If a machine is named, infer the category from it; otherwise "".
                 - machine_name: the machine in simple English (e.g. "tractor", "JCB"), without quantity
                   or filler words. "" if none.
                 - rental_days: integer only. Convert number words and units, e.g.
@@ -504,7 +507,7 @@ public class VoiceNoteProcessingService {
                 
                 EXAMPLES
                 Message: "Mujhe kal se 3 din ke liye tractor chahiye, Sandila hub, khet pe bhej dena"
-                {"transcript":"Mujhe kal se 3 din ke liye tractor chahiye, Sandila hub, khet pe bhej dena","detected_language":"hi","intent":"BROWSE_RENT","asset_category":"AGRICULTURE","machine_name":"tractor","rental_days":3,"hub_name":"Sandila","delivery_type":"FARM"}
+                {"transcript":"Mujhe kal se 3 din ke liye tractor chahiye, Sandila hub, khet pe bhej dena","detected_language":"hi","intent":"BROWSE_RENT","asset_category":"MULTIPURPOSE_FLEET","machine_name":"tractor","rental_days":3,"hub_name":"Sandila","delivery_type":"FARM"}
                 
                 Message: "mera order kahan tak pahuncha"
                 {"transcript":"mera order kahan tak pahuncha","detected_language":"hi","intent":"TRACK_ORDER","asset_category":"","machine_name":"","rental_days":null,"hub_name":"","delivery_type":""}
@@ -534,12 +537,20 @@ public class VoiceNoteProcessingService {
         }
 
         String category = "";
-        if (upper.contains("AGRI") || upper.contains("KRISHI") || upper.contains("KHET") ||
-                upper.contains("FARM") || upper.contains("REAPER") || upper.contains("WEEDER")) {
-            category = "AGRICULTURE";
+        if (upper.contains("DUAL") || upper.contains("MULTI") || upper.contains("FLEET") || upper.contains("BAHU") ||
+                upper.contains("TROLLY") || upper.contains("TROLLEY") || upper.contains("TRAILER") || upper.contains("TANKER") ||
+                upper.contains("CARRIER") || upper.contains("TRACTOR") || upper.contains("COMPAIND") || upper.contains("COMBINE")) {
+            category = "MULTIPURPOSE_FLEET";
         } else if (upper.contains("CONCRETE") || upper.contains("VIBRAT") || upper.contains("PUMP") ||
-                upper.contains("GENERATOR") || upper.contains("NIRMAN") || upper.contains("CONSTRUCT")) {
+                upper.contains("GENERATOR") || upper.contains("NIRMAN") || upper.contains("CONSTRUCT") || upper.contains("JCB") ||
+                upper.contains("EXCAVAT") || upper.contains("ROLLER") || upper.contains("RAMMER")) {
             category = "CONSTRUCTION";
+        } else if (upper.contains("AGRI") || upper.contains("KRISHI") || upper.contains("KHET") ||
+                upper.contains("FARM") || upper.contains("REAPER") || upper.contains("WEEDER") || upper.contains("ROTAVAT") ||
+                upper.contains("ROTAVET") || upper.contains("HARVEST") || upper.contains("THRESH") || upper.contains("SPRAY") ||
+                upper.contains("SEED") || upper.contains("JUTAAI") || upper.contains("KATAAI") || upper.contains("BUWAAI") ||
+                upper.contains("BEEJ") || upper.contains("KHAAD") || upper.contains("HAIRROW") || upper.contains("HARROW")) {
+            category = "AGRICULTURE";
         }
 
         Integer days = null;
@@ -551,9 +562,19 @@ public class VoiceNoteProcessingService {
             }
         }
 
+        String lower = text.toLowerCase();
+        String[] hindiGreetings = {"namaste", "ram ram", "pranam", "khet", "chahiye", "din", "kisan"};
+        String[] greetings = {"hi", "hello", "namaste", "namaskar", "ram ram", "pranam", "parnaam", "jai shree ram", "radhe radhe", "sat sri akal"};
+
+        String detectedLang = (Arrays.stream(hindiGreetings).anyMatch(lower::contains) || text.matches(".*[\\u0900-\\u097F]+.*")) ? "hi" : (lower.contains("hello") ? "en" : "hi");
+
+        if ("UNKNOWN".equals(intent) && Arrays.stream(greetings).anyMatch(lower::contains)) {
+            intent = "GREETING";
+        }
+
         return VoiceBookingIntent.builder()
                 .transcript(text)
-                .detectedLanguage("hi")
+                .detectedLanguage(detectedLang)
                 .intent(intent)
                 .assetCategory(category)
                 .rentalDays(days)
