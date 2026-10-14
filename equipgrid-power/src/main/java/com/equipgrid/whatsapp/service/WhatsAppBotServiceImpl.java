@@ -331,16 +331,26 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String lower = input != null ? input.toLowerCase().trim() : "";
 
         String salutation;
-        if (lower.contains("ram ram") || lower.contains("ramram") || lower.contains("राम राम") || lower.contains("रामराम")) {
-            salutation = String.format("🌾 *राम राम %s! (Ram Ram %s)*", nameWithJi, nameWithJi);
-        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("प्रणाम") || lower.contains("charan sparsh")) {
-            salutation = String.format("🌾 *प्रणाम %s! (Pranam %s)*", nameWithJi, nameWithJi);
-        } else if (lower.contains("jai shree ram") || lower.contains("जय श्री राम")) {
-            salutation = String.format("🌾 *जय श्री राम %s! (Jai Shree Ram %s)*", nameWithJi, nameWithJi);
-        } else if (lower.contains("radhe") || lower.contains("राधे")) {
-            salutation = String.format("🌾 *राधे राधे %s! (Radhe Radhe %s)*", nameWithJi, nameWithJi);
-        } else if (lower.contains("sat sri akal") || lower.contains("सत श्री अकाल") || lower.contains("satsriakal")) {
-            salutation = String.format("🌾 *सत श्री अकाल %s! (Sat Sri Akal %s)*", nameWithJi, nameWithJi);
+        if (lower.contains("राम राम") || lower.contains("रामराम")) {
+            salutation = String.format("🌾 *राम राम %s!*", nameWithJi);
+        } else if (lower.contains("ram ram") || lower.contains("ramram")) {
+            salutation = String.format("🌾 *Ram Ram %s!*", nameWithJi);
+        } else if (lower.contains("प्रणाम")) {
+            salutation = String.format("🌾 *प्रणाम %s!*", nameWithJi);
+        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("charan sparsh")) {
+            salutation = String.format("🌾 *Pranam %s!*", nameWithJi);
+        } else if (lower.contains("जय श्री राम")) {
+            salutation = String.format("🌾 *जय श्री राम %s!*", nameWithJi);
+        } else if (lower.contains("jai shree ram")) {
+            salutation = String.format("🌾 *Jai Shree Ram %s!*", nameWithJi);
+        } else if (lower.contains("राधे")) {
+            salutation = String.format("🌾 *राधे राधे %s!*", nameWithJi);
+        } else if (lower.contains("radhe")) {
+            salutation = String.format("🌾 *Radhe Radhe %s!*", nameWithJi);
+        } else if (lower.contains("सत श्री अकाल")) {
+            salutation = String.format("🌾 *सत श्री अकाल %s!*", nameWithJi);
+        } else if (lower.contains("sat sri akal") || lower.contains("satsriakal")) {
+            salutation = String.format("🌾 *Sat Sri Akal %s!*", nameWithJi);
         } else if (lower.contains("hello")) {
             salutation = String.format("🌾 *Hello %s!*", nameWithJi);
         } else if (lower.contains("hi") && !lower.contains("chahiye")) {
@@ -361,16 +371,26 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String nameWithJi = formatCustomerNameWithJi(fullName);
         String lower = input != null ? input.toLowerCase().trim() : "";
 
-        if (lower.contains("ram ram") || lower.contains("ramram") || lower.contains("राम राम") || lower.contains("रामराम")) {
-            return String.format("🌾 *राम राम %s! (Ram Ram %s)*\n", nameWithJi, nameWithJi);
-        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("प्रणाम") || lower.contains("charan sparsh")) {
-            return String.format("🌾 *प्रणाम %s! (Pranam %s)*\n", nameWithJi, nameWithJi);
-        } else if (lower.contains("jai shree ram") || lower.contains("जय श्री राम")) {
-            return String.format("🌾 *जय श्री राम %s! (Jai Shree Ram %s)*\n", nameWithJi, nameWithJi);
-        } else if (lower.contains("radhe") || lower.contains("राधे")) {
-            return String.format("🌾 *राधे राधे %s! (Radhe Radhe %s)*\n", nameWithJi, nameWithJi);
-        } else if (lower.contains("sat sri akal") || lower.contains("सत श्री अकाल") || lower.contains("satsriakal")) {
-            return String.format("🌾 *सत श्री अकाल %s! (Sat Sri Akal %s)*\n", nameWithJi, nameWithJi);
+        if (lower.contains("राम राम") || lower.contains("रामराम")) {
+            return String.format("🌾 *राम राम %s!*\n", nameWithJi);
+        } else if (lower.contains("ram ram") || lower.contains("ramram")) {
+            return String.format("🌾 *Ram Ram %s!*\n", nameWithJi);
+        } else if (lower.contains("प्रणाम")) {
+            return String.format("🌾 *प्रणाम %s!*\n", nameWithJi);
+        } else if (lower.contains("pranam") || lower.contains("parnaam") || lower.contains("pramaan") || lower.contains("charan sparsh")) {
+            return String.format("🌾 *Pranam %s!*\n", nameWithJi);
+        } else if (lower.contains("जय श्री राम")) {
+            return String.format("🌾 *जय श्री राम %s!*\n", nameWithJi);
+        } else if (lower.contains("jai shree ram")) {
+            return String.format("🌾 *Jai Shree Ram %s!*\n", nameWithJi);
+        } else if (lower.contains("राधे")) {
+            return String.format("🌾 *राधे राधे %s!*\n", nameWithJi);
+        } else if (lower.contains("radhe")) {
+            return String.format("🌾 *Radhe Radhe %s!*\n", nameWithJi);
+        } else if (lower.contains("सत श्री अकाल")) {
+            return String.format("🌾 *सत श्री अकाल %s!*\n", nameWithJi);
+        } else if (lower.contains("sat sri akal") || lower.contains("satsriakal")) {
+            return String.format("🌾 *Sat Sri Akal %s!*\n", nameWithJi);
         } else if (lower.contains("hello")) {
             return String.format("🌾 *Hello %s!*\n", nameWithJi);
         } else if (lower.contains("hi") && !lower.contains("chahiye")) {
