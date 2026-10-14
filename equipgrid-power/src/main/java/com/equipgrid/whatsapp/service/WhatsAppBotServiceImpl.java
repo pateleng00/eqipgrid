@@ -27,6 +27,8 @@ import com.equipgrid.farmlocation.repository.FarmLocationRepository;
 import com.equipgrid.farmlocation.enums.FarmLocationType;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
+import com.equipgrid.rentalconfig.entity.RentalConfiguration;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.payment.dto.request.RecordPaymentRequest;
 import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.enums.PaymentMode;
@@ -89,6 +91,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     private final VoiceNoteProcessingService voiceNoteProcessingService;
     private final MetaWhatsAppClientService metaWhatsAppClientService;
     private final ChallanDocumentService challanDocumentService;
+    private final RentalConfigurationRepository rentalConfigurationRepository;
 
     public static String getEquipmentHindiName(String name, String tag) {
         if (name == null) return "उपकरण (Equipment)";
@@ -186,6 +189,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             case SELECTING_HUB -> response = handleHubSelection(messageText, conversation, customer, context);
             case SELECTING_CATEGORY -> response = handleCategorySelection(messageText, conversation, customer, context);
             case SELECTING_ASSET -> response = handleAssetSelection(messageText, conversation, customer, context);
+            case SELECTING_TARIFF -> response = handleTariffSelection(messageText, conversation, customer, context);
             case ENTERING_DATES -> response = handleDateInput(messageText, conversation, customer, context);
             case SELECTING_DELIVERY_DESTINATION ->
                     response = handleDeliveryDestinationSelection(messageText, conversation, customer, context);
@@ -701,7 +705,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             if (hubStr != null && !hubStr.isBlank()) {
                 sb.append(String.format("   • 📍 Yard: %s\n", hubStr));
             }
-            sb.append(String.format("   • 💰 Daily Rent: ₹%,.0f/day\n", asset.getDailyRate()));
+            List<RentalConfiguration> assetConfigs = rentalConfigurationRepository.findByAssetIdAndActiveTrue(asset.getId());
+            if (assetConfigs.size() > 1) {
+                sb.append(String.format("   • ⚡ Multi-Mode Billing: %d Plans (प्रति एकड़, प्रति चक्कर, प्रति दिन)\n", assetConfigs.size()));
+            } else if (assetConfigs.size() == 1) {
+                RentalConfiguration singleCfg = assetConfigs.get(0);
+                String uLabel = formatBillingUnitLabel(singleCfg.getBillingUnit() != null ? singleCfg.getBillingUnit().name() : "DAILY");
+                sb.append(String.format("   • 💰 Rate: ₹%,.0f / %s\n", singleCfg.getBaseDailyRate(), uLabel));
+            } else {
+                sb.append(String.format("   • 💰 Daily Rent: ₹%,.0f/day\n", asset.getDailyRate()));
+            }
             sb.append(String.format("   • 🛡️ Deposit: ₹%,.0f (100%% Refundable)\n", asset.getDepositAmount()));
             sb.append("   • 📸 4 Photos & 🎥 10-sec Demo Video Available\n\n");
 
@@ -842,8 +855,91 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         if (selected.getHub() != null) {
             sb.append(String.format("📍 Station Hub: *%s*\n", selected.getHub().getName()));
         }
-        sb.append(String.format("• 💰 Daily Rent: ₹%,.0f/day\n", selected.getDailyRate()));
-        sb.append(String.format("• 🛡️ Security Deposit: ₹%,.0f (100%% Refundable)\n", selected.getDepositAmount()));
+
+        // Check for active RentalConfigurations (supporting multimode billing: Per Acre, Per Trip, Daily Shift, etc.)
+        Long hubId = selected.getHub() != null ? selected.getHub().getId() : null;
+        List<RentalConfiguration> configs = hubId != null
+                ? rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(selected.getId(), hubId)
+                : rentalConfigurationRepository.findByAssetIdAndActiveTrue(selected.getId());
+        if (configs.isEmpty()) {
+            configs = rentalConfigurationRepository.findByAssetIdAndActiveTrue(selected.getId());
+        }
+        if (configs.isEmpty() && selected.getType() != null) {
+            configs = hubId != null
+                    ? rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(selected.getType().getId(), hubId)
+                    : rentalConfigurationRepository.findByTypeIdAndActiveTrue(selected.getType().getId());
+            if (configs.isEmpty()) {
+                configs = rentalConfigurationRepository.findByTypeIdAndActiveTrue(selected.getType().getId());
+            }
+        }
+
+        // MULTI-TARIFF PATH: Multiple billing plans exist for this machine!
+        if (configs.size() > 1) {
+            context.setAvailableRentalConfigIds(configs.stream().map(RentalConfiguration::getId).toList());
+            conv.setState(WhatsAppState.SELECTING_TARIFF);
+
+            sb.append(String.format("• 🛡️ Security Deposit: ₹%,.0f (100%% Refundable)\n", selected.getDepositAmount()));
+            if (selected.getModel() != null) {
+                sb.append(String.format("• ⚙️ Model: %s\n", selected.getModel().getName()));
+            }
+            sb.append("━━━━━━━━━━━━━━━━━━━━━━\n");
+
+            if (demoVideoUrl != null) {
+                sb.append("🎥 *Watch 10-Second Demo Video:*\n");
+                sb.append(demoVideoUrl).append("\n\n");
+            }
+
+            if (!photoUrls.isEmpty()) {
+                sb.append("📸 *Machine High-Res Photos:*\n");
+                int pIdx = 1;
+                for (String pUrl : photoUrls) {
+                    sb.append(String.format("%d. %s\n", pIdx++, pUrl));
+                }
+                sb.append("\n");
+            }
+
+            sb.append("⚡ *Select Billing / Tariff Plan (बिलिंग का तरीका चुनें):*\n");
+            sb.append("_(यह मशीन विभिन्न कार्यों के लिए अलग-अलग दरों पर उपलब्ध है:)_\n\n");
+
+            List<String> suggestedOptions = new ArrayList<>();
+            for (int i = 0; i < configs.size(); i++) {
+                RentalConfiguration cfg = configs.get(i);
+                String unitLabel = formatBillingUnitLabel(cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : "DAILY");
+                String terms = (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) ? " • " + cfg.getShiftTerms() : "";
+                sb.append(String.format("*%d.* %s: *₹%,.0f*%s\n", i + 1, unitLabel, cfg.getBaseDailyRate(), terms));
+                suggestedOptions.add(String.format("%d. %s", i + 1, unitLabel));
+            }
+            sb.append("\n👉 Reply with *1*, *2*, etc. to select your billing mode.");
+
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(sb.toString())
+                    .state(WhatsAppState.SELECTING_TARIFF)
+                    .suggestedOptions(suggestedOptions)
+                    .previewImageUrl(previewImgUrl)
+                    .demoVideoUrl(demoVideoUrl)
+                    .mediaUrls(photoUrls)
+                    .hubName(context.getSelectedHubName())
+                    .cityName(context.getSelectedCityName())
+                    .build();
+        }
+
+        // SINGLE-TARIFF OR DEFAULT PATH:
+        if (configs.size() == 1) {
+            RentalConfiguration single = configs.get(0);
+            context.setSelectedRentalConfigId(single.getId());
+            context.setSelectedBillingUnit(single.getBillingUnit() != null ? single.getBillingUnit().name() : "DAILY");
+            context.setSelectedShiftTerms(single.getShiftTerms());
+            context.setDailyRate(single.getBaseDailyRate());
+            context.setSecurityDeposit(single.getDepositAmount());
+        }
+
+        String unitLabel = formatBillingUnitLabel(context.getSelectedBillingUnit());
+        sb.append(String.format("• 💰 Rate: ₹%,.0f / %s\n", context.getDailyRate(), unitLabel));
+        if (context.getSelectedShiftTerms() != null && !context.getSelectedShiftTerms().isBlank()) {
+            sb.append(String.format("• ⏱️ Shift/Terms: %s\n", context.getSelectedShiftTerms()));
+        }
+        sb.append(String.format("• 🛡️ Security Deposit: ₹%,.0f (100%% Refundable)\n", context.getSecurityDeposit()));
         if (selected.getModel() != null) {
             sb.append(String.format("• ⚙️ Model: %s\n", selected.getModel().getName()));
         }
@@ -894,6 +990,143 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .previewImageUrl(previewImgUrl)
                 .demoVideoUrl(demoVideoUrl)
                 .mediaUrls(photoUrls)
+                .hubName(context.getSelectedHubName())
+                .cityName(context.getSelectedCityName())
+                .build();
+    }
+
+    private WhatsAppMessageResponse handleTariffSelection(String input, WhatsAppConversation conv, Customer customer, WhatsAppConversationContext context) {
+        List<Long> configIds = context.getAvailableRentalConfigIds();
+        if (configIds == null || configIds.isEmpty()) {
+            conv.setState(WhatsAppState.ENTERING_DATES);
+            return promptDateInput(conv, context);
+        }
+
+        List<RentalConfiguration> configs = rentalConfigurationRepository.findAllById(configIds);
+        if (configs.isEmpty()) {
+            conv.setState(WhatsAppState.ENTERING_DATES);
+            return promptDateInput(conv, context);
+        }
+
+        RentalConfiguration selected = null;
+        try {
+            int choice = Integer.parseInt(input.trim());
+            if (choice >= 1 && choice <= configs.size()) {
+                selected = configs.get(choice - 1);
+            }
+        } catch (NumberFormatException ignored) {
+        }
+
+        if (selected == null) {
+            String search = input.trim().toLowerCase();
+            for (RentalConfiguration cfg : configs) {
+                String unit = cfg.getBillingUnit() != null ? cfg.getBillingUnit().name().toLowerCase() : "";
+                String label = formatBillingUnitLabel(cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : "").toLowerCase();
+                if (unit.contains(search) || label.contains(search) || (cfg.getShiftTerms() != null && cfg.getShiftTerms().toLowerCase().contains(search))) {
+                    selected = cfg;
+                    break;
+                }
+            }
+        }
+
+        if (selected == null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("⚠️ Please select a valid billing plan from the list:\n\n");
+            List<String> suggestedOptions = new ArrayList<>();
+            for (int i = 0; i < configs.size(); i++) {
+                RentalConfiguration cfg = configs.get(i);
+                String unitLabel = formatBillingUnitLabel(cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : "DAILY");
+                String terms = (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) ? " • " + cfg.getShiftTerms() : "";
+                sb.append(String.format("*%d.* %s: *₹%,.0f*%s\n", i + 1, unitLabel, cfg.getBaseDailyRate(), terms));
+                suggestedOptions.add(String.format("%d. %s", i + 1, unitLabel));
+            }
+            sb.append("\n👉 Reply with *1*, *2*, etc.");
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(sb.toString())
+                    .state(WhatsAppState.SELECTING_TARIFF)
+                    .suggestedOptions(suggestedOptions)
+                    .build();
+        }
+
+        // Apply selected tariff configuration
+        context.setSelectedRentalConfigId(selected.getId());
+        context.setSelectedBillingUnit(selected.getBillingUnit() != null ? selected.getBillingUnit().name() : "DAILY");
+        context.setSelectedShiftTerms(selected.getShiftTerms());
+        context.setDailyRate(selected.getBaseDailyRate());
+        context.setSecurityDeposit(selected.getDepositAmount());
+
+        String unitLabel = formatBillingUnitLabel(context.getSelectedBillingUnit());
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("✅ *Selected Plan: %s*\n", unitLabel));
+        sb.append(String.format("• Rate: *₹%,.0f* / %s\n", selected.getBaseDailyRate(), unitLabel));
+        if (selected.getShiftTerms() != null && !selected.getShiftTerms().isBlank()) {
+            sb.append(String.format("• Shift/Terms: *%s*\n", selected.getShiftTerms()));
+        }
+        sb.append(String.format("• 🛡️ Deposit: *₹%,.0f* (100%% Refundable)\n", selected.getDepositAmount()));
+        sb.append("━━━━━━━━━━━━━━━━━━━━━━\n\n");
+
+        if (context.getRentalDays() != null && context.getStartDate() != null) {
+            WhatsAppMessageResponse prompt = promptDeliveryDestinationOrLocation(conv, customer, context);
+            return WhatsAppMessageResponse.builder()
+                    .to(conv.getPhoneNumber())
+                    .message(sb.toString() + prompt.getMessage())
+                    .state(prompt.getState())
+                    .suggestedOptions(prompt.getSuggestedOptions())
+                    .previewImageUrl(context.getPreviewImageUrl())
+                    .demoVideoUrl(context.getDemoVideoUrl())
+                    .mediaUrls(context.getMediaUrls())
+                    .hubName(context.getSelectedHubName())
+                    .cityName(context.getSelectedCityName())
+                    .build();
+        }
+
+        conv.setState(WhatsAppState.ENTERING_DATES);
+        String unitCode = context.getSelectedBillingUnit() != null ? context.getSelectedBillingUnit().toUpperCase() : "DAILY";
+        switch (unitCode) {
+            case "PER_ACRE" -> {
+                sb.append("🌾 *For how many days/shifts do you plan for field operation?*\n");
+                sb.append("_(खेत कार्य के लिए कितने दिन/शिफ्ट की आवश्यकता होगी? उदाहरण: *1* दिन या *2* दिन)_");
+            }
+            case "PER_TRIP" -> {
+                sb.append("🚛 *Over how many days will the transportation / trips take place?*\n");
+                sb.append("_(ढुलाई/ट्रिप कार्य कितने दिनों में पूरा होगा? उदाहरण: *1* या *2* दिन)_");
+            }
+            case "HOURLY" -> {
+                sb.append("⏱️ *For how many days do you need the machine on site?*\n");
+                sb.append("_(कार्यस्थल पर कितने दिन मशीन रहेगी? उदाहरण: *1* या *3* दिन)_");
+            }
+            default -> {
+                sb.append("📅 *For how many days do you need this equipment?*\n");
+                sb.append("_(कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_");
+            }
+        }
+
+        return WhatsAppMessageResponse.builder()
+                .to(conv.getPhoneNumber())
+                .message(sb.toString())
+                .state(WhatsAppState.ENTERING_DATES)
+                .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "7 Days"))
+                .previewImageUrl(context.getPreviewImageUrl())
+                .demoVideoUrl(context.getDemoVideoUrl())
+                .mediaUrls(context.getMediaUrls())
+                .hubName(context.getSelectedHubName())
+                .cityName(context.getSelectedCityName())
+                .build();
+    }
+
+    private WhatsAppMessageResponse promptDateInput(WhatsAppConversation conv, WhatsAppConversationContext context) {
+        conv.setState(WhatsAppState.ENTERING_DATES);
+        String msg = "📅 *For how many days do you need this equipment?*\n" +
+                "_(कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_";
+        return WhatsAppMessageResponse.builder()
+                .to(conv.getPhoneNumber())
+                .message(msg)
+                .state(WhatsAppState.ENTERING_DATES)
+                .suggestedOptions(List.of("1 Day", "3 Days", "5 Days", "7 Days (1 Week)"))
+                .previewImageUrl(context.getPreviewImageUrl())
+                .demoVideoUrl(context.getDemoVideoUrl())
+                .mediaUrls(context.getMediaUrls())
                 .hubName(context.getSelectedHubName())
                 .cityName(context.getSelectedCityName())
                 .build();
@@ -1294,6 +1527,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 .endDate(context.getEndDate())
                 .distanceKm(new BigDecimal("15"))
                 .operatorRequired(false)
+                .rentalConfigId(context.getSelectedRentalConfigId())
                 .build();
 
         QuoteResponse quote = bookingService.calculateQuote(quoteRequest);
@@ -1316,21 +1550,38 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         String hindiName = getEquipmentHindiName(context.getSelectedAssetName(), context.getSelectedAssetTag());
 
+        String tariffBadge = "";
+        if (context.getSelectedBillingUnit() != null) {
+            String uLabel = formatBillingUnitLabel(context.getSelectedBillingUnit());
+            String terms = (context.getSelectedShiftTerms() != null && !context.getSelectedShiftTerms().isBlank())
+                    ? " (" + context.getSelectedShiftTerms() + ")" : "";
+            tariffBadge = String.format("⚡ Tariff Mode: *%s*%s\n", uLabel, terms);
+        }
+
+        String depositLine = quote.getDepositAmount().compareTo(BigDecimal.ZERO) == 0
+                ? "• *Security Deposit*: ✨ *₹0 (Zero-Deposit Scheme / किसान सहायता योजना)*\n"
+                : String.format("• *Security Deposit (100%% Refundable)*: ₹%,.2f\n", quote.getDepositAmount());
+
+        String depositNote = quote.getDepositAmount().compareTo(BigDecimal.ZERO) == 0
+                ? "_(✨ ₹0 Zero-Deposit Scheme Applied - कोई अग्रिम सिक्योरिटी नहीं)_"
+                : String.format("_(Includes ₹%,.2f 100%% Refundable Deposit)_", quote.getDepositAmount());
+
+        String unitLabel = context.getSelectedBillingUnit() != null ? formatBillingUnitLabel(context.getSelectedBillingUnit()) : "Days";
+
         String summary = String.format("""
                         📋 *EquipGrid Booking Quotation Summary*
                         ━━━━━━━━━━━━━━━━━━━━━━
                         🚜 Machine: *%s* (`%s`)
                            👉 *%s*
-                        %s📅 Duration: *%d Days* (%s to %s)
+                        %s%s📅 Duration: *%d Days* (%s to %s)
                         📍 Delivery Type: %s
                         📍 Destination: *%s*
                         %s━━━━━━━━━━━━━━━━━━━━━━
-                        • Base Rent (%d Days): ₹%,.2f
+                        • Base Rent (%d Days / %s): ₹%,.2f
                         • Logistics & Transport: ₹%,.2f
-                        • *Security Deposit (100%% Refundable)*: ₹%,.2f
-                        ━━━━━━━━━━━━━━━━━━━━━━
+                        %s━━━━━━━━━━━━━━━━━━━━━━
                         💰 *Total Advance Due*: *₹%,.2f*
-                        _(Includes ₹%,.2f 100%% Refundable Deposit)_
+                        %s
                         
                         🛡️ *Zero-Credit Guarantee*:
                         Full deposit is credited back to your UPI within 2 hours of machine return inspection.
@@ -1342,6 +1593,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 context.getSelectedAssetTag() != null ? context.getSelectedAssetTag() : "",
                 hindiName,
                 hubInfo,
+                tariffBadge,
                 context.getRentalDays(),
                 context.getStartDate(),
                 context.getEndDate(),
@@ -1349,11 +1601,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 context.getDeliveryAddress(),
                 navLink,
                 context.getRentalDays(),
+                unitLabel,
                 quote.getBaseRent(),
                 quote.getDeliveryFee(),
-                quote.getDepositAmount(),
+                depositLine,
                 quote.getTotalAmount(),
-                quote.getDepositAmount()
+                depositNote
         );
 
         return WhatsAppMessageResponse.builder()
@@ -1466,7 +1719,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                     .farmLocationId(context.getSelectedFarmLocationId())
                     .distanceKm(new BigDecimal("15"))
                     .operatorRequired(false)
+                    .rentalConfigId(context.getSelectedRentalConfigId())
+                    .billingUnit(context.getSelectedBillingUnit())
+                    .shiftTerms(context.getSelectedShiftTerms())
+                    .bookingSource(com.equipgrid.booking.enums.BookingSource.WHATSAPP)
                     .notes("Booked via WhatsApp by " + customer.getFullName() +
+                            (context.getSelectedBillingUnit() != null ? " [Mode: " + context.getSelectedBillingUnit() + "]" : "") +
                             (context.getDeliveryDestinationType() != null ? " [" + context.getDeliveryDestinationType() + "]" : "") +
                             (context.getSelectedHubName() != null ? " via " + context.getSelectedHubName() : ""))
                     .build();
@@ -2519,6 +2777,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             case CLOSED -> "Closed";
             case CANCELLED -> "Cancelled";
             default -> status.name();
+        };
+    }
+
+    private String formatBillingUnitLabel(String code) {
+        if (code == null) return "प्रति दिन (Per Day)";
+        return switch (code.toUpperCase()) {
+            case "PER_ACRE" -> "प्रति एकड़ (Per Acre)";
+            case "PER_TRIP" -> "प्रति चक्कर/ट्रिप (Per Trip)";
+            case "HOURLY" -> "प्रति घंटा (Per Hour)";
+            case "PER_SHIFT" -> "प्रति शिफ्ट (Per Shift)";
+            case "PER_HOLE" -> "प्रति गड्ढा (Per Hole)";
+            case "PER_TON" -> "प्रति टन (Per Ton)";
+            case "MONTHLY" -> "मासिक (Monthly)";
+            default -> "प्रति दिन (Per Day)";
         };
     }
 

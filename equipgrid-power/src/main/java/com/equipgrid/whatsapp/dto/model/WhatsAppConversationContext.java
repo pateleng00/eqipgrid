@@ -36,6 +36,10 @@ public class WhatsAppConversationContext {
     private String googleMapsUrl;
     private Boolean isGeoLocation;
     private BigDecimal dailyRate;
+    private Long selectedRentalConfigId;
+    private String selectedBillingUnit;
+    private String selectedShiftTerms;
+    private List<Long> availableRentalConfigIds;
     private BigDecimal securityDeposit;
     private BigDecimal calculatedRentalAmount;
     private BigDecimal calculatedDepositAmount;

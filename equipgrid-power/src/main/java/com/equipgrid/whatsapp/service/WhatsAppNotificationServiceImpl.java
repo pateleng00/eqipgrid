@@ -59,6 +59,23 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                 ? booking.getFarmLocation().getLocalName() + (booking.getFarmLocation().getLocalNameHindi() != null ? " (" + booking.getFarmLocation().getLocalNameHindi() + ")" : "") + " — " + booking.getDeliveryAddress()
                 : (booking.getDeliveryLocationName() != null ? booking.getDeliveryLocationName() + " — " + booking.getDeliveryAddress() : booking.getDeliveryAddress());
 
+        String unit = booking.getBillingUnit() != null ? booking.getBillingUnit()
+                : (booking.getRentalConfig() != null && booking.getRentalConfig().getBillingUnit() != null ? booking.getRentalConfig().getBillingUnit().name() : "DAILY");
+        String unitLabel = formatBillingUnitLabel(unit);
+        BigDecimal rate = booking.getDailyRate() != null ? booking.getDailyRate()
+                : (booking.getRentalConfig() != null ? booking.getRentalConfig().getBaseDailyRate() : booking.getAsset().getDailyRate());
+        String shiftTerms = booking.getShiftTerms() != null ? booking.getShiftTerms()
+                : (booking.getRentalConfig() != null ? booking.getRentalConfig().getShiftTerms() : null);
+
+        boolean isZeroDeposit = booking.getDepositAmount() == null || booking.getDepositAmount().compareTo(BigDecimal.ZERO) == 0;
+        String depositInfo = isZeroDeposit
+                ? "✨ *₹0 (Zero-Deposit Scheme)* (किसान सहायता योजना - ₹0 जमानत)"
+                : String.format("*₹%,.2f* (Paid - 100%% Refundable Escrow)", depositPaid);
+
+        String termsLine = shiftTerms != null && !shiftTerms.isBlank()
+                ? String.format("📋 Terms: *%s*\n", shiftTerms)
+                : "";
+
         String message;
         UpiPaymentDetails upi = null;
 
@@ -70,12 +87,13 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                             Your machinery reservation *%s* is confirmed and payment is verified!
                             
                             🚜 Machine: *%s* (`%s`)
-                            📅 Rental Dates: *%s to %s*
+                            ⏱ Tariff Plan: *₹%,.2f / %s*
+                            %s📅 Rental Dates: *%s to %s*
                             📍 Delivery Site: *%s*
                             
                             💳 *Payment Confirmation Breakdown:*
                             • Advance Rent: *₹%,.2f* (Paid)
-                            • Security Deposit: *₹%,.2f* (Paid - 100%% Refundable Escrow)
+                            • Security Deposit: %s
                             ━━━━━━━━━━━━━━━━━━━━━━
                             💰 Total Amount Paid: *₹%,.2f*
                             ✅ Status: *DISPATCH READY*
@@ -91,11 +109,14 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                     booking.getBookingNumber(),
                     booking.getAsset().getName(),
                     booking.getAsset().getAssetTag(),
+                    rate,
+                    unitLabel,
+                    termsLine,
                     booking.getStartDate(),
                     booking.getEndDate(),
                     delivery,
                     advancePaid,
-                    depositPaid,
+                    depositInfo,
                     totalPaid,
                     booking.getBookingNumber()
             );
@@ -106,6 +127,10 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                     "Advance & Deposit for " + booking.getBookingNumber()
             );
 
+            String depositPendingText = isZeroDeposit
+                    ? "✨ Zero-Deposit Scheme (₹0 जमानत योजना)"
+                    : String.format("100%% Refundable Security Deposit: ₹%,.2f", booking.getDepositAmount());
+
             message = String.format("""
                             🌾 *EquipGrid Booking Reservation* 🚜
                             ━━━━━━━━━━━━━━━━━━━━━━
@@ -113,11 +138,12 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                             Your machinery reservation *%s* has been received!
                             
                             🚜 Machine: *%s* (`%s`)
-                            📅 Dates: *%s to %s*
+                            ⏱ Tariff Plan: *₹%,.2f / %s*
+                            %s📅 Dates: *%s to %s*
                             📍 Delivery Site: *%s*
                             
                             💰 Initial Collection Due: *₹%,.2f*
-                            _(Advance Rent: ₹%,.2f + 100%% Refundable Security Deposit: ₹%,.2f)_
+                            _(Advance Rent: ₹%,.2f + %s)_
                             
                             📲 *Pay via UPI QR Code:*
                             %s
@@ -129,12 +155,15 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                     booking.getBookingNumber(),
                     booking.getAsset().getName(),
                     booking.getAsset().getAssetTag(),
+                    rate,
+                    unitLabel,
+                    termsLine,
                     booking.getStartDate(),
                     booking.getEndDate(),
                     delivery,
                     requiredBarrier,
                     booking.getBaseRent() != null ? booking.getBaseRent() : BigDecimal.ZERO,
-                    booking.getDepositAmount() != null ? booking.getDepositAmount() : BigDecimal.ZERO,
+                    depositPendingText,
                     upi.getUpiUri()
             );
         }
@@ -313,5 +342,19 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
                 .bookingNumber(booking.getBookingNumber())
                 .suggestedOptions(List.of("1. Rent Again", "MENU"))
                 .build();
+    }
+
+    private String formatBillingUnitLabel(String code) {
+        if (code == null) return "प्रति दिन (Per Day)";
+        return switch (code.toUpperCase()) {
+            case "PER_ACRE" -> "प्रति एकड़ (Per Acre)";
+            case "PER_TRIP" -> "प्रति चक्कर/ट्रिप (Per Trip)";
+            case "HOURLY" -> "प्रति घंटा (Per Hour)";
+            case "PER_SHIFT" -> "प्रति शिफ्ट (Per Shift)";
+            case "PER_HOLE" -> "प्रति गड्ढा (Per Hole)";
+            case "PER_TON" -> "प्रति टन (Per Ton)";
+            case "MONTHLY" -> "मासिक (Monthly)";
+            default -> "प्रति दिन (Per Day)";
+        };
     }
 }

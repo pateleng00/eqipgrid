@@ -26,7 +26,11 @@ public enum WhatsAppState {
     /**
      * Step-by-step WhatsApp damage checklist during return pickup
      */
-    DAMAGE_CHECKLIST_ACTIVE((short) 13);
+    DAMAGE_CHECKLIST_ACTIVE((short) 13),
+    /**
+     * Multimode tariff slab selection (Per Acre, Per Trip, Daily Shift, Metered Hourly)
+     */
+    SELECTING_TARIFF((short) 14);
 
     @JsonValue
     private final Short value;
