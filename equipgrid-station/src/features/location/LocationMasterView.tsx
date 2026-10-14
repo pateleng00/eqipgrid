@@ -1263,8 +1263,9 @@ export const LocationMasterView: React.FC = () => {
                     </label>
                     <input
                       type="number"
-                      min="5"
-                      max="150"
+                      min="1"
+                      max="500"
+                      step="any"
                       value={newHubRadius}
                       onChange={(e) => setNewHubRadius(e.target.value)}
                       className={`w-full rounded-xl border p-2.5 text-xs font-mono focus:border-amber-500 focus:outline-none ${
@@ -1339,7 +1340,7 @@ export const LocationMasterView: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        step="0.0000001"
+                        step="any"
                         min="6"
                         max="38"
                         placeholder="e.g. 27.3967000"
@@ -1357,7 +1358,7 @@ export const LocationMasterView: React.FC = () => {
                       </label>
                       <input
                         type="number"
-                        step="0.0000001"
+                        step="any"
                         min="68"
                         max="98"
                         placeholder="e.g. 80.1266000"

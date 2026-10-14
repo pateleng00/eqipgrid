@@ -1551,7 +1551,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                       <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Engine / Operating Hours Out</label>
                       <input
                         type="number"
-                        step="0.1"
+                        min="0"
+                        step="any"
                         value={engineHoursOut}
                         onChange={(e) => setEngineHoursOut(parseFloat(e.target.value))}
                         placeholder="Current engine meter hours"

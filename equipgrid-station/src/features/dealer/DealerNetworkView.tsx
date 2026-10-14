@@ -626,9 +626,9 @@ export const DealerNetworkView: React.FC = () => {
                     <div className="relative">
                       <input
                         type="number"
-                        min="1"
-                        max="25"
-                        step="0.5"
+                        min="0"
+                        max="100"
+                        step="any"
                         value={commissionRate * 100}
                         onChange={(e) => setCommissionRate(parseFloat(e.target.value) / 100 || 0.06)}
                         className={`w-full rounded-xl border p-3 text-xs font-mono font-bold focus:border-amber-500 focus:outline-none ${

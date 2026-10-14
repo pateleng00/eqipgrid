@@ -427,8 +427,8 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               <label className="block text-xs font-bold mb-1">CAPEX Purchase Cost (₹) *</label>
               <input
                 type="number"
-                min="1000"
-                step="1000"
+                min="0"
+                step="any"
                 placeholder="55000"
                 value={purchaseCost}
                 onChange={(e) => setPurchaseCost(e.target.value)}

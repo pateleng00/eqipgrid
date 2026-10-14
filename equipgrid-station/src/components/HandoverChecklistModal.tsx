@@ -271,7 +271,8 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                 </label>
                 <input
                   type="number"
-                  step="0.1"
+                  min="0"
+                  step="any"
                   value={engineHoursOut}
                   onChange={(e) => setEngineHoursOut(e.target.value === '' ? '' : parseFloat(e.target.value))}
                   placeholder="Meter hours reading"

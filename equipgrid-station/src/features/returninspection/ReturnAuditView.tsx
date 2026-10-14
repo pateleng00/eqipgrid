@@ -527,6 +527,8 @@ export const ReturnAuditView: React.FC = () => {
                     <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Fuel Delta Charge (₹)</label>
                     <input
                       type="number"
+                      min="0"
+                      step="any"
                       value={fuelDeltaCharge}
                       onChange={(e) => setFuelDeltaCharge(parseFloat(e.target.value) || 0)}
                       className={cn('w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-purple-500' : 'border-slate-700 bg-slate-950 text-white focus:border-purple-500')}
@@ -553,6 +555,8 @@ export const ReturnAuditView: React.FC = () => {
                           <label className="block text-[11px] font-bold text-rose-400 uppercase tracking-wide mb-1">Repair Cost (₹)</label>
                           <input
                             type="number"
+                            min="0"
+                            step="any"
                             value={damageCost}
                             onChange={(e) => setDamageCost(parseFloat(e.target.value) || 0)}
                             className={cn('w-full rounded-lg border border-rose-400/40 px-3 py-2 text-xs focus:outline-none', isDaylight ? 'bg-white text-slate-950' : 'bg-slate-900 text-white')}

@@ -914,7 +914,8 @@ export const PaymentLedgerView: React.FC = () => {
                 <input
                   type="number"
                   required
-                  min={1}
+                  min={0}
+                  step="any"
                   value={verifyAmount}
                   onChange={(e) => setVerifyAmount(Number(e.target.value))}
                   className="w-full rounded-xl border p-2.5 text-sm font-mono font-bold focus:border-amber-500 focus:outline-none dark:bg-slate-950"
@@ -1181,7 +1182,7 @@ export const PaymentLedgerView: React.FC = () => {
                   <input
                     type="number"
                     min="0"
-                    step="100"
+                    step="any"
                     placeholder="Enter amount (e.g. 5000)"
                     value={qrAmount}
                     onChange={(e) => {
