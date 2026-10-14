@@ -22,6 +22,8 @@ import com.equipgrid.auth.otp.OtpVerificationService;
 import com.equipgrid.farmlocation.entity.FarmLocation;
 import com.equipgrid.farmlocation.service.IFarmLocationService;
 import com.equipgrid.location.entity.Hub;
+import com.equipgrid.rentalconfig.entity.RentalConfiguration;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +54,7 @@ public class BookingServiceImpl implements IBookingService {
     private final IAuditService auditService;
     private final IWhatsAppNotificationService whatsAppNotificationService;
     private final OtpVerificationService otpVerificationService;
+    private final RentalConfigurationRepository rentalConfigurationRepository;
 
     @Override
     public List<Booking> getAllBookings(BookingStatus status) {
@@ -76,9 +79,34 @@ public class BookingServiceImpl implements IBookingService {
 
         boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
 
+        RentalConfiguration rentalConfig = null;
+        if (request.getRentalConfigId() != null) {
+            rentalConfig = rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
+        } else {
+            Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
+            List<RentalConfiguration> configs = rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+            if (!configs.isEmpty()) {
+                rentalConfig = configs.get(0);
+            } else if (asset.getType() != null && asset.getHub() != null) {
+                configs = rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(asset.getType().getId(), asset.getHub().getId());
+                if (!configs.isEmpty()) {
+                    rentalConfig = configs.get(0);
+                }
+            }
+        }
+
+        BigDecimal dailyRate = rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+        BigDecimal depositAmount = rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+        BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : PricingEngine.OPERATOR_DAILY_RATE;
+        BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
+        BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : PricingEngine.DEFAULT_RATE_PER_KM;
+
         PricingEngine.CommercialQuote quote = pricingEngine.calculate(
-                asset.getDailyRate(),
-                asset.getDepositAmount(),
+                dailyRate,
+                depositAmount,
+                opRate,
+                freeKm,
+                ratePerKm,
                 request.getStartDate(),
                 request.getEndDate(),
                 request.getDistanceKm(),
@@ -90,13 +118,16 @@ public class BookingServiceImpl implements IBookingService {
                 .assetName(asset.getName())
                 .assetTag(asset.getAssetTag())
                 .durationDays(quote.durationDays)
-                .dailyRate(asset.getDailyRate())
+                .dailyRate(dailyRate)
                 .baseRent(quote.baseRent)
                 .deliveryFee(quote.deliveryFee)
                 .operatorFee(quote.operatorFee)
                 .depositAmount(quote.depositAmount)
                 .totalAmount(quote.totalAmount)
                 .requiredInitialPayment(quote.requiredInitialAmount)
+                .rentalConfigId(rentalConfig != null ? rentalConfig.getId() : null)
+                .billingUnit(rentalConfig != null && rentalConfig.getBillingUnit() != null ? rentalConfig.getBillingUnit().name() : null)
+                .shiftTerms(rentalConfig != null ? rentalConfig.getShiftTerms() : null)
                 .build();
     }
 
@@ -181,10 +212,35 @@ public class BookingServiceImpl implements IBookingService {
 
         boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
 
+        RentalConfiguration rentalConfig = null;
+        if (request.getRentalConfigId() != null) {
+            rentalConfig = rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
+        } else {
+            Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
+            List<RentalConfiguration> configs = rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+            if (!configs.isEmpty()) {
+                rentalConfig = configs.get(0);
+            } else if (asset.getType() != null && asset.getHub() != null) {
+                configs = rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(asset.getType().getId(), asset.getHub().getId());
+                if (!configs.isEmpty()) {
+                    rentalConfig = configs.get(0);
+                }
+            }
+        }
+
+        BigDecimal dailyRate = rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+        BigDecimal depositAmount = rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+        BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : PricingEngine.OPERATOR_DAILY_RATE;
+        BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
+        BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : PricingEngine.DEFAULT_RATE_PER_KM;
+
         BigDecimal calculatedDistance = resolveDistance(request.getDistanceKm(), asset, farmLocation);
         PricingEngine.CommercialQuote quote = pricingEngine.calculate(
-                asset.getDailyRate(),
-                asset.getDepositAmount(),
+                dailyRate,
+                depositAmount,
+                opRate,
+                freeKm,
+                ratePerKm,
                 request.getStartDate(),
                 request.getEndDate(),
                 calculatedDistance,
@@ -201,6 +257,7 @@ public class BookingServiceImpl implements IBookingService {
                 .status(BookingStatus.CONFIRMED)
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
+                .dailyRate(dailyRate)
                 .baseRent(quote.baseRent)
                 .deliveryFee(quote.deliveryFee)
                 .operatorFee(quote.operatorFee)
@@ -216,6 +273,9 @@ public class BookingServiceImpl implements IBookingService {
                 .operatorRequired(opRequired)
                 .bookingSource(request.getBookingSource() != null ? request.getBookingSource() : BookingSource.STATION)
                 .callbackRequested(Boolean.TRUE.equals(request.getCallbackRequested()))
+                .rentalConfig(rentalConfig)
+                .billingUnit(rentalConfig != null && rentalConfig.getBillingUnit() != null ? rentalConfig.getBillingUnit().name() : request.getBillingUnit())
+                .shiftTerms(rentalConfig != null ? rentalConfig.getShiftTerms() : request.getShiftTerms())
                 .notes(request.getNotes())
                 .build();
 

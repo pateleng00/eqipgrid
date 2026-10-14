@@ -45,6 +45,10 @@ public class CreateBookingRequest {
     private Boolean callbackRequested = false;
     private String notes;
 
+    private Long rentalConfigId;
+    private String billingUnit;
+    private String shiftTerms;
+
     /** Single-use signed OTP proof token required for unauthenticated website bookings */
     private String otpProofToken;
 }

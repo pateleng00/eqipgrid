@@ -446,6 +446,9 @@ export interface Booking {
   advancePaid: number;
   depositPaid: number;
   billingUnit?: BillingUnit;
+  shiftTerms?: string;
+  rentalConfigId?: number;
+  dailyRate?: number;
   status: BookingStatus;
   dealerId?: number;
   notes?: string;
@@ -464,6 +467,9 @@ export interface QuoteCalculation {
   depositAmount: number;
   totalAmount: number;
   requiredInitialPayment: number;
+  rentalConfigId?: number;
+  billingUnit?: BillingUnit;
+  shiftTerms?: string;
 }
 
 export interface DispatchRecord {

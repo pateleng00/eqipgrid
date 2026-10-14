@@ -55,6 +55,7 @@ import {
   getFarmerFriendlyStatus,
   getBillingUnitLabel,
   getBillingUnitShiftTerms,
+  RentalConfiguration,
 } from '../../types';
 import { printBookingConfirmationPdf, printDispatchChallanPdf } from '../../services/voucherPdfService';
 import { getBookingWhatsAppMessage } from '../../services/whatsappCirculation';
@@ -93,14 +94,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
   const [bookingsList, setBookingsList] = useState<Booking[]>([...api.bookings]);
   const [customerList, setCustomerList] = useState<Customer[]>([...api.customers]);
+  const [configs, setConfigs] = useState<RentalConfiguration[]>(() => api.getRentalConfigs());
   const [isLoading, setIsLoading] = useState(false);
 
   React.useEffect(() => {
     setBookingsList([...api.bookings]);
     setCustomerList([...api.customers]);
+    setConfigs([...api.rentalConfigs]);
     return api.subscribe(() => {
       setBookingsList([...api.bookings]);
       setCustomerList([...api.customers]);
+      setConfigs([...api.rentalConfigs]);
     });
   }, []);
 
@@ -134,7 +138,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       setBookingCityId('');
       setBookingHubId(managerHubId || '');
       setBookingCategory('');
+      setBookingModelId('');
       setSelectedAssetId(0);
+      setSelectedRentalConfigId('');
       setSelectedCustomerId(0);
       setQuote(null);
       setDeliveryAddress('');
@@ -151,6 +157,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const hubs = api.getHubs();
   const assets = api.assets;
   const dealers = api.dealers;
+  const models = api.getMachineModels();
 
   // Filter states
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
@@ -285,6 +292,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const [selectedAssetId, setSelectedAssetId] = useState<number>(
     preselectedAsset ? preselectedAsset.id : 0
   );
+  const [selectedRentalConfigId, setSelectedRentalConfigId] = useState<number | ''>('');
+  const [bookingModelId, setBookingModelId] = useState<string>('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(0);
   const [farmLocations, setFarmLocations] = useState<FarmLocation[]>([]);
   const [selectedFarmLocationId, setSelectedFarmLocationId] = useState<number>(0);
@@ -391,6 +400,27 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
   const currentAsset = selectedAssetId ? assets.find((a) => a.id === selectedAssetId) || null : null;
 
+  // Available rental configuration tariff slabs for current asset
+  const availableTariffs = useMemo(() => {
+    if (!currentAsset) return [];
+    return api.getRentalConfigsForAsset(currentAsset.id, currentAsset.hubId);
+  }, [currentAsset, configs]);
+
+  useEffect(() => {
+    if (availableTariffs.length > 0) {
+      if (!selectedRentalConfigId || !availableTariffs.some((t) => t.id === selectedRentalConfigId)) {
+        setSelectedRentalConfigId(availableTariffs[0].id);
+      }
+    } else {
+      setSelectedRentalConfigId('');
+    }
+  }, [availableTariffs, selectedRentalConfigId]);
+
+  const currentTariff = useMemo(() => {
+    if (!selectedRentalConfigId) return null;
+    return availableTariffs.find((t) => t.id === selectedRentalConfigId) || null;
+  }, [selectedRentalConfigId, availableTariffs]);
+
   useEffect(() => {
     let active = true;
     setFarmLocations([]);
@@ -419,7 +449,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     if (calculatedDistance != null) setDistanceKm(calculatedDistance);
   }, [selectedFarmLocationId, farmLocations, currentAsset?.hubId, hubs]);
 
-  const hasSelectedFilters = Boolean(bookingStateId || bookingCityId || bookingHubId || bookingCategory);
+  const hasSelectedFilters = Boolean(bookingStateId || bookingCityId || bookingHubId || bookingCategory || bookingModelId);
 
   const bookingCities = useMemo(() => {
     if (!bookingStateId || bookingStateId === 'ALL') return [];
@@ -430,6 +460,15 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     if (!bookingCityId || bookingCityId === 'ALL') return [];
     return hubs.filter((hub) => hub.cityId === Number(bookingCityId));
   }, [hubs, bookingCityId]);
+
+  const availableBookingModels = useMemo(() => {
+    let list = models.filter((m) => m.active !== false);
+    if (bookingCategory && bookingCategory !== 'ALL') {
+      const typeIds = new Set(api.getEquipmentTypes().filter((t) => t.category === bookingCategory).map((t) => t.id));
+      list = list.filter((m) => typeIds.has(m.typeId));
+    }
+    return list;
+  }, [models, bookingCategory]);
 
   const availableMachines = useMemo(() => {
     if (!hasSelectedFilters) return [];
@@ -446,9 +485,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         if (!hub || !cityIds.has(hub.cityId)) return false;
       }
       if (bookingCategory && bookingCategory !== 'ALL' && asset.category !== bookingCategory) return false;
+      if (bookingModelId && bookingModelId !== 'ALL' && asset.modelId !== Number(bookingModelId)) return false;
       return true;
     });
-  }, [assets, hasSelectedFilters, bookingHubId, bookingCityId, bookingStateId, bookingCategory, hubs, cities]);
+  }, [assets, hasSelectedFilters, bookingHubId, bookingCityId, bookingStateId, bookingCategory, bookingModelId, hubs, cities]);
 
   const scopedCustomers = useMemo(() => {
     // Before hub selection, NO customer should show!
@@ -502,12 +542,14 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         startDate,
         endDate,
         distanceKm,
-        operatorRequired || !!currentAsset.operatorRequired
+        operatorRequired || !!currentAsset.operatorRequired,
+        currentAsset.hubId,
+        selectedRentalConfigId ? Number(selectedRentalConfigId) : undefined
       );
       setQuote(q);
     };
     calculate();
-  }, [selectedAssetId, startDate, endDate, distanceKm, operatorRequired, currentAsset]);
+  }, [selectedAssetId, startDate, endDate, distanceKm, operatorRequired, currentAsset, selectedRentalConfigId]);
 
   const handleCreateReservation = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -541,8 +583,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         bookingSource,
         callbackRequested,
         notes,
+        rentalConfigId: selectedRentalConfigId ? Number(selectedRentalConfigId) : undefined,
+        billingUnit: currentTariff?.billingUnit || currentAsset.billingUnit,
+        shiftTerms: currentTariff?.shiftTerms || currentAsset.shiftTerms,
+        dailyRate: currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate,
       });
 
+      setSelectedRentalConfigId('');
       setBookingsList([...api.bookings]);
       setBookingSuccess(res.bookingNumber);
       setShowCreateModal(false);
@@ -1027,7 +1074,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           )}
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className={`font-mono text-xs px-1.5 py-0.2 rounded border ${
                               isDaylight
                                 ? 'text-amber-950 bg-amber-100 border-amber-300 font-bold'
@@ -1038,8 +1085,22 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             <span className="text-[10px] font-mono uppercase text-slate-500 font-bold">
                               {b.asset.category}
                             </span>
+                            {(b.billingUnit || b.dailyRate) && (
+                              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                                isDaylight
+                                  ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30'
+                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                              }`}>
+                                {b.dailyRate ? formatINR(b.dailyRate) : ''}/{getBillingUnitLabel(b.billingUnit || b.asset.billingUnit)}
+                              </span>
+                            )}
                           </div>
                           <div className="font-extrabold text-xs mt-0.5">{b.asset.name}</div>
+                          {b.shiftTerms && (
+                            <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[220px] mt-0.5">
+                              ⏱ {b.shiftTerms}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -1424,7 +1485,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     <MapPin className="h-4 w-4 text-amber-500" />
                     <h4 className="text-xs font-black uppercase tracking-wider">Machine availability filters</h4>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
                     <SearchSelect
                       options={states.map((state) => ({ value: String(state.id), label: state.name }))}
                       value={bookingStateId}
@@ -1473,12 +1534,30 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     />
                     <SearchSelect
                       options={[
-                        { value: 'CONSTRUCTION', label: 'Construction' },
-                        { value: 'AGRICULTURE', label: 'Agriculture' },
+                        { value: 'CONSTRUCTION', label: 'Construction Fleet' },
+                        { value: 'AGRICULTURE', label: 'Agriculture Machinery' },
+                        { value: 'MULTIPURPOSE_FLEET', label: 'Multipurpose Fleet' },
                       ]}
                       value={bookingCategory}
-                      onChange={(value) => setBookingCategory(String(value || ''))}
+                      onChange={(value) => {
+                        setBookingCategory(String(value || ''));
+                        setBookingModelId('');
+                      }}
                       placeholder="Category (Optional)"
+                      isClearable={true}
+                    />
+                    <SearchSelect
+                      options={[
+                        { value: '', label: 'All Machine Models' },
+                        ...availableBookingModels.map((m) => ({
+                          value: String(m.id),
+                          label: m.name,
+                          subLabel: m.modelNumber,
+                        })),
+                      ]}
+                      value={bookingModelId}
+                      onChange={(value) => setBookingModelId(String(value || ''))}
+                      placeholder="Model (Optional)"
                       isClearable={true}
                     />
                   </div>
@@ -1486,7 +1565,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 {/* Equipment Selection */}
                 <div>
                   <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className="block text-xs font-bold">Available machine</label>
+                    <label className="block text-xs font-bold">Available machine <span className="text-amber-500">*</span></label>
                     <span className="text-[11px] font-bold text-emerald-500">
                       {hasSelectedFilters ? `${availableMachines.length} available` : 'Filters required'}
                     </span>
@@ -1494,7 +1573,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   {!hasSelectedFilters ? (
                     <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                       <Filter className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span>Please select filters above (State, City, Hub, or Category) to display available machinery.</span>
+                      <span>Please select filters above (State, City, Hub, Category or Model) to display available machinery.</span>
                     </div>
                   ) : availableMachines.length ? (
                     <SearchSelect
@@ -1520,6 +1599,82 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* Rental Configuration / Billing Metric Tariff Slab Selection */}
+                {currentAsset && (
+                  <div>
+                    <div className="mb-1 flex items-center justify-between gap-3">
+                      <label className="block text-xs font-bold flex items-center gap-1.5">
+                        <Tag className="h-3.5 w-3.5 text-amber-500" />
+                        <span>Tariff Plan / Billing Metric <span className="text-amber-500">*</span></span>
+                      </label>
+                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                        {availableTariffs.length > 0
+                          ? `${availableTariffs.length} tariff slab${availableTariffs.length > 1 ? 's' : ''} available`
+                          : 'Default Machine Rate'}
+                      </span>
+                    </div>
+
+                    {availableTariffs.length > 0 ? (
+                      <div className="space-y-2">
+                        <SearchSelect
+                          options={availableTariffs.map((t) => {
+                            const unit = t.unitLabel || getBillingUnitLabel(t.billingUnit);
+                            const depText = t.depositAmount === 0 ? 'Zero-Dep (₹0)' : `Dep: ${formatINR(t.depositAmount)}`;
+                            const opText = !t.operatorDailyRate || t.operatorDailyRate === 0 ? 'Operator: ₹0 (Optional)' : `Operator: ${formatINR(t.operatorDailyRate)}/day`;
+                            const deliveryText = t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0 ? 'Delivery: ₹0 (Per-Trip)' : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
+                            const terms = t.shiftTerms || 'Standard operational terms';
+                            return {
+                              value: t.id,
+                              label: `${formatINR(t.baseDailyRate)} / ${unit} (${t.billingUnit || 'DAILY'})`,
+                              subLabel: `${depText} • ${opText} • ${deliveryText} • ${terms}`,
+                              badge: String(t.unitLabel || t.billingUnit || 'RATE').toUpperCase(),
+                            };
+                          })}
+                          value={selectedRentalConfigId}
+                          onChange={(val) => val && setSelectedRentalConfigId(Number(val))}
+                          placeholder="Select a tariff slab..."
+                          isClearable={false}
+                        />
+
+                        {currentTariff && (
+                          <div className={`p-2.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                            isDaylight ? 'bg-amber-50/70 border-amber-300/80 text-amber-950' : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                          }`}>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500 text-slate-950">
+                                  {currentTariff.billingUnit || 'ACTIVE'}
+                                </span>
+                                <span className="font-mono font-black text-xs">
+                                  {formatINR(currentTariff.baseDailyRate)} / {currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
+                                ⏱️ {currentTariff.shiftTerms || 'Standard operational deployment terms'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono">
+                              <span className={currentTariff.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
+                                {currentTariff.depositAmount === 0 ? '₹0 Zero-Dep' : `Dep: ${formatINR(currentTariff.depositAmount)}`}
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span>
+                                {!currentTariff.operatorDailyRate || currentTariff.operatorDailyRate === 0 ? 'Operator: ₹0' : `Op: ${formatINR(currentTariff.operatorDailyRate)}/d`}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                        isDaylight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900/50 border-slate-800 text-slate-300'
+                      }`}>
+                        <span>Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Customer Selection */}
                 <div>
@@ -1772,7 +1927,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                   <div className="mt-2.5 flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
                     <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="truncate">{currentAsset?.shiftTerms || 'Standard Shift Terms'}</span>
+                    <span className="truncate">{quote?.shiftTerms || currentTariff?.shiftTerms || currentAsset?.shiftTerms || 'Standard Shift Terms'}</span>
                   </div>
 
                   {currentAsset && quote ? (
@@ -1782,12 +1937,14 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <span className="font-bold">{quote.durationDays} Days</span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-slate-500">Base Equipment Rent</span>
+                        <span className="text-slate-500">
+                          Base Rent ({getBillingUnitLabel(quote.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit)})
+                        </span>
                         <span className="font-bold">{formatINR(quote.baseRent)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">
-                          Transit {distanceKm <= 5 ? '(0–5km Free)' : '(>5km @ ₹10/km)'}
+                          Transit {currentTariff?.freeDeliveryDistanceKm === 0 && currentTariff?.ratePerKmAfterFree === 0 ? '(Free / Per-Trip)' : (distanceKm <= (currentTariff?.freeDeliveryDistanceKm ?? 5) ? `(0–${currentTariff?.freeDeliveryDistanceKm ?? 5}km Free)` : `(>${currentTariff?.freeDeliveryDistanceKm ?? 5}km @ ₹${currentTariff?.ratePerKmAfterFree ?? 10}/km)`)}
                         </span>
                         <span className="font-bold">
                           {(quote?.deliveryFee ?? 0) === 0 ? 'FREE (₹0)' : formatINR(quote?.deliveryFee)}
@@ -1837,6 +1994,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div>
                           <strong>मशीन:</strong> {currentAsset.name} ({currentAsset.assetTag})
+                        </div>
+                        <div>
+                          <strong>दर / प्लान:</strong> {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset.dailyRate)} / {getBillingUnitLabel(quote?.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit)}
                         </div>
                         {callbackRequested && (
                           <div className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 pt-0.5">

@@ -16,17 +16,26 @@ public class PricingEngine {
     public CommercialQuote calculate(BigDecimal dailyRate, BigDecimal depositAmount,
                                      LocalDate startDate, LocalDate endDate,
                                      BigDecimal distanceKm, boolean operatorRequired) {
+        return calculate(dailyRate, depositAmount, OPERATOR_DAILY_RATE, DEFAULT_FREE_DISTANCE_KM, DEFAULT_RATE_PER_KM,
+                startDate, endDate, distanceKm, operatorRequired);
+    }
+
+    public CommercialQuote calculate(BigDecimal dailyRate, BigDecimal depositAmount,
+                                     BigDecimal operatorDailyRate, BigDecimal freeKm, BigDecimal ratePerKm,
+                                     LocalDate startDate, LocalDate endDate,
+                                     BigDecimal distanceKm, boolean operatorRequired) {
         long days = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         if (days <= 0) days = 1;
 
         BigDecimal duration = BigDecimal.valueOf(days);
         BigDecimal baseRent = dailyRate.multiply(duration);
 
+        BigDecimal opRate = operatorDailyRate != null ? operatorDailyRate : OPERATOR_DAILY_RATE;
         BigDecimal opFee = operatorRequired
-                ? OPERATOR_DAILY_RATE.multiply(duration)
+                ? opRate.multiply(duration)
                 : BigDecimal.ZERO;
 
-        BigDecimal deliveryFee = calculateDeliveryFee(distanceKm);
+        BigDecimal deliveryFee = calculateDeliveryFee(distanceKm, freeKm, ratePerKm);
         BigDecimal total = baseRent.add(opFee).add(deliveryFee).add(depositAmount);
         BigDecimal requiredInitial = baseRent.add(deliveryFee).add(depositAmount);
 

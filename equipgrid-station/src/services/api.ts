@@ -437,6 +437,10 @@ function mapBooking(b: any): Booking {
     totalAmount: Number(b.totalAmount || 0),
     advancePaid: Number(b.advancePaid || 0),
     depositPaid: Number(b.depositPaid || 0),
+    billingUnit: b.billingUnit ? resolveBillingUnitCode(b.billingUnit) : resolveBillingUnitCode(b.asset?.billingUnit),
+    shiftTerms: b.shiftTerms || b.asset?.shiftTerms,
+    rentalConfigId: b.rentalConfig?.id || b.rentalConfigId,
+    dailyRate: b.dailyRate != null ? Number(b.dailyRate) : (b.asset ? Number(b.asset.dailyRate) : undefined),
     status: mapBookingStatus(b.status),
     dealerId: b.dealerId,
     notes: b.notes,
@@ -1220,18 +1224,47 @@ export class ApiStore {
     return list;
   }
 
+  getRentalConfigsForAsset(assetId: number, hubId?: number): RentalConfiguration[] {
+    const asset = this.assets.find((a) => a.id === assetId);
+    const resolvedHubId = hubId || asset?.hubId;
+
+    // 1. All active configurations explicitly tied to this machine
+    const directConfigs = this.rentalConfigs.filter(
+      (c) => c.active && c.assetId === assetId && (!resolvedHubId || c.hubId === resolvedHubId)
+    );
+
+    // 2. All active configurations for this machine's model / type in this hub
+    const typeConfigs = asset?.typeId
+      ? this.rentalConfigs.filter(
+          (c) => c.active && !c.assetId && c.typeId === asset.typeId && (!resolvedHubId || c.hubId === resolvedHubId)
+        )
+      : [];
+
+    // 3. All active configurations for this hub
+    const hubConfigs = resolvedHubId
+      ? this.rentalConfigs.filter(
+          (c) => c.active && !c.assetId && !c.typeId && c.hubId === resolvedHubId
+        )
+      : [];
+
+    const map = new Map<string, RentalConfiguration>();
+    // Hub defaults first
+    hubConfigs.forEach((c) => map.set(String(c.billingUnit || 'DAILY'), c));
+    // Type configs override hub defaults
+    typeConfigs.forEach((c) => map.set(String(c.billingUnit || 'DAILY'), c));
+    // Asset configs override type configs
+    directConfigs.forEach((c) => map.set(String(c.billingUnit || 'DAILY'), c));
+
+    const list = Array.from(map.values());
+    if (list.length > 0) return list;
+    if (directConfigs.length > 0) return directConfigs;
+    if (typeConfigs.length > 0) return typeConfigs;
+    return hubConfigs;
+  }
+
   getRentalConfigForAsset(assetId: number, hubId?: number): RentalConfiguration | undefined {
-    if (hubId) {
-      const match = this.rentalConfigs.find((c) => c.active && c.assetId === assetId && c.hubId === hubId);
-      if (match) return match;
-    }
-    const machineMatch = this.rentalConfigs.find((c) => c.active && c.assetId === assetId);
-    if (machineMatch) return machineMatch;
-    if (hubId) {
-      const hubMatch = this.rentalConfigs.find((c) => c.active && c.hubId === hubId);
-      if (hubMatch) return hubMatch;
-    }
-    return undefined;
+    const all = this.getRentalConfigsForAsset(assetId, hubId);
+    return all.length > 0 ? all[0] : undefined;
   }
 
   addRentalConfig(data: {
@@ -1265,9 +1298,9 @@ export class ApiStore {
       typeName: type?.name,
       baseDailyRate: data.baseDailyRate,
       depositAmount: data.depositAmount != null ? data.depositAmount : 0,
-      operatorDailyRate: data.operatorDailyRate ?? 500,
-      freeDeliveryDistanceKm: data.freeDeliveryDistanceKm ?? 5.0,
-      ratePerKmAfterFree: data.ratePerKmAfterFree ?? 10.0,
+      operatorDailyRate: data.operatorDailyRate ?? 0,
+      freeDeliveryDistanceKm: data.freeDeliveryDistanceKm ?? 0,
+      ratePerKmAfterFree: data.ratePerKmAfterFree ?? 0,
       active: true,
       notes: data.notes,
       billingUnit: resolveBillingUnitCode(data.billingUnit),
@@ -1560,7 +1593,8 @@ export class ApiStore {
     endDate: string,
     distanceKm: number,
     operatorRequired: boolean,
-    _hubId?: number
+    _hubId?: number,
+    rentalConfigId?: number
   ): Promise<QuoteCalculation> {
     try {
       const res = await request<any>('/bookings/quote', {
@@ -1571,6 +1605,7 @@ export class ApiStore {
           endDate,
           distanceKm,
           operatorRequired,
+          rentalConfigId,
         }),
       });
 
@@ -1586,34 +1621,48 @@ export class ApiStore {
         depositAmount: Number(res.depositAmount || 0),
         totalAmount: Number(res.totalAmount || 0),
         requiredInitialPayment: Number(res.requiredInitialPayment || 0),
+        rentalConfigId: res.rentalConfigId || rentalConfigId,
+        billingUnit: res.billingUnit ? resolveBillingUnitCode(res.billingUnit) : undefined,
+        shiftTerms: res.shiftTerms,
       };
     } catch {
-      // Local fallback calculation based on policy: Free <= 5 KM, 10 Rs/KM thereafter
+      // Local fallback calculation based on selected rental configuration or asset defaults
       const asset = this.assets.find((a) => a.id === assetId);
       if (!asset) throw new Error('Selected machine does not exist');
+      const rc = rentalConfigId ? this.rentalConfigs.find((c) => c.id === rentalConfigId) : this.getRentalConfigForAsset(assetId, _hubId);
       const [y1, m1, d1] = startDate.split('-').map(Number);
       const [y2, m2, d2] = endDate.split('-').map(Number);
       const date1 = new Date(y1, m1 - 1, d1);
       const date2 = new Date(y2, m2 - 1, d2);
       const diffDays = Math.round((date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24));
       const days = Math.max(1, diffDays + 1);
-      const baseRent = asset.dailyRate * days;
-      const opFee = (operatorRequired || asset.operatorRequired) ? 500 * days : 0;
-      const delFee = distanceKm > 5.0 ? Math.round((distanceKm - 5.0) * 10.0) : 0;
-      const total = baseRent + opFee + delFee + asset.depositAmount;
+
+      const rate = rc ? rc.baseDailyRate : asset.dailyRate;
+      const deposit = rc ? rc.depositAmount : asset.depositAmount;
+      const opRate = rc ? (rc.operatorDailyRate ?? 500) : 500;
+      const freeKm = rc ? (rc.freeDeliveryDistanceKm ?? 5.0) : 5.0;
+      const ratePerKm = rc ? (rc.ratePerKmAfterFree ?? 10.0) : 10.0;
+
+      const baseRent = rate * days;
+      const opFee = (operatorRequired || asset.operatorRequired) ? opRate * days : 0;
+      const delFee = (freeKm === 0 && ratePerKm === 0) ? 0 : (distanceKm > freeKm ? Math.round((distanceKm - freeKm) * ratePerKm) : 0);
+      const total = baseRent + opFee + delFee + deposit;
 
       return {
         assetId: asset.id,
         assetName: asset.name,
         assetTag: asset.assetTag,
         durationDays: days,
-        dailyRate: asset.dailyRate,
+        dailyRate: rate,
         baseRent,
         deliveryFee: delFee,
         operatorFee: opFee,
-        depositAmount: asset.depositAmount,
+        depositAmount: deposit,
         totalAmount: total,
-        requiredInitialPayment: baseRent + delFee + asset.depositAmount,
+        requiredInitialPayment: baseRent + delFee + deposit,
+        rentalConfigId: rc?.id,
+        billingUnit: rc?.billingUnit,
+        shiftTerms: rc?.shiftTerms,
       };
     }
   }
@@ -1848,6 +1897,10 @@ export class ApiStore {
     operatorRequired: boolean;
     dealerId?: number;
     notes?: string;
+    rentalConfigId?: number;
+    billingUnit?: BillingUnit;
+    shiftTerms?: string;
+    dailyRate?: number;
   }): Promise<Booking> {
     const raw = await request<any>('/bookings', {
       method: 'POST',
@@ -1855,6 +1908,11 @@ export class ApiStore {
     });
 
     const newBooking = mapBooking(raw);
+    if (data.rentalConfigId) newBooking.rentalConfigId = data.rentalConfigId;
+    if (data.billingUnit) newBooking.billingUnit = resolveBillingUnitCode(data.billingUnit);
+    if (data.shiftTerms) newBooking.shiftTerms = data.shiftTerms;
+    if (data.dailyRate) newBooking.dailyRate = data.dailyRate;
+
     this.bookings.unshift(newBooking);
 
     const asset = this.assets.find((a) => a.id === data.assetId);

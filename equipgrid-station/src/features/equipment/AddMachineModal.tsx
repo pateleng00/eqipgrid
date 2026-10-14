@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { Asset, AssetCategory, BillingUnitCode, BillingUnitMaster } from '../../types';
+import { Asset, AssetCategory } from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 
 interface AddMachineModalProps {
@@ -38,7 +38,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   const hubs = api.getHubs();
   const types = api.getEquipmentTypes();
   const manufacturers = api.getManufacturers();
-  const billingUnits = api.getBillingUnits();
 
   // Step state: 1 = Details & Territory, 2 = Media & Operations
   const [step, setStep] = useState<1 | 2>(1);
@@ -88,13 +87,8 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
   const [machineName, setMachineName] = useState<string>('');
   const [assetTag, setAssetTag] = useState<string>('');
 
-  // 8. CAPEX Purchase Cost only (Deposit and Daily Rent removed, configured in Rental Config)
+  // 8. CAPEX Purchase Cost only (Deposit and Tariffs configured under Rental Configuration)
   const [purchaseCost, setPurchaseCost] = useState<string>('');
-
-  // 9. Billing Unit & Shift Terms
-  const [selectedBillingUnit, setSelectedBillingUnit] = useState<BillingUnitCode>('DAILY');
-  const [workingHoursLimit, setWorkingHoursLimit] = useState<string>('');
-  const [shiftTerms, setShiftTerms] = useState<string>('Full 24-hr day site deployment • Flexible field usage');
 
   // Step 2 Fields: Media & Operations
   const [imageUrl, setImageUrl] = useState<string>(
@@ -136,22 +130,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
   const handleTypeChange = (typeId: number) => {
     setSelectedTypeId(typeId);
-    const selectedType = types.find((t) => t.id === typeId);
-    const code = (selectedType?.code || '').toUpperCase();
-    const name = (selectedType?.name || '').toUpperCase();
-    if (code.includes('AUG') || name.includes('AUGER') || name.includes('DIGGER')) {
-      setSelectedBillingUnit('PER_HOLE');
-      setShiftTerms('Per hole drilled • Includes 6" & 8" bits • Zero time boundation');
-    } else if (code.includes('PMP') || name.includes('PUMP')) {
-      setSelectedBillingUnit('HOURLY');
-      setShiftTerms('Hourly metered operation • Pay for actual run time');
-    } else if (code.includes('TRL') || name.includes('TROLLEY')) {
-      setSelectedBillingUnit('PER_TRIP');
-      setShiftTerms('Per transport trip • No daily shift restriction');
-    } else {
-      setSelectedBillingUnit('DAILY');
-      setShiftTerms('Full 24-hr day site deployment • Flexible field usage');
-    }
   };
 
   const handleMfgChange = (mfgId: number) => {
@@ -218,7 +196,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
     try {
       const selectedModel = api.models.find((m) => m.id === Number(selectedModelId));
-      const matchingBillingUnit = billingUnits.find((u) => u.code === selectedBillingUnit);
       const newAsset = api.addAsset({
         name: machineName.trim() || selectedModel?.name || 'New Machine',
         assetTag: assetTag.trim() || undefined,
@@ -233,10 +210,6 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
         serialNumber: serialNumber.trim() || undefined,
         conditionNotes: conditionNotes.trim() || undefined,
         accessoriesIncluded: accessoriesIncluded.trim() || undefined,
-        billingUnit: selectedBillingUnit,
-        billingUnitId: matchingBillingUnit?.id,
-        workingHoursLimit: workingHoursLimit ? parseFloat(workingHoursLimit) : undefined,
-        shiftTerms: shiftTerms.trim() || undefined,
       });
 
       onMachineAdded(newAsset);
@@ -449,57 +422,21 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               </div>
             </div>
 
-            {/* 5. CAPEX Purchase Cost & Billing Unit Metric */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold mb-1">CAPEX Purchase Cost (₹) *</label>
-                <input
-                  type="number"
-                  min="1000"
-                  step="1000"
-                  placeholder="55000"
-                  value={purchaseCost}
-                  onChange={(e) => setPurchaseCost(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
-                <SearchSelect
-                  options={billingUnits.map((opt) => ({
-                    value: opt.code,
-                    label: `${opt.name}${opt.hindiName ? ` (${opt.hindiName})` : ''}`,
-                    subLabel: opt.defaultShiftTerms,
-                    badge: (opt.unitLabel || opt.code).toUpperCase(),
-                  }))}
-                  value={selectedBillingUnit}
-                  onChange={(val) => {
-                    if (!val) return;
-                    const nextUnit = val as BillingUnitCode;
-                    setSelectedBillingUnit(nextUnit);
-                    const opt = billingUnits.find((o) => o.code === nextUnit);
-                    if (opt?.defaultShiftTerms) setShiftTerms(opt.defaultShiftTerms);
-                  }}
-                  isClearable={false}
-                  placeholder="Select Billing Unit..."
-                />
-              </div>
-            </div>
-
-            {/* 6. Shift Terms / Operating Boundation Policy */}
+            {/* 5. CAPEX Purchase Cost */}
             <div>
-              <label className="block text-xs font-bold mb-1">Shift Terms / Operational Boundation</label>
+              <label className="block text-xs font-bold mb-1">CAPEX Purchase Cost (₹) *</label>
               <input
-                type="text"
-                placeholder="e.g. Full 24-hr day site deployment • Flexible field usage"
-                value={shiftTerms}
-                onChange={(e) => setShiftTerms(e.target.value)}
-                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
+                type="number"
+                min="1000"
+                step="1000"
+                placeholder="55000"
+                value={purchaseCost}
+                onChange={(e) => setPurchaseCost(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-mono font-bold text-slate-950 focus:outline-none focus:border-amber-600 bg-white"
+                required
               />
               <p className={`text-[11px] mt-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Generic shift terms for machine work (e.g. per hole drilled for Earth Auger, metered run time for water pump, or full 24-hr day deployment).
+                Capital expenditure for inventory asset tracking. Multi-rate tariffs, variable billing units (per day, acre, trip, shift), deposits, and shift terms are managed flexibly under <strong>Rental Configuration</strong>.
               </p>
             </div>
 

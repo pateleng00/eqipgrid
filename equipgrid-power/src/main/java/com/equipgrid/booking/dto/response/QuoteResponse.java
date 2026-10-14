@@ -23,4 +23,7 @@ public class QuoteResponse {
     private BigDecimal depositAmount;
     private BigDecimal totalAmount;
     private BigDecimal requiredInitialPayment;
+    private Long rentalConfigId;
+    private String billingUnit;
+    private String shiftTerms;
 }

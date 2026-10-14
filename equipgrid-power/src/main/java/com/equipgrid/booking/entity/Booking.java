@@ -112,6 +112,19 @@ public class Booking extends BaseEntity {
     @Column(name = "callback_requested", nullable = false)
     private Boolean callbackRequested = false;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "rental_config_id")
+    private com.equipgrid.rentalconfig.entity.RentalConfiguration rentalConfig;
+
+    @Column(name = "billing_unit", length = 32)
+    private String billingUnit;
+
+    @Column(name = "shift_terms", length = 256)
+    private String shiftTerms;
+
+    @Column(name = "daily_rate", precision = 10, scale = 2)
+    private BigDecimal dailyRate;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 }

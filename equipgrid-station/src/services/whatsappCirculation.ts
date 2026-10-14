@@ -3,7 +3,7 @@
  * Formats rich messages and generates one-click wa.me direct links for station ops.
  */
 
-import { Booking, DispatchRecord, ReturnInspection } from '../types';
+import { Booking, DispatchRecord, ReturnInspection, getBillingUnitDisplayName } from '../types';
 
 export function cleanIndianPhoneNumber(rawPhone?: string): string {
   if (!rawPhone) return '';
@@ -32,6 +32,10 @@ export function getBookingWhatsAppMessage(booking: Booking, customRef?: string):
     ? `${farm.localName}${farm.localNameHindi ? ` (${farm.localNameHindi})` : ''} — ${booking.deliveryAddress || farm.landmark || ''}`
     : (booking.deliveryLocationName ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}` : (booking.deliveryAddress || booking.customer.address));
 
+  const unitName = getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit || 'DAILY');
+  const rateVal = booking.dailyRate || booking.asset.dailyRate;
+  const termsText = booking.shiftTerms || booking.asset.shiftTerms;
+
   return `🌾 *EquipGrid Booking & Payment Confirmed* 🚜
 ━━━━━━━━━━━━━━━━━━━━━━
 नमस्ते ${booking.customer.fullName} जी (Dear ${booking.customer.fullName}),
@@ -39,6 +43,7 @@ Your machinery reservation *${booking.bookingNumber}* is confirmed and payment h
 
 🚜 *Machine:* ${booking.asset.name} (\`${booking.asset.assetTag}\`)
 📅 *Rental Dates:* ${booking.startDate} to ${booking.endDate}
+⏱ *Tariff Plan:* ${formatINR(rateVal)} / ${unitName}${termsText ? `\n📋 *Terms:* ${termsText}` : ''}
 📍 *Delivery Site:* ${destination}
 
 💳 *Payment Breakdown:*

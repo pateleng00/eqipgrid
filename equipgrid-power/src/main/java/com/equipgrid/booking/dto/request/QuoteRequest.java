@@ -28,4 +28,6 @@ public class QuoteRequest {
 
     @Builder.Default
     private Boolean operatorRequired = false;
+
+    private Long rentalConfigId;
 }

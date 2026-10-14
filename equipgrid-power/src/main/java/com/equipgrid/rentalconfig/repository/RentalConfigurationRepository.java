@@ -17,6 +17,12 @@ public interface RentalConfigurationRepository extends JpaRepository<RentalConfi
 
     Optional<RentalConfiguration> findFirstByAssetIdAndHubIdAndActiveTrue(Long assetId, Long hubId);
 
+    List<RentalConfiguration> findByAssetIdAndHubIdAndActiveTrue(Long assetId, Long hubId);
+
+    List<RentalConfiguration> findByTypeIdAndActiveTrue(Long typeId);
+
+    List<RentalConfiguration> findByTypeIdAndHubIdAndActiveTrue(Long typeId, Long hubId);
+
     Optional<RentalConfiguration> findFirstByAssetIdAndActiveTrue(Long assetId);
 
     Optional<RentalConfiguration> findFirstByHubIdAndActiveTrue(Long hubId);

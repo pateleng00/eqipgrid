@@ -84,11 +84,11 @@ function getBookingSourceMeta(source?: string): { en: string; hi: string } {
 }
 
 function getDynamicBookingTerms(booking: Booking): string {
-  const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
+  const billingUnitCode = resolveBillingUnitCode(booking.billingUnit || booking.asset?.billingUnit);
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
   const isFreeDelivery = Number(booking.distanceKm || 0) <= 5 || Number(booking.deliveryFee || 0) === 0;
 
-  let shiftPolicy = `1. <strong>${escapeHtml(getBillingUnitDisplayName(billingUnitCode))} Policy:</strong> ${escapeHtml(booking.asset?.shiftTerms || getBillingUnitShiftTerms(billingUnitCode))}`;
+  let shiftPolicy = `1. <strong>${escapeHtml(getBillingUnitDisplayName(billingUnitCode))} Policy:</strong> ${escapeHtml(booking.shiftTerms || booking.asset?.shiftTerms || getBillingUnitShiftTerms(billingUnitCode))}`;
   if (billingUnitCode === 'DAILY') {
     shiftPolicy = '1. <strong>Standard Shift Policy (दैनिक कार्य समय):</strong> Machine rental duration is standard 8:00 hours (+ 1:00 hour complimentary grace buffer allowed at no extra cost). Beyond 9:00 hours total running time, pro-rata hourly rates apply.';
   } else if (billingUnitCode === 'HOURLY') {
@@ -109,8 +109,8 @@ function getDynamicBookingTerms(booking: Booking): string {
     shiftPolicy = '1. <strong>Monthly Lease Policy (मासिक पट्टा दर):</strong> Billed on 30-day scheduled rental cycles with dedicated maintenance coverage.';
   }
 
-  const shiftTermsLine = booking.asset?.shiftTerms 
-    ? `2. <strong>Special Equipment Terms (विशेष उपकरण शर्तें):</strong> ${escapeHtml(booking.asset.shiftTerms)}<br>`
+  const shiftTermsLine = (booking.shiftTerms || booking.asset?.shiftTerms) 
+    ? `2. <strong>Special Equipment Terms (विशेष उपकरण शर्तें):</strong> ${escapeHtml(booking.shiftTerms || booking.asset.shiftTerms)}<br>`
     : '';
 
   const transitLine = isFreeDelivery
@@ -134,7 +134,7 @@ function getDynamicBookingTerms(booking: Booking): string {
 }
 
 function getDynamicDispatchPolicy(booking: Booking): string {
-  const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
+  const billingUnitCode = resolveBillingUnitCode(booking.billingUnit || booking.asset?.billingUnit);
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
 
   if (billingUnitCode === 'HOURLY') {
@@ -472,7 +472,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
   const isFreeDelivery = Number(booking.distanceKm || 0) <= 5 || Number(booking.deliveryFee || 0) === 0;
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
 
-  const billingUnitText = getBillingUnitDisplayName(booking.asset?.billingUnit || 'DAILY');
+  const billingUnitText = getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit || 'DAILY');
 
   const categoryLabel = booking.asset.category === 'MULTIPURPOSE_FLEET'
     ? 'Multipurpose Fleet (बहुउद्देशीय वाहन)'
@@ -561,9 +561,9 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
         <div class="info-row"><span class="info-label">Category / Model:</span><span class="info-val">${escapeHtml(categoryLabel)} · ${escapeHtml(modelDisplay)}</span></div>
         <div class="info-row"><span class="info-label">Rental Duration:</span><span class="info-val">${escapeHtml(booking.startDate)} to ${escapeHtml(booking.endDate)}</span></div>
         <div class="info-row"><span class="info-label">Billing Metric:</span><span class="info-val" style="color: #0369a1;">${escapeHtml(billingUnitText)}</span></div>
-        ${booking.asset.shiftTerms ? `
+        ${(booking.shiftTerms || booking.asset.shiftTerms) ? `
         <div style="margin-top: 6px; padding: 6px 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 10.5px; color: #1e40af;">
-          ⏱️ <strong>Shift Terms:</strong> ${escapeHtml(booking.asset.shiftTerms)}
+          ⏱️ <strong>Shift Terms:</strong> ${escapeHtml(booking.shiftTerms || booking.asset.shiftTerms)}
         </div>` : ''}
         ${booking.operatorRequired ? `
         <div class="info-row" style="margin-top: 4px;"><span class="info-label">Certified Operator:</span><span class="info-val" style="color: #047857;">Included (ऑपरेटर सहित)</span></div>` : ''}
@@ -586,7 +586,7 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
             <div style="font-size: 10.5px; color: #64748b;">${escapeHtml(booking.asset.name)} · ${escapeHtml(billingUnitText)}</div>
           </td>
           <td style="text-align: center;">${escapeHtml(booking.startDate)} → ${escapeHtml(booking.endDate)}</td>
-          <td style="text-align: right;">${formatINR(booking.asset.dailyRate)}</td>
+          <td style="text-align: right;">${formatINR(booking.dailyRate || booking.asset.dailyRate)}</td>
           <td style="text-align: right;">${formatINR(booking.baseRent)}</td>
         </tr>
         <tr>
