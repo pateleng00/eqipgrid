@@ -1320,7 +1320,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
-            className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all my-2 ${
+            className={`w-full max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all my-2 ${
               isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-white'
             }`}
           >

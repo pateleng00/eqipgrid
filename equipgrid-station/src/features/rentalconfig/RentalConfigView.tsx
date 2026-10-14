@@ -569,7 +569,7 @@ export const RentalConfigView: React.FC = () => {
       {/* --- ADD / EDIT RENTAL CONFIG MODAL --- */}
       {(showAddModal || editingConfig) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
-          <div className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-3.5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
+          <div className={`w-full max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-3.5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
             <div className={`flex items-center justify-between border-b pb-3 ${
               isDaylight ? 'border-slate-200' : 'border-slate-700/30'
             }`}>
@@ -615,7 +615,7 @@ export const RentalConfigView: React.FC = () => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs sm:text-sm font-black tracking-tight">
-                          Step 3.1: Territory & Machine Target Scope
+                          Territory & Machine Target Scope
                         </span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                           expandedSection === 'SCOPE'
@@ -757,7 +757,7 @@ export const RentalConfigView: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold mb-1">Manufacturer OEM</label>
+                        <label className="block text-xs font-bold mb-1">Manufacturer</label>
                         <SearchSelect
                           options={[
                             { value: '', label: 'All Manufacturers' },
@@ -833,7 +833,7 @@ export const RentalConfigView: React.FC = () => {
                             : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
                         }`}
                       >
-                        <span>Continue to Tariff & Commercials (Step 3.2)</span>
+                        <span>Click to proceed</span>
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -864,7 +864,7 @@ export const RentalConfigView: React.FC = () => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs sm:text-sm font-black tracking-tight">
-                          Step 3.2: Tariff Rates, Billing Unit & Delivery Policy
+                          Tariff Rates & Billing Unit
                         </span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                           expandedSection === 'COMMERCIALS'
@@ -894,7 +894,7 @@ export const RentalConfigView: React.FC = () => {
                     {/* Commercial Rates: Billing Unit, Base Rate, Deposit */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs font-bold mb-1">Billing Unit & Metric *</label>
+                        <label className="block text-xs font-bold mb-1">Billing Unit *</label>
                         <SearchSelect
                           options={billingUnits.map((opt) => ({
                             value: opt.code,
@@ -1101,7 +1101,7 @@ export const RentalConfigView: React.FC = () => {
                         }`}
                       >
                         <ArrowLeft className="h-3.5 w-3.5" />
-                        <span>Back to Scope (Step 3.1)</span>
+                        <span>Back to Scope</span>
                       </button>
 
                       <div className="flex items-center gap-2">
