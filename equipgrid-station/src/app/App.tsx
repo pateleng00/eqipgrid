@@ -1,23 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Layout } from './Layout';
-import { DashboardView } from '../features/dashboard/DashboardView';
-import { EquipmentCatalogView } from '../features/equipment/EquipmentCatalogView';
-import { BookingDeskView } from '../features/booking/BookingDeskView';
-import { DispatchYardView } from '../features/dispatch/DispatchYardView';
-import { ReturnAuditView } from '../features/returninspection/ReturnAuditView';
-import { PaymentLedgerView } from '../features/payment/PaymentLedgerView';
-import { DealerNetworkView } from '../features/dealer/DealerNetworkView';
-import { DailyCashReconciliationView } from '../features/reporting/DailyCashReconciliationView';
-import { RentalConfigView } from '../features/rentalconfig/RentalConfigView';
-import { LocationMasterView } from '../features/location/LocationMasterView';
-import { UserManagementView } from '../features/users/UserManagementView';
 import { Asset } from '../types';
 import { useAuth } from '../lib/AuthContext';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { api } from '../services/api';
+import { getInitialActiveTab, persistActiveTab } from '../lib/navigationState';
 
-import { getInitialActiveTab, persistActiveTab, getUrlParam, setUrlParam } from '../lib/navigationState';
+// Route-level code splitting via dynamic imports
+const DashboardView = lazy(() =>
+  import('../features/dashboard/DashboardView').then((m) => ({ default: m.DashboardView })),
+);
+const EquipmentCatalogView = lazy(() =>
+  import('../features/equipment/EquipmentCatalogView').then((m) => ({ default: m.EquipmentCatalogView })),
+);
+const BookingDeskView = lazy(() =>
+  import('../features/booking/BookingDeskView').then((m) => ({ default: m.BookingDeskView })),
+);
+const DispatchYardView = lazy(() =>
+  import('../features/dispatch/DispatchYardView').then((m) => ({ default: m.DispatchYardView })),
+);
+const ReturnAuditView = lazy(() =>
+  import('../features/returninspection/ReturnAuditView').then((m) => ({ default: m.ReturnAuditView })),
+);
+const PaymentLedgerView = lazy(() =>
+  import('../features/payment/PaymentLedgerView').then((m) => ({ default: m.PaymentLedgerView })),
+);
+const DealerNetworkView = lazy(() =>
+  import('../features/dealer/DealerNetworkView').then((m) => ({ default: m.DealerNetworkView })),
+);
+const DailyCashReconciliationView = lazy(() =>
+  import('../features/reporting/DailyCashReconciliationView').then((m) => ({ default: m.DailyCashReconciliationView })),
+);
+const RentalConfigView = lazy(() =>
+  import('../features/rentalconfig/RentalConfigView').then((m) => ({ default: m.RentalConfigView })),
+);
+const LocationMasterView = lazy(() =>
+  import('../features/location/LocationMasterView').then((m) => ({ default: m.LocationMasterView })),
+);
+const UserManagementView = lazy(() =>
+  import('../features/users/UserManagementView').then((m) => ({ default: m.UserManagementView })),
+);
+
+const ViewLoadingFallback: React.FC = () => (
+  <div className="space-y-4 animate-pulse p-4">
+    <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded-xl w-1/4" />
+    <div className="h-64 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center justify-center text-xs text-slate-400 font-bold">
+      Loading view...
+    </div>
+  </div>
+);
 
 export const App: React.FC = () => {
   const { isAuthenticated, currentUser } = useAuth();
@@ -93,25 +125,27 @@ export const App: React.FC = () => {
       onTabChange={handleTabChange}
       onNewDeployment={handleNewDeployment}
     >
-      {activeTab === 'dashboard' && <DashboardView onNavigate={handleTabChange} />}
-      {activeTab === 'catalog' && <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />}
-      {activeTab === 'booking' && (
-        <BookingDeskView
-          preselectedAsset={preselectedAsset}
-          onBookingCreated={() => handleTabChange('dashboard')}
-          initialViewMode="all"
-          openCreateModal={triggerNewDeployment}
-          onCreateModalOpened={() => setTriggerNewDeployment(false)}
-        />
-      )}
-      {activeTab === 'dispatch' && <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />}
-      {activeTab === 'rental-configs' && <RentalConfigView />}
-      {activeTab === 'locations' && <LocationMasterView />}
-      {activeTab === 'return' && <ReturnAuditView />}
-      {activeTab === 'payments' && <PaymentLedgerView />}
-      {activeTab === 'dealers' && <DealerNetworkView />}
-      {activeTab === 'cash' && <DailyCashReconciliationView />}
-      {activeTab === 'users' && <UserManagementView />}
+      <Suspense fallback={<ViewLoadingFallback />}>
+        {activeTab === 'dashboard' && <DashboardView onNavigate={handleTabChange} />}
+        {activeTab === 'catalog' && <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />}
+        {activeTab === 'booking' && (
+          <BookingDeskView
+            preselectedAsset={preselectedAsset}
+            onBookingCreated={() => handleTabChange('dashboard')}
+            initialViewMode="all"
+            openCreateModal={triggerNewDeployment}
+            onCreateModalOpened={() => setTriggerNewDeployment(false)}
+          />
+        )}
+        {activeTab === 'dispatch' && <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />}
+        {activeTab === 'rental-configs' && <RentalConfigView />}
+        {activeTab === 'locations' && <LocationMasterView />}
+        {activeTab === 'return' && <ReturnAuditView />}
+        {activeTab === 'payments' && <PaymentLedgerView />}
+        {activeTab === 'dealers' && <DealerNetworkView />}
+        {activeTab === 'cash' && <DailyCashReconciliationView />}
+        {activeTab === 'users' && <UserManagementView />}
+      </Suspense>
 
       {/* Guest booking restriction modal */}
       <ConfirmationModal
