@@ -12,15 +12,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class PaginationRequest {
-    @Min(0)
-    @Builder.Default
-    private int page = 0;
+  @Min(0)
+  @Builder.Default
+  private int page = 0;
 
-    @Min(1)
-    @Max(100)
-    @Builder.Default
-    private int size = 20;
+  @Min(1)
+  @Max(100)
+  @Builder.Default
+  private int size = 20;
 
-    private String sortBy;
-    private String sortDirection;
+  private String sortBy;
+  private String sortDirection;
 }

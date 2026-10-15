@@ -120,9 +120,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
     }
   };
 
-  const availableCities = useMemo(() =>
-    cities.filter((c) => selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)),
-    [cities, selectedStateId]
+  const availableCities = useMemo(
+    () => cities.filter((c) => (selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId))),
+    [cities, selectedStateId],
   );
   const availableHubs = useMemo(() => {
     if (selectedCityId !== 'ALL') return hubs.filter((h) => h.cityId === Number(selectedCityId));
@@ -238,7 +238,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
     setJobEtaEnd(j?.etaEnd ? j.etaEnd.slice(0, 16) : `${b.startDate}T12:00`);
     setJobReceiverName(j?.receiverName || b.customer.fullName);
     setJobReceiverPhone(j?.receiverPhone || b.customer.phone);
-    setJobNotes(j?.deliveryNotes || (b.deliveryLocationName ? `Delivery to: ${b.deliveryLocationName}` : b.deliveryAddress));
+    setJobNotes(
+      j?.deliveryNotes || (b.deliveryLocationName ? `Delivery to: ${b.deliveryLocationName}` : b.deliveryAddress),
+    );
     setJobStatus(j?.status || 'SCHEDULED');
   };
 
@@ -336,8 +338,16 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
   const [checkSignature, setCheckSignature] = useState(true);
 
   const [issuedChallan, setIssuedChallan] = useState<DispatchRecord | null>(null);
-  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; title: string; message: string; variant: 'error' | 'warning' }>({
-    isOpen: false, title: '', message: '', variant: 'error',
+  const [errorModal, setErrorModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    variant: 'error' | 'warning';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'error',
   });
 
   const openHandoverPanel = (b: Booking) => {
@@ -393,7 +403,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
 
       setIssuedChallan(challan);
     } catch (err: any) {
-      setErrorModal({ isOpen: true, title: 'Dispatch Failed', message: err.message || 'Dispatch could not be executed. Please check booking status.', variant: 'error' });
+      setErrorModal({
+        isOpen: true,
+        title: 'Dispatch Failed',
+        message: err.message || 'Dispatch could not be executed. Please check booking status.',
+        variant: 'error',
+      });
     }
   };
 
@@ -405,7 +420,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+          <h2
+            className={cn(
+              'text-lg sm:text-xl font-black flex items-center gap-2',
+              isDaylight ? 'text-slate-950' : 'text-white',
+            )}
+          >
             <Send className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-slate-400')} />
             Fulfillment & Logistics Dispatch
           </h2>
@@ -416,7 +436,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       </div>
 
       {/* Sub Tabs Switcher */}
-      <div className={cn('flex items-center gap-1.5 p-1 rounded-xl border flex-shrink-0', isDaylight ? 'border-slate-200 bg-slate-100' : 'border-slate-800 bg-slate-900/60')}>
+      <div
+        className={cn(
+          'flex items-center gap-1.5 p-1 rounded-xl border flex-shrink-0',
+          isDaylight ? 'border-slate-200 bg-slate-100' : 'border-slate-800 bg-slate-900/60',
+        )}
+      >
         <button
           onClick={() => setActiveTab('deliveries')}
           className={cn(
@@ -426,8 +451,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <Truck className="h-3.5 w-3.5 text-amber-500" />
@@ -446,8 +471,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <RotateCcw className="h-3.5 w-3.5 text-purple-500" />
@@ -472,8 +497,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
@@ -485,45 +510,83 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       </div>
 
       {/* Filters */}
-      <div className={cn('flex-shrink-0 p-2.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+      <div
+        className={cn(
+          'flex-shrink-0 p-2.5 rounded-xl border transition-colors',
+          isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+        )}
+      >
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-1.5">
             <Calendar className={cn('h-3 w-3', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
             <span className={cn('text-[11px] font-bold', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
-              Today: {new Date().toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+              Today:{' '}
+              {new Date().toLocaleDateString('en-IN', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
             </span>
           </div>
           <button
-            onClick={() => { setSelectedStateId('ALL'); setSelectedCityId('ALL'); setSelectedHubId('ALL'); }}
-            className={cn('text-[11px] font-bold flex items-center gap-1 cursor-pointer', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+            onClick={() => {
+              setSelectedStateId('ALL');
+              setSelectedCityId('ALL');
+              setSelectedHubId('ALL');
+            }}
+            className={cn(
+              'text-[11px] font-bold flex items-center gap-1 cursor-pointer',
+              isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200',
+            )}
           >
             <RotateCcw className="h-3 w-3" /> Reset
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <SearchSelect
-            options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
+            options={[
+              { value: 'ALL', label: 'All States' },
+              ...states.map((s) => ({ value: String(s.id), label: s.name })),
+            ]}
             value={selectedStateId}
-            onChange={(v) => { setSelectedStateId(String(v || 'ALL')); setSelectedCityId('ALL'); setSelectedHubId('ALL'); }}
-            placeholder="All States" isClearable={false}
+            onChange={(v) => {
+              setSelectedStateId(String(v || 'ALL'));
+              setSelectedCityId('ALL');
+              setSelectedHubId('ALL');
+            }}
+            placeholder="All States"
+            isClearable={false}
           />
           <SearchSelect
             options={
               selectedStateId !== 'ALL' && availableCities.length === 0
                 ? []
-                : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]
+                : [
+                    { value: 'ALL', label: 'All Cities' },
+                    ...availableCities.map((c) => ({ value: String(c.id), label: c.name })),
+                  ]
             }
             value={selectedCityId}
-            onChange={(v) => { setSelectedCityId(String(v || 'ALL')); setSelectedHubId('ALL'); }}
-            placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+            onChange={(v) => {
+              setSelectedCityId(String(v || 'ALL'));
+              setSelectedHubId('ALL');
+            }}
+            placeholder={
+              selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+            }
             isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
             isClearable={false}
           />
           <SearchSelect
             options={
-              (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+              (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+              (selectedStateId !== 'ALL' && availableCities.length === 0)
                 ? []
-                : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]
+                : [
+                    { value: 'ALL', label: 'All Hubs' },
+                    ...availableHubs.map((h) => ({ value: String(h.id), label: h.name })),
+                  ]
             }
             value={selectedHubId}
             onChange={(v) => setSelectedHubId(String(v || 'ALL'))}
@@ -531,10 +594,13 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
               selectedStateId !== 'ALL' && availableCities.length === 0
                 ? 'No cities in this State'
                 : selectedCityId !== 'ALL' && availableHubs.length === 0
-                ? 'No hubs in this City'
-                : 'All Hubs'
+                  ? 'No hubs in this City'
+                  : 'All Hubs'
             }
-            isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+            isDisabled={
+              (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+              (selectedStateId !== 'ALL' && availableCities.length === 0)
+            }
             isClearable={false}
           />
         </div>
@@ -544,8 +610,18 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* 1. DELIVERY JOBS & OUTBOUND SCHEDULE TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeTab === 'deliveries' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <Truck className="h-4 w-4 text-amber-500" />
               <div>
@@ -579,7 +655,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           ) : (
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800' : 'border-slate-800 bg-slate-950 text-slate-300')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800'
+                      : 'border-slate-800 bg-slate-950 text-slate-300',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Booking / Machine</th>
                     <th className="py-3 px-4">Destination & Farm Local Name</th>
@@ -597,7 +680,10 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     const isOutForDelivery = status === 'OUT_FOR_DELIVERY';
 
                     return (
-                      <tr key={booking.id} className={cn('transition-colors', isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20')}>
+                      <tr
+                        key={booking.id}
+                        className={cn('transition-colors', isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20')}
+                      >
                         <td className="py-3 px-4">
                           <div className="font-mono font-bold text-amber-700 dark:text-amber-400">
                             {booking.bookingNumber}
@@ -605,9 +691,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                           <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                             {booking.asset.name}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-500">
-                            {booking.asset.assetTag}
-                          </div>
+                          <div className="font-mono text-[10px] text-slate-500">{booking.asset.assetTag}</div>
                         </td>
 
                         <td className="py-3 px-4 max-w-[220px]">
@@ -621,9 +705,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                               {booking.deliveryAddress}
                             </div>
                           )}
-                          <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                            {booking.deliveryAddress}
-                          </div>
+                          <div className="text-[10px] text-slate-500 truncate mt-0.5">{booking.deliveryAddress}</div>
                           {job?.deliveryNotes && (
                             <div className="text-[10px] text-amber-600 dark:text-amber-400 italic truncate mt-0.5">
                               Note: {job.deliveryNotes}
@@ -643,9 +725,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         <td className="py-3 px-4">
                           {job?.driverName ? (
                             <div>
-                              <div className="font-bold text-slate-800 dark:text-slate-200">
-                                {job.driverName}
-                              </div>
+                              <div className="font-bold text-slate-800 dark:text-slate-200">{job.driverName}</div>
                               <div className="font-mono text-[10px] text-slate-500">
                                 {job.driverPhone || '—'} · {job.vehicleNumber || 'No vehicle'}
                               </div>
@@ -665,15 +745,19 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                               </div>
                               {job.etaStart && (
                                 <div className="text-[10px] text-slate-500">
-                                  ETA: {new Date(job.etaStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                  {job.etaEnd ? ` - ${new Date(job.etaEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
+                                  ETA:{' '}
+                                  {new Date(job.etaStart).toLocaleTimeString([], {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                  {job.etaEnd
+                                    ? ` - ${new Date(job.etaEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                                    : ''}
                                 </div>
                               )}
                             </div>
                           ) : (
-                            <span className="font-mono text-xs text-slate-500">
-                              {booking.startDate}
-                            </span>
+                            <span className="font-mono text-xs text-slate-500">{booking.startDate}</span>
                           )}
                         </td>
 
@@ -684,11 +768,20 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                               isDelivered
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/50'
                                 : isOutForDelivery
-                                ? 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-700/50'
-                                : 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-700/50'
+                                  ? 'bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-700/50'
+                                  : 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-700/50',
                             )}
                           >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', isOutForDelivery ? 'bg-indigo-500 animate-pulse' : isDelivered ? 'bg-emerald-500' : 'bg-sky-500')} />
+                            <span
+                              className={cn(
+                                'h-1.5 w-1.5 rounded-full',
+                                isOutForDelivery
+                                  ? 'bg-indigo-500 animate-pulse'
+                                  : isDelivered
+                                    ? 'bg-emerald-500'
+                                    : 'bg-sky-500',
+                              )}
+                            />
                             {isDelivered ? 'DELIVERED' : isOutForDelivery ? 'OUT FOR DELIVERY' : 'SCHEDULED'}
                           </span>
                         </td>
@@ -737,8 +830,18 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* 2. RETURN PICKUP JOBS TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeTab === 'returns' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <RotateCcw className="h-4 w-4 text-purple-500" />
               <div>
@@ -772,7 +875,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           ) : (
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800' : 'border-slate-800 bg-slate-950 text-slate-300')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800'
+                      : 'border-slate-800 bg-slate-950 text-slate-300',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Booking / Machine</th>
                     <th className="py-3 px-4">Farmer & Farm Pickup Point</th>
@@ -789,7 +899,10 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     const isInTransit = status === 'IN_TRANSIT';
 
                     return (
-                      <tr key={item.id} className={cn('transition-colors', isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20')}>
+                      <tr
+                        key={item.id}
+                        className={cn('transition-colors', isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/20')}
+                      >
                         <td className="py-3 px-4">
                           <div className="font-mono font-bold text-amber-700 dark:text-amber-400">
                             {item.booking.bookingNumber}
@@ -797,18 +910,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                           <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                             {item.booking.asset.name}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-500">
-                            {item.booking.asset.assetTag}
-                          </div>
+                          <div className="font-mono text-[10px] text-slate-500">{item.booking.asset.assetTag}</div>
                         </td>
 
                         <td className="py-3 px-4 max-w-[220px]">
                           <div className="font-bold text-slate-900 dark:text-slate-100">
                             {item.booking.customer.fullName}
                           </div>
-                          <div className="font-mono text-[10px] text-slate-500">
-                            {item.booking.customer.phone}
-                          </div>
+                          <div className="font-mono text-[10px] text-slate-500">{item.booking.customer.phone}</div>
                           {item.booking.deliveryLocationName ? (
                             <div className="font-black text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-1 mt-0.5">
                               <MapPin className="h-3 w-3 shrink-0" />
@@ -824,9 +933,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         <td className="py-3 px-4">
                           {item.driverName ? (
                             <div>
-                              <div className="font-bold text-slate-800 dark:text-slate-200">
-                                {item.driverName}
-                              </div>
+                              <div className="font-bold text-slate-800 dark:text-slate-200">{item.driverName}</div>
                               <div className="font-mono text-[10px] text-slate-500">
                                 {item.driverPhone || '—'} · {item.vehicleNumber || 'No vehicle'}
                               </div>
@@ -849,11 +956,20 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                               isCollected
                                 ? 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/50'
                                 : isInTransit
-                                ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/50'
-                                : 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700/50'
+                                  ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/50'
+                                  : 'bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-700/50',
                             )}
                           >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', isInTransit ? 'bg-amber-500 animate-pulse' : isCollected ? 'bg-emerald-500' : 'bg-purple-500')} />
+                            <span
+                              className={cn(
+                                'h-1.5 w-1.5 rounded-full',
+                                isInTransit
+                                  ? 'bg-amber-500 animate-pulse'
+                                  : isCollected
+                                    ? 'bg-emerald-500'
+                                    : 'bg-purple-500',
+                              )}
+                            />
                             {item.status}
                           </span>
                         </td>
@@ -901,8 +1017,18 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* 3. YARD HANDOVER DESK TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeTab === 'handover' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <Truck className={cn('h-4 w-4', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
               <h3 className={cn('font-black text-xs sm:text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
@@ -928,12 +1054,16 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
               </p>
             </div>
           ) : (
-            <div
-              onScroll={handleScroll}
-              className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
-            >
+            <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs'
+                      : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Booking / Customer</th>
                     <th className="py-3 px-4">Machine</th>
@@ -956,8 +1086,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         className={cn(
                           'transition-colors',
                           overdue
-                            ? isDaylight ? 'bg-rose-50 hover:bg-rose-100/60' : 'bg-rose-950/10 hover:bg-rose-950/20'
-                            : isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'
+                            ? isDaylight
+                              ? 'bg-rose-50 hover:bg-rose-100/60'
+                              : 'bg-rose-950/10 hover:bg-rose-950/20'
+                            : isDaylight
+                              ? 'hover:bg-slate-50'
+                              : 'hover:bg-slate-800/30',
                         )}
                       >
                         {/* Booking / Customer */}
@@ -965,8 +1099,19 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                           <div className="flex items-center gap-1.5">
                             {overdue && <AlertTriangle className="h-3 w-3 text-rose-500 shrink-0" />}
                             <div>
-                              <div className={cn('font-mono font-bold text-[11px]', isDaylight ? 'text-amber-700' : 'text-amber-400')}>{b.bookingNumber}</div>
-                              <div className={cn('font-bold text-sm mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}>{b.customer.fullName}</div>
+                              <div
+                                className={cn(
+                                  'font-mono font-bold text-[11px]',
+                                  isDaylight ? 'text-amber-700' : 'text-amber-400',
+                                )}
+                              >
+                                {b.bookingNumber}
+                              </div>
+                              <div
+                                className={cn('font-bold text-sm mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}
+                              >
+                                {b.customer.fullName}
+                              </div>
                               <div className="text-[10px] text-slate-500">{b.customer.phone}</div>
                             </div>
                           </div>
@@ -974,7 +1119,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
 
                         {/* Machine */}
                         <td className="py-3.5 px-4">
-                          <div className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>{b.asset.name}</div>
+                          <div className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                            {b.asset.name}
+                          </div>
                           <div className="font-mono text-[10px] text-slate-500 mt-0.5">{b.asset.assetTag}</div>
                         </td>
 
@@ -982,7 +1129,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1">
                             <MapPin className="h-3 w-3 text-emerald-500 shrink-0" />
-                            <span className={cn('font-medium', isDaylight ? 'text-slate-700' : 'text-slate-300')}>{b.asset.hubName || '—'}</span>
+                            <span className={cn('font-medium', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                              {b.asset.hubName || '—'}
+                            </span>
                           </div>
                         </td>
 
@@ -990,7 +1139,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-1">
                             <Clock className={cn('h-3 w-3 shrink-0', overdue ? 'text-rose-500' : 'text-slate-400')} />
-                            <span className={cn('font-mono text-[11px]', overdue ? 'text-rose-500 font-bold' : isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                            <span
+                              className={cn(
+                                'font-mono text-[11px]',
+                                overdue ? 'text-rose-500 font-bold' : isDaylight ? 'text-slate-700' : 'text-slate-300',
+                              )}
+                            >
                               {b.startDate}
                             </span>
                           </div>
@@ -1000,11 +1154,25 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         {/* Payment status */}
                         <td className="py-3.5 px-4">
                           {paymentOk ? (
-                            <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border', isDaylight ? 'bg-emerald-100 text-emerald-800 border-emerald-300' : 'bg-emerald-900/30 text-emerald-300 border-emerald-800/50')}>
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border',
+                                isDaylight
+                                  ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                                  : 'bg-emerald-900/30 text-emerald-300 border-emerald-800/50',
+                              )}
+                            >
                               <ShieldCheck className="h-3 w-3" /> Cleared
                             </span>
                           ) : (
-                            <span className={cn('inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border', isDaylight ? 'bg-rose-100 text-rose-800 border-rose-300' : 'bg-rose-900/30 text-rose-300 border-rose-800/50')}>
+                            <span
+                              className={cn(
+                                'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border',
+                                isDaylight
+                                  ? 'bg-rose-100 text-rose-800 border-rose-300'
+                                  : 'bg-rose-900/30 text-rose-300 border-rose-800/50',
+                              )}
+                            >
                               <ShieldAlert className="h-3 w-3" /> Pending
                             </span>
                           )}
@@ -1047,8 +1215,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                                     ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
                                     : 'bg-amber-600/80 hover:bg-amber-500 text-slate-950 border border-amber-500/50'
                                   : isDaylight
-                                  ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm'
-                                  : 'bg-rose-700 hover:bg-rose-600 text-white'
+                                    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm'
+                                    : 'bg-rose-700 hover:bg-rose-600 text-white',
                               )}
                             >
                               {!paymentOk ? <ShieldAlert className="h-3.5 w-3.5" /> : <Send className="h-3.5 w-3.5" />}
@@ -1079,7 +1247,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* Schedule / Assign Delivery Job Modal */}
       {selectedDeliveryJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-3 overflow-y-auto">
-          <div className={cn('w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl', isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-amber-500/30 text-white')}>
+          <div
+            className={cn(
+              'w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl',
+              isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-amber-500/30 text-white',
+            )}
+          >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <Truck className="h-5 w-5 text-amber-500" />
@@ -1097,11 +1270,15 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
             <div className="rounded-xl border p-3 text-xs space-y-1.5 bg-slate-50 dark:bg-slate-900/50">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Booking:</span>
-                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{selectedDeliveryJob.booking.bookingNumber}</span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                  {selectedDeliveryJob.booking.bookingNumber}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Machine:</span>
-                <span className="font-bold">{selectedDeliveryJob.booking.asset.name} ({selectedDeliveryJob.booking.asset.assetTag})</span>
+                <span className="font-bold">
+                  {selectedDeliveryJob.booking.asset.name} ({selectedDeliveryJob.booking.asset.assetTag})
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Destination Farm:</span>
@@ -1250,7 +1427,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* Schedule Return Pickup Job Modal */}
       {selectedReturnJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-3 overflow-y-auto">
-          <div className={cn('w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl', isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-purple-500/30 text-white')}>
+          <div
+            className={cn(
+              'w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl',
+              isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-purple-500/30 text-white',
+            )}
+          >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <RotateCcw className="h-5 w-5 text-purple-500" />
@@ -1268,11 +1450,15 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
             <div className="rounded-xl border p-3 text-xs space-y-1.5 bg-slate-50 dark:bg-slate-900/50">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Booking:</span>
-                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{selectedReturnJob.booking?.bookingNumber}</span>
+                <span className="font-mono font-bold text-amber-600 dark:text-amber-400">
+                  {selectedReturnJob.booking?.bookingNumber}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Farmer:</span>
-                <span className="font-bold">{selectedReturnJob.booking?.customer?.fullName} ({selectedReturnJob.booking?.customer?.phone})</span>
+                <span className="font-bold">
+                  {selectedReturnJob.booking?.customer?.fullName} ({selectedReturnJob.booking?.customer?.phone})
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Pickup Point:</span>
@@ -1380,8 +1566,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
       {/* Handover Panel Modal */}
       {selectedBooking && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-2 sm:p-3 bg-black/55 backdrop-blur-md overflow-y-auto">
-          <div className={cn('w-full max-w-4xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border shadow-2xl my-2', isDaylight ? 'bg-white border-slate-200' : 'bg-[#242424] border-slate-800')}>
-
+          <div
+            className={cn(
+              'w-full max-w-4xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border shadow-2xl my-2',
+              isDaylight ? 'bg-white border-slate-200' : 'bg-[#242424] border-slate-800',
+            )}
+          >
             {/* Success state */}
             {issuedChallan ? (
               <div className="p-4 sm:p-5 space-y-3.5">
@@ -1394,40 +1584,59 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                       Challan {issuedChallan.challanNumber} Issued!
                     </h3>
                     <p className={cn('text-xs', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-                      Machine <strong className="text-amber-500">{issuedChallan.assetTag}</strong> successfully handed over · Status → <strong className="text-emerald-400">ON_RENT</strong>
+                      Machine <strong className="text-amber-500">{issuedChallan.assetTag}</strong> successfully handed
+                      over · Status → <strong className="text-emerald-400">ON_RENT</strong>
                     </p>
                   </div>
                 </div>
-                <div className={cn('rounded-xl border p-4 text-xs grid grid-cols-2 gap-3', isDaylight ? 'border-emerald-200 bg-emerald-50' : 'border-emerald-800/50 bg-emerald-900/20')}>
+                <div
+                  className={cn(
+                    'rounded-xl border p-4 text-xs grid grid-cols-2 gap-3',
+                    isDaylight ? 'border-emerald-200 bg-emerald-50' : 'border-emerald-800/50 bg-emerald-900/20',
+                  )}
+                >
                   <div>
                     <div className="text-[10px] uppercase font-bold text-slate-500">Challan #</div>
-                    <div className={cn('font-mono font-bold mt-0.5', isDaylight ? 'text-slate-900' : 'text-emerald-400')}>{issuedChallan.challanNumber}</div>
+                    <div
+                      className={cn('font-mono font-bold mt-0.5', isDaylight ? 'text-slate-900' : 'text-emerald-400')}
+                    >
+                      {issuedChallan.challanNumber}
+                    </div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold text-slate-500">Driver</div>
-                    <div className={cn('font-medium mt-0.5', isDaylight ? 'text-slate-700' : 'text-slate-300')}>{issuedChallan.driverName}</div>
+                    <div className={cn('font-medium mt-0.5', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                      {issuedChallan.driverName}
+                    </div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold text-slate-500">Fuel Out</div>
-                    <div className={cn('font-medium mt-0.5', isDaylight ? 'text-slate-700' : 'text-slate-300')}>{issuedChallan.fuelLevel}</div>
+                    <div className={cn('font-medium mt-0.5', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                      {issuedChallan.fuelLevel}
+                    </div>
                   </div>
                   <div>
                     <div className="text-[10px] uppercase font-bold text-slate-500">Engine Hours Out</div>
-                    <div className={cn('font-mono font-bold mt-0.5', isDaylight ? 'text-slate-900' : 'text-slate-300')}>{issuedChallan.engineHoursOut} hrs</div>
+                    <div className={cn('font-mono font-bold mt-0.5', isDaylight ? 'text-slate-900' : 'text-slate-300')}>
+                      {issuedChallan.engineHoursOut} hrs
+                    </div>
                   </div>
                 </div>
                 {/* WhatsApp status banner */}
                 <div
                   className={cn(
                     'rounded-xl border p-3 flex items-start gap-2.5 text-xs',
-                    isDaylight ? 'border-emerald-200 bg-emerald-50 text-emerald-950' : 'border-emerald-800/40 bg-emerald-950/30 text-emerald-300'
+                    isDaylight
+                      ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                      : 'border-emerald-800/40 bg-emerald-950/30 text-emerald-300',
                   )}
                 >
                   <MessageSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                   <div>
                     <div className="font-bold text-xs">WhatsApp Dispatch Alert Dispatched</div>
                     <div className="text-[11px] opacity-85">
-                      Challan handover details & live trip tracking prompt sent to <strong>+91 {selectedBooking.customer.phone}</strong>.
+                      Challan handover details & live trip tracking prompt sent to{' '}
+                      <strong>+91 {selectedBooking.customer.phone}</strong>.
                     </div>
                   </div>
                 </div>
@@ -1451,7 +1660,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     onClick={() => printDispatchChallanPdf({ booking: selectedBooking, challan: issuedChallan })}
                     className={cn(
                       'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border font-bold text-xs transition-colors cursor-pointer',
-                      isDaylight ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100' : 'border-amber-700/50 text-amber-300 bg-amber-900/20 hover:bg-amber-900/30'
+                      isDaylight
+                        ? 'border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100'
+                        : 'border-amber-700/50 text-amber-300 bg-amber-900/20 hover:bg-amber-900/30',
                     )}
                   >
                     <Printer className="h-3.5 w-3.5" />
@@ -1463,7 +1674,9 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     onClick={closePanel}
                     className={cn(
                       'py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-sm',
-                      isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black' : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                      isDaylight
+                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black',
                     )}
                   >
                     Done
@@ -1473,39 +1686,99 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
             ) : (
               <>
                 {/* Panel Header */}
-                <div className={cn('flex items-center justify-between px-4 py-3 border-b', isDaylight ? 'border-slate-100' : 'border-slate-800')}>
+                <div
+                  className={cn(
+                    'flex items-center justify-between px-4 py-3 border-b',
+                    isDaylight ? 'border-slate-100' : 'border-slate-800',
+                  )}
+                >
                   <div className="flex items-center gap-2.5">
-                    <div className={cn('p-2 rounded-xl', isDaylight ? 'bg-amber-100 text-amber-700' : 'bg-amber-900/40 text-amber-400')}>
+                    <div
+                      className={cn(
+                        'p-2 rounded-xl',
+                        isDaylight ? 'bg-amber-100 text-amber-700' : 'bg-amber-900/40 text-amber-400',
+                      )}
+                    >
                       <Send className="h-4 w-4" />
                     </div>
                     <div>
-                      <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>Yard Handover Checklist</h3>
-                      <p className={cn('text-[11px] font-mono', isDaylight ? 'text-amber-700' : 'text-amber-400')}>{selectedBooking.bookingNumber}</p>
+                      <h3 className={cn('font-black text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
+                        Yard Handover Checklist
+                      </h3>
+                      <p className={cn('text-[11px] font-mono', isDaylight ? 'text-amber-700' : 'text-amber-400')}>
+                        {selectedBooking.bookingNumber}
+                      </p>
                     </div>
                   </div>
-                  <button onClick={closePanel} className={cn('p-1.5 rounded-lg border cursor-pointer transition-colors', isDaylight ? 'border-slate-200 text-slate-400 hover:bg-slate-100' : 'border-slate-700 text-slate-500 hover:bg-slate-800')}>
+                  <button
+                    onClick={closePanel}
+                    className={cn(
+                      'p-1.5 rounded-lg border cursor-pointer transition-colors',
+                      isDaylight
+                        ? 'border-slate-200 text-slate-400 hover:bg-slate-100'
+                        : 'border-slate-700 text-slate-500 hover:bg-slate-800',
+                    )}
+                  >
                     <X className="h-4 w-4" />
                   </button>
                 </div>
 
                 {/* Booking summary strip */}
-                <div className={cn('px-4 py-2 border-b text-xs', isDaylight ? 'bg-slate-50 border-slate-100 text-slate-700' : 'bg-slate-950/60 border-slate-800 text-slate-400')}>
+                <div
+                  className={cn(
+                    'px-4 py-2 border-b text-xs',
+                    isDaylight
+                      ? 'bg-slate-50 border-slate-100 text-slate-700'
+                      : 'bg-slate-950/60 border-slate-800 text-slate-400',
+                  )}
+                >
                   <span className="font-bold">{selectedBooking.customer.fullName}</span>
-                  {' · '}<span>{selectedBooking.asset.name}</span>
-                  {' · '}<span className="font-mono">{selectedBooking.asset.assetTag}</span>
-                  {' · '}<span>To: <strong className={isDaylight ? 'text-slate-800' : 'text-slate-200'}>{selectedBooking.deliveryAddress}</strong></span>
+                  {' · '}
+                  <span>{selectedBooking.asset.name}</span>
+                  {' · '}
+                  <span className="font-mono">{selectedBooking.asset.assetTag}</span>
+                  {' · '}
+                  <span>
+                    To:{' '}
+                    <strong className={isDaylight ? 'text-slate-800' : 'text-slate-200'}>
+                      {selectedBooking.deliveryAddress}
+                    </strong>
+                  </span>
                 </div>
 
                 <form onSubmit={handleDispatch} className="p-4 sm:p-5 space-y-3.5">
                   {/* Zero-credit summary */}
-                  <div className={cn('rounded-xl border p-4 flex items-center justify-between', isZeroCreditPassed ? (isDaylight ? 'border-emerald-200 bg-emerald-50' : 'border-emerald-800/50 bg-emerald-900/20') : (isDaylight ? 'border-rose-200 bg-rose-50' : 'border-rose-800/50 bg-rose-900/20'))}>
+                  <div
+                    className={cn(
+                      'rounded-xl border p-4 flex items-center justify-between',
+                      isZeroCreditPassed
+                        ? isDaylight
+                          ? 'border-emerald-200 bg-emerald-50'
+                          : 'border-emerald-800/50 bg-emerald-900/20'
+                        : isDaylight
+                          ? 'border-rose-200 bg-rose-50'
+                          : 'border-rose-800/50 bg-rose-900/20',
+                    )}
+                  >
                     <div className="flex items-center gap-2">
-                      {isZeroCreditPassed
-                        ? <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                        : <ShieldAlert className="h-4 w-4 text-rose-500" />
-                      }
+                      {isZeroCreditPassed ? (
+                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <ShieldAlert className="h-4 w-4 text-rose-500" />
+                      )}
                       <div>
-                        <div className={cn('text-xs font-black', isZeroCreditPassed ? (isDaylight ? 'text-emerald-800' : 'text-emerald-300') : (isDaylight ? 'text-rose-800' : 'text-rose-300'))}>
+                        <div
+                          className={cn(
+                            'text-xs font-black',
+                            isZeroCreditPassed
+                              ? isDaylight
+                                ? 'text-emerald-800'
+                                : 'text-emerald-300'
+                              : isDaylight
+                                ? 'text-rose-800'
+                                : 'text-rose-300',
+                          )}
+                        >
                           {isZeroCreditPassed ? 'Zero-Credit Barrier: CLEARED' : 'Zero-Credit Barrier: BLOCKED'}
                         </div>
                         <div className={cn('text-[11px]', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
@@ -1524,7 +1797,10 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         </button>
                         <button
                           type="button"
-                          onClick={() => { closePanel(); onNavigateToPayment(); }}
+                          onClick={() => {
+                            closePanel();
+                            onNavigateToPayment();
+                          }}
                           className="text-[11px] font-bold text-slate-500 hover:underline cursor-pointer"
                         >
                           Ledger
@@ -1536,19 +1812,38 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Fuel level */}
                     <div>
-                      <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Fuel Level at Handover</label>
+                      <label
+                        className={cn(
+                          'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                          isDaylight ? 'text-slate-500' : 'text-slate-400',
+                        )}
+                      >
+                        Fuel Level at Handover
+                      </label>
                       <input
                         type="text"
                         value={fuelLevel}
                         onChange={(e) => setFuelLevel(e.target.value)}
                         placeholder="e.g. 100%, 75%"
-                        className={cn('w-full rounded-lg border px-3 py-2 text-xs focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none',
+                          isDaylight
+                            ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500'
+                            : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
+                        )}
                       />
                     </div>
 
                     {/* Engine hours */}
                     <div>
-                      <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Engine / Operating Hours Out</label>
+                      <label
+                        className={cn(
+                          'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                          isDaylight ? 'text-slate-500' : 'text-slate-400',
+                        )}
+                      >
+                        Engine / Operating Hours Out
+                      </label>
                       <input
                         type="number"
                         min="0"
@@ -1556,52 +1851,119 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         value={engineHoursOut}
                         onChange={(e) => setEngineHoursOut(parseFloat(e.target.value))}
                         placeholder="Current engine meter hours"
-                        className={cn('w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2 text-xs font-mono focus:outline-none',
+                          isDaylight
+                            ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500'
+                            : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
+                        )}
                       />
                     </div>
 
                     {/* Driver */}
                     <div className="sm:col-span-2">
-                      <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Assigned Driver / Logistics Operator</label>
+                      <label
+                        className={cn(
+                          'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                          isDaylight ? 'text-slate-500' : 'text-slate-400',
+                        )}
+                      >
+                        Assigned Driver / Logistics Operator
+                      </label>
                       <input
                         type="text"
                         value={driverName}
                         onChange={(e) => setDriverName(e.target.value)}
                         placeholder="Enter driver name or transport fleet"
-                        className={cn('w-full rounded-lg border px-3 py-2 text-xs focus:outline-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none',
+                          isDaylight
+                            ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500'
+                            : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
+                        )}
                       />
                     </div>
 
                     {/* Condition notes */}
                     <div className="sm:col-span-2">
-                      <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Condition Notes & Serial Confirmation</label>
+                      <label
+                        className={cn(
+                          'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                          isDaylight ? 'text-slate-500' : 'text-slate-400',
+                        )}
+                      >
+                        Condition Notes & Serial Confirmation
+                      </label>
                       <textarea
                         rows={2}
                         value={conditionNotes}
                         onChange={(e) => setConditionNotes(e.target.value)}
-                        className={cn('w-full rounded-lg border px-3 py-2 text-xs focus:outline-none resize-none', isDaylight ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500')}
+                        className={cn(
+                          'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none resize-none',
+                          isDaylight
+                            ? 'border-slate-300 bg-white text-slate-950 focus:border-amber-500'
+                            : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
+                        )}
                       />
                     </div>
                   </div>
 
                   {/* Pre-dispatch checklist */}
-                  <div className={cn('rounded-xl border p-4 space-y-2.5', isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/60')}>
-                    <h4 className={cn('text-[11px] font-black uppercase tracking-wider mb-3', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+                  <div
+                    className={cn(
+                      'rounded-xl border p-4 space-y-2.5',
+                      isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-950/60',
+                    )}
+                  >
+                    <h4
+                      className={cn(
+                        'text-[11px] font-black uppercase tracking-wider mb-3',
+                        isDaylight ? 'text-slate-500' : 'text-slate-400',
+                      )}
+                    >
                       Pre-Dispatch Safety Checklist (SOP-005)
                     </h4>
                     {[
-                      { state: checkEngine, set: setCheckEngine, label: 'Engine Start, Idle & Leakage Test Verified (No oil/fuel leaks)' },
-                      { state: checkAccessories, set: setCheckAccessories, label: `Mandatory Accessories Included: ${selectedBooking.asset.accessoriesIncluded || 'All tools checked'}` },
-                      { state: checkSignature, set: setCheckSignature, label: 'Customer ID & Delivery Acceptance Sign-off Acknowledged' },
+                      {
+                        state: checkEngine,
+                        set: setCheckEngine,
+                        label: 'Engine Start, Idle & Leakage Test Verified (No oil/fuel leaks)',
+                      },
+                      {
+                        state: checkAccessories,
+                        set: setCheckAccessories,
+                        label: `Mandatory Accessories Included: ${selectedBooking.asset.accessoriesIncluded || 'All tools checked'}`,
+                      },
+                      {
+                        state: checkSignature,
+                        set: setCheckSignature,
+                        label: 'Customer ID & Delivery Acceptance Sign-off Acknowledged',
+                      },
                     ].map(({ state, set, label }) => (
-                      <label key={label} className={cn('flex items-start gap-3 rounded-lg border p-2.5 cursor-pointer transition-colors', state ? (isDaylight ? 'border-emerald-200 bg-emerald-50/60' : 'border-emerald-800/40 bg-emerald-900/10') : (isDaylight ? 'border-slate-200' : 'border-slate-800'))}>
+                      <label
+                        key={label}
+                        className={cn(
+                          'flex items-start gap-3 rounded-lg border p-2.5 cursor-pointer transition-colors',
+                          state
+                            ? isDaylight
+                              ? 'border-emerald-200 bg-emerald-50/60'
+                              : 'border-emerald-800/40 bg-emerald-900/10'
+                            : isDaylight
+                              ? 'border-slate-200'
+                              : 'border-slate-800',
+                        )}
+                      >
                         <input
                           type="checkbox"
                           checked={state}
                           onChange={(e) => set(e.target.checked)}
                           className="accent-amber-500 h-4 w-4 mt-0.5 cursor-pointer shrink-0"
                         />
-                        <span className={cn('text-xs leading-relaxed', isDaylight ? 'text-slate-700' : 'text-slate-300')}>{label}</span>
+                        <span
+                          className={cn('text-xs leading-relaxed', isDaylight ? 'text-slate-700' : 'text-slate-300')}
+                        >
+                          {label}
+                        </span>
                       </label>
                     ))}
                   </div>
@@ -1611,7 +1973,12 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                     <button
                       type="button"
                       onClick={closePanel}
-                      className={cn('flex-1 py-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors', isDaylight ? 'border-slate-300 text-slate-700 hover:bg-slate-100' : 'border-slate-700 text-slate-300 hover:bg-slate-800')}
+                      className={cn(
+                        'flex-1 py-2.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors',
+                        isDaylight
+                          ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
+                          : 'border-slate-700 text-slate-300 hover:bg-slate-800',
+                      )}
                     >
                       Cancel
                     </button>
@@ -1622,7 +1989,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                         'flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-black cursor-pointer transition-colors',
                         isZeroCreditPassed
                           ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md shadow-amber-500/20'
-                          : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50'
+                          : 'bg-slate-700 text-slate-500 cursor-not-allowed opacity-50',
                       )}
                     >
                       <Send className="h-4 w-4" />
@@ -1670,19 +2037,22 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           bookingNumber={whatsAppModalBooking.bookingNumber}
           recipientName={whatsAppModalBooking.customer.fullName}
           recipientPhone={whatsAppModalBooking.customer.phone}
-          message={getDispatchWhatsAppMessage(whatsAppModalBooking, whatsAppModalDispatch || {
-            id: whatsAppModalBooking.id,
-            bookingId: whatsAppModalBooking.id,
-            assetTag: whatsAppModalBooking.asset.assetTag,
-            challanNumber: `DC-${new Date().getFullYear()}-${String(whatsAppModalBooking.id).padStart(4, '0')}`,
-            fuelLevel: '',
-            engineHoursOut: whatsAppModalBooking.asset.engineHours,
-            accessoriesVerified: true,
-            conditionNotes: '',
-            driverName: '',
-            customerSignatureConfirmed: true,
-            dispatchTimestamp: new Date().toISOString(),
-          })}
+          message={getDispatchWhatsAppMessage(
+            whatsAppModalBooking,
+            whatsAppModalDispatch || {
+              id: whatsAppModalBooking.id,
+              bookingId: whatsAppModalBooking.id,
+              assetTag: whatsAppModalBooking.asset.assetTag,
+              challanNumber: `DC-${new Date().getFullYear()}-${String(whatsAppModalBooking.id).padStart(4, '0')}`,
+              fuelLevel: '',
+              engineHoursOut: whatsAppModalBooking.asset.engineHours,
+              accessoriesVerified: true,
+              conditionNotes: '',
+              driverName: '',
+              customerSignatureConfirmed: true,
+              dispatchTimestamp: new Date().toISOString(),
+            },
+          )}
           onPrintPdf={() =>
             printDispatchChallanPdf({
               booking: whatsAppModalBooking,

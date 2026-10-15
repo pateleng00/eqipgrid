@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class UpdateBookingStatusRequest {
-    @NotNull(message = "Status is required")
-    private BookingStatus status;
-    private String notes;
+  @NotNull(message = "Status is required")
+  private BookingStatus status;
+
+  private String notes;
 }

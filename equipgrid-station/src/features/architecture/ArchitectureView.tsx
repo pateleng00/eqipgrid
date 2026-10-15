@@ -1,14 +1,5 @@
 import React from 'react';
-import {
-  Cpu,
-  Layers,
-  Database,
-  Server,
-  Monitor,
-  ShieldCheck,
-  CheckCircle,
-  GitBranch,
-} from 'lucide-react';
+import { Cpu, Layers, Database, Server, Monitor, ShieldCheck, CheckCircle, GitBranch } from 'lucide-react';
 
 export const ArchitectureView: React.FC = () => {
   return (
@@ -135,7 +126,7 @@ export const ArchitectureView: React.FC = () => {
             In <code className="text-amber-400">DispatchService.java</code>:
           </p>
           <pre className="bg-slate-950 p-3 rounded border border-slate-800 font-mono text-[11px] text-amber-300 overflow-x-auto">
-{`if (advancePaid + depositPaid < depositAmount + baseRent) {
+            {`if (advancePaid + depositPaid < depositAmount + baseRent) {
     throw new BusinessRuleViolationException("ZERO-OPEN-CREDIT VIOLATION: Dispatch blocked!");
 }`}
           </pre>

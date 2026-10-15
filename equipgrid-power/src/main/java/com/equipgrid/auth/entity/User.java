@@ -14,34 +14,34 @@ import lombok.*;
 @Builder
 public class User extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false, unique = true, length = 64)
-    private String username;
+  @Column(nullable = false, unique = true, length = 64)
+  private String username;
 
-    @Column(unique = true, length = 128)
-    private String email;
+  @Column(unique = true, length = 128)
+  private String email;
 
-    @com.fasterxml.jackson.annotation.JsonIgnore
-    @Column(name = "password_hash", nullable = false)
-    private String passwordHash;
+  @com.fasterxml.jackson.annotation.JsonIgnore
+  @Column(name = "password_hash", nullable = false)
+  private String passwordHash;
 
-    @Column(name = "full_name", nullable = false, length = 128)
-    private String fullName;
+  @Column(name = "full_name", nullable = false, length = 128)
+  private String fullName;
 
-    @Column(nullable = false)
-    private Role role;
+  @Column(nullable = false)
+  private Role role;
 
-    @Column(length = 20)
-    private String phone;
+  @Column(length = 20)
+  private String phone;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "hub_id")
-    private com.equipgrid.location.entity.Hub hub;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "hub_id")
+  private com.equipgrid.location.entity.Hub hub;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
+  @Builder.Default
+  @Column(nullable = false)
+  private Boolean active = true;
 }

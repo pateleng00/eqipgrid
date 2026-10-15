@@ -1,9 +1,28 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import {
-  Truck, Plus, Search, RotateCcw, Zap, Building2, MapPin,
-  Clock, UserCheck, Play, Pause, ChevronLeft, ChevronRight,
-  Video, Images, X, Maximize2, Volume2, VolumeX, Star, Trash2,
-  Layers, Cpu
+  Truck,
+  Plus,
+  Search,
+  RotateCcw,
+  Zap,
+  Building2,
+  MapPin,
+  Clock,
+  UserCheck,
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  Video,
+  Images,
+  X,
+  Maximize2,
+  Volume2,
+  VolumeX,
+  Star,
+  Trash2,
+  Layers,
+  Cpu,
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -33,14 +52,11 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
 
-  const images = asset.mediaItems?.filter(m => m.mediaType === 'IMAGE') ?? [];
-  const video  = asset.mediaItems?.find(m => m.mediaType === 'VIDEO');
+  const images = asset.mediaItems?.filter((m) => m.mediaType === 'IMAGE') ?? [];
+  const video = asset.mediaItems?.find((m) => m.mediaType === 'VIDEO');
 
   // Build unified slide list: images first, then video tab
-  const slides: Array<AssetMedia | 'video'> = [
-    ...images,
-    ...(video ? ['video' as const] : []),
-  ];
+  const slides: Array<AssetMedia | 'video'> = [...images, ...(video ? ['video' as const] : [])];
 
   // Fallback to single imageUrl if no media gallery
   const hasGallery = slides.length > 0;
@@ -75,25 +91,31 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
   const prev = (e: React.MouseEvent) => {
     e.stopPropagation();
     pauseVideo();
-    setActiveIdx(i => (i - 1 + slides.length) % slides.length);
+    setActiveIdx((i) => (i - 1 + slides.length) % slides.length);
   };
   const next = (e: React.MouseEvent) => {
     e.stopPropagation();
     pauseVideo();
-    setActiveIdx(i => (i + 1) % slides.length);
+    setActiveIdx((i) => (i + 1) % slides.length);
   };
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!videoRef.current) return;
     if (videoRef.current.paused) {
-      videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {
-        if (videoRef.current) {
-          videoRef.current.muted = true;
-          setIsMuted(true);
-          videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-        }
-      });
+      videoRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch(() => {
+          if (videoRef.current) {
+            videoRef.current.muted = true;
+            setIsMuted(true);
+            videoRef.current
+              .play()
+              .then(() => setIsPlaying(true))
+              .catch(() => {});
+          }
+        });
     } else {
       videoRef.current.pause();
       setIsPlaying(false);
@@ -104,16 +126,15 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
     e.stopPropagation();
     if (!videoRef.current) return;
     videoRef.current.muted = !isMuted;
-    setIsMuted(m => !m);
+    setIsMuted((m) => !m);
   };
 
-  const currentImageUrl = isVideoTab
-    ? null
-    : (currentSlide as AssetMedia | null)?.url ?? asset.imageUrl;
+  const currentImageUrl = isVideoTab ? null : ((currentSlide as AssetMedia | null)?.url ?? asset.imageUrl);
 
   return (
-    <div className={`relative w-full h-40 sm:h-44 overflow-hidden group ${isDaylight ? 'bg-slate-100' : 'bg-slate-950'}`}>
-
+    <div
+      className={`relative w-full h-40 sm:h-44 overflow-hidden group ${isDaylight ? 'bg-slate-100' : 'bg-slate-950'}`}
+    >
       {/* Image Layer */}
       {!isVideoTab && (
         <img
@@ -127,8 +148,7 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
             if (img.src && img.src.includes('?')) {
               img.src = img.src.split('?')[0];
             } else {
-              img.src =
-                'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+              img.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
             }
           }}
         />
@@ -194,11 +214,13 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
       )}
 
       {/* Subtle overlay */}
-      <div className={`absolute inset-0 pointer-events-none ${
-        isDaylight
-          ? 'bg-gradient-to-t from-slate-950/25 via-transparent to-transparent'
-          : 'bg-gradient-to-t from-black/60 via-transparent to-black/10'
-      }`} />
+      <div
+        className={`absolute inset-0 pointer-events-none ${
+          isDaylight
+            ? 'bg-gradient-to-t from-slate-950/25 via-transparent to-transparent'
+            : 'bg-gradient-to-t from-black/60 via-transparent to-black/10'
+        }`}
+      />
 
       {/* Navigation Arrows */}
       {slides.length > 1 && (
@@ -272,11 +294,13 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
       {hasGallery && (
         <div className="absolute top-2 right-2 flex items-center gap-1.5 z-20">
           {images.length > 0 && (
-            <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm border ${
-              isDaylight
-                ? 'bg-white/95 text-slate-800 border-slate-300 shadow-slate-200'
-                : 'bg-black/70 text-white border-white/20'
-            }`}>
+            <span
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold backdrop-blur-md shadow-sm border ${
+                isDaylight
+                  ? 'bg-white/95 text-slate-800 border-slate-300 shadow-slate-200'
+                  : 'bg-black/70 text-white border-white/20'
+              }`}
+            >
               <Images className={`h-3 w-3 ${isDaylight ? 'text-indigo-600' : 'text-slate-300'}`} />
               {images.length}
             </span>
@@ -307,7 +331,10 @@ const MediaCarousel: React.FC<{ asset: Asset; onExpand: () => void }> = ({ asset
 
       {/* Expand Icon */}
       <button
-        onClick={(e) => { e.stopPropagation(); onExpand(); }}
+        onClick={(e) => {
+          e.stopPropagation();
+          onExpand();
+        }}
         className={`absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center opacity-90 group-hover:opacity-100 transition-all backdrop-blur-md z-20 cursor-pointer shadow-md ${
           isDaylight
             ? 'bg-white/95 hover:bg-white text-slate-800 border border-slate-300'
@@ -328,29 +355,26 @@ const LightboxModal: React.FC<{ asset: Asset; onClose: () => void }> = ({ asset,
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const images = asset.mediaItems?.filter(m => m.mediaType === 'IMAGE') ?? [];
-  const video  = asset.mediaItems?.find(m => m.mediaType === 'VIDEO');
+  const images = asset.mediaItems?.filter((m) => m.mediaType === 'IMAGE') ?? [];
+  const video = asset.mediaItems?.find((m) => m.mediaType === 'VIDEO');
   const slides: Array<AssetMedia | 'video'> = [...images, ...(video ? ['video' as const] : [])];
 
   const isVideoTab = slides[activeIdx] === 'video';
-  const currentUrl = isVideoTab ? null : (slides[activeIdx] as AssetMedia)?.url ?? asset.imageUrl;
+  const currentUrl = isVideoTab ? null : ((slides[activeIdx] as AssetMedia)?.url ?? asset.imageUrl);
 
   const go = (dir: number) => {
     videoRef.current?.pause();
     setIsPlaying(false);
-    setActiveIdx(i => (i + dir + slides.length) % slides.length);
+    setActiveIdx((i) => (i + dir + slides.length) % slides.length);
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-2 sm:p-3"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-2 sm:p-3" onClick={onClose}>
       <button onClick={onClose} className="absolute top-4 right-4 text-white/70 hover:text-white z-10">
         <X className="h-7 w-7" />
       </button>
 
-      <div className="relative max-w-4xl w-full" onClick={e => e.stopPropagation()}>
+      <div className="relative max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
         {/* Main Media */}
         <div className="relative rounded-xl overflow-hidden bg-slate-950 aspect-video">
           {!isVideoTab && (
@@ -384,10 +408,16 @@ const LightboxModal: React.FC<{ asset: Asset; onClose: () => void }> = ({ asset,
 
           {slides.length > 1 && (
             <>
-              <button onClick={() => go(-1)} className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white">
+              <button
+                onClick={() => go(-1)}
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white"
+              >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-              <button onClick={() => go(1)} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white">
+              <button
+                onClick={() => go(1)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/90 flex items-center justify-center text-white"
+              >
                 <ChevronRight className="h-5 w-5" />
               </button>
             </>
@@ -400,7 +430,10 @@ const LightboxModal: React.FC<{ asset: Asset; onClose: () => void }> = ({ asset,
             {slides.map((s, i) => (
               <button
                 key={i}
-                onClick={() => { videoRef.current?.pause(); setActiveIdx(i); }}
+                onClick={() => {
+                  videoRef.current?.pause();
+                  setActiveIdx(i);
+                }}
                 className={`relative w-16 h-12 rounded-lg overflow-hidden border-2 transition-all ${
                   i === activeIdx ? 'border-amber-400 scale-105' : 'border-transparent opacity-60 hover:opacity-100'
                 }`}
@@ -455,18 +488,26 @@ const MachineCard: React.FC<{
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className={`font-mono text-[10px] px-1.5 py-0.5 rounded border font-bold ${
-                isDaylight
-                  ? 'text-amber-900 bg-amber-50 border-amber-200'
-                  : 'text-amber-400 bg-amber-900/20 border-amber-700/40'
-              }`}>
+              <span
+                className={`font-mono text-[10px] px-1.5 py-0.5 rounded border font-bold ${
+                  isDaylight
+                    ? 'text-amber-900 bg-amber-50 border-amber-200'
+                    : 'text-amber-400 bg-amber-900/20 border-amber-700/40'
+                }`}
+              >
                 {asset.assetTag}
               </span>
-              <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                asset.category === 'AGRICULTURE'
-                  ? isDaylight ? 'bg-green-100 text-green-800' : 'bg-green-900/30 text-green-400'
-                  : isDaylight ? 'bg-blue-100 text-blue-800' : 'bg-blue-900/30 text-blue-400'
-              }`}>
+              <span
+                className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                  asset.category === 'AGRICULTURE'
+                    ? isDaylight
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-green-900/30 text-green-400'
+                    : isDaylight
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-blue-900/30 text-blue-400'
+                }`}
+              >
                 {asset.category === 'AGRICULTURE' ? 'Agro' : 'Civil'}
               </span>
             </div>
@@ -491,13 +532,17 @@ const MachineCard: React.FC<{
             <MapPin className="h-3 w-3 shrink-0 text-emerald-500" />
             <span className="truncate font-medium">
               {asset.hubName || 'Hardoi Central Yard'}
-              {asset.cityName && <span className={isDaylight ? 'text-slate-400' : 'text-slate-500'}>, {asset.cityName}</span>}
+              {asset.cityName && (
+                <span className={isDaylight ? 'text-slate-400' : 'text-slate-500'}>, {asset.cityName}</span>
+              )}
             </span>
           </div>
           {asset.operatorRequired && (
             <div className="flex items-center gap-1.5 col-span-2">
               <UserCheck className="h-3 w-3 shrink-0 text-amber-700 dark:text-amber-500" />
-              <span className={isDaylight ? 'text-amber-900 font-bold' : 'text-amber-400 font-semibold'}>Operator Mandatory</span>
+              <span className={isDaylight ? 'text-amber-900 font-bold' : 'text-amber-400 font-semibold'}>
+                Operator Mandatory
+              </span>
             </div>
           )}
           {/* Shift Allowance (In short) */}
@@ -508,7 +553,9 @@ const MachineCard: React.FC<{
         </div>
 
         {/* Pricing */}
-        <div className={`rounded-xl p-3 mt-auto ${isDaylight ? 'bg-slate-50 border border-slate-100' : 'bg-slate-800/60 border border-slate-700/40'}`}>
+        <div
+          className={`rounded-xl p-3 mt-auto ${isDaylight ? 'bg-slate-50 border border-slate-100' : 'bg-slate-800/60 border border-slate-700/40'}`}
+        >
           <div className="flex items-end justify-between">
             <div>
               <div className={`text-xl font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
@@ -517,7 +564,9 @@ const MachineCard: React.FC<{
                   /{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}
                 </span>
               </div>
-              <div className={`text-[11px] mt-0.5 ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400')}`}>
+              <div
+                className={`text-[11px] mt-0.5 ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
+              >
                 Deposit: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}
               </div>
             </div>
@@ -544,8 +593,8 @@ const MachineCard: React.FC<{
                       ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm shadow-amber-200'
                       : 'bg-amber-500 hover:bg-amber-400 text-black'
                     : isDaylight
-                    ? 'bg-slate-200 text-slate-500 cursor-default'
-                    : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
+                      ? 'bg-slate-200 text-slate-500 cursor-default'
+                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
                 }`}
               >
                 <Zap className="h-3.5 w-3.5" />
@@ -596,9 +645,18 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const [modelCount, setModelCount] = useState<number>(() => api.getMachineModels(undefined, undefined, true).length);
 
   useEffect(() => {
-    api.fetchManufacturers(true).then((m) => setMfgCount(m.length)).catch(() => {});
-    api.fetchEquipmentTypes(true).then((t) => setTypeCount(t.length)).catch(() => {});
-    api.fetchMachineModels(undefined, undefined, true).then((md) => setModelCount(md.length)).catch(() => {});
+    api
+      .fetchManufacturers(true)
+      .then((m) => setMfgCount(m.length))
+      .catch(() => {});
+    api
+      .fetchEquipmentTypes(true)
+      .then((t) => setTypeCount(t.length))
+      .catch(() => {});
+    api
+      .fetchMachineModels(undefined, undefined, true)
+      .then((md) => setModelCount(md.length))
+      .catch(() => {});
 
     return api.subscribe(() => {
       setMfgCount(api.getManufacturers(true).length);
@@ -627,7 +685,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   }, []);
 
   const [feedbackModal, setFeedbackModal] = useState<{
-    isOpen: boolean; variant: 'success' | 'error' | 'warning' | 'info'; title: string; message: string;
+    isOpen: boolean;
+    variant: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
   }>({ isOpen: false, variant: 'success', title: '', message: '' });
 
   const showFeedback = (variant: 'success' | 'error' | 'warning' | 'info', title: string, message: string) =>
@@ -635,53 +696,82 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
 
   const states = api.getStates();
   const cities = api.getCities();
-  const hubs   = api.getHubs();
+  const hubs = api.getHubs();
 
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
-  const [selectedCityId,  setSelectedCityId]  = useState<string>('ALL');
-  const [selectedHubId,   setSelectedHubId]   = useState<string>('ALL');
+  const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
+  const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
-  const [statusFilter,    setStatusFilter]    = useState<string>('ALL');
-  const [searchQuery,     setSearchQuery]     = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const [visibleCount, setVisibleCount] = useState<number>(7);
 
   const availableCities = useMemo(() => {
     if (selectedStateId === 'ALL') return cities;
-    return cities.filter(c => c.stateId === Number(selectedStateId));
+    return cities.filter((c) => c.stateId === Number(selectedStateId));
   }, [cities, selectedStateId]);
 
   const availableHubs = useMemo(() => {
-    if (selectedCityId !== 'ALL') return hubs.filter(h => h.cityId === Number(selectedCityId));
+    if (selectedCityId !== 'ALL') return hubs.filter((h) => h.cityId === Number(selectedCityId));
     if (selectedStateId !== 'ALL') {
-      const cityIds = new Set(availableCities.map(c => c.id));
-      return hubs.filter(h => cityIds.has(h.cityId));
+      const cityIds = new Set(availableCities.map((c) => c.id));
+      return hubs.filter((h) => cityIds.has(h.cityId));
     }
     return hubs;
   }, [hubs, selectedCityId, selectedStateId, availableCities]);
 
-  const handleStateChange = (val: string | number) => { setSelectedStateId(String(val)); setSelectedCityId('ALL'); setSelectedHubId('ALL'); };
-  const handleCityChange  = (val: string | number) => { setSelectedCityId(String(val)); setSelectedHubId('ALL'); };
-  const handleResetFilters = () => { setSelectedStateId('ALL'); setSelectedCityId('ALL'); setSelectedHubId('ALL'); setSelectedCategory('ALL'); setStatusFilter('ALL'); setSearchQuery(''); };
+  const handleStateChange = (val: string | number) => {
+    setSelectedStateId(String(val));
+    setSelectedCityId('ALL');
+    setSelectedHubId('ALL');
+  };
+  const handleCityChange = (val: string | number) => {
+    setSelectedCityId(String(val));
+    setSelectedHubId('ALL');
+  };
+  const handleResetFilters = () => {
+    setSelectedStateId('ALL');
+    setSelectedCityId('ALL');
+    setSelectedHubId('ALL');
+    setSelectedCategory('ALL');
+    setStatusFilter('ALL');
+    setSearchQuery('');
+  };
 
   const filteredAssets = useMemo(() => {
-    return assetsList.filter(asset => {
-      const assetHub    = hubs.find(h => h.id === asset.hubId);
-      const assetCity   = cities.find(c => c.id === assetHub?.cityId);
+    return assetsList.filter((asset) => {
+      const assetHub = hubs.find((h) => h.id === asset.hubId);
+      const assetCity = cities.find((c) => c.id === assetHub?.cityId);
       const assetStateId = assetCity?.stateId;
 
       if (selectedStateId !== 'ALL' && assetStateId !== Number(selectedStateId)) return false;
-      if (selectedCityId  !== 'ALL' && assetHub?.cityId !== Number(selectedCityId)) return false;
-      if (selectedHubId   !== 'ALL' && asset.hubId !== Number(selectedHubId)) return false;
+      if (selectedCityId !== 'ALL' && assetHub?.cityId !== Number(selectedCityId)) return false;
+      if (selectedHubId !== 'ALL' && asset.hubId !== Number(selectedHubId)) return false;
       if (selectedCategory !== 'ALL' && asset.category !== selectedCategory) return false;
-      if (statusFilter    !== 'ALL' && asset.status !== statusFilter) return false;
+      if (statusFilter !== 'ALL' && asset.status !== statusFilter) return false;
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
-        if (![asset.name, asset.assetTag, asset.modelName, asset.manufacturerName, asset.hubName].some(s => s?.toLowerCase().includes(q))) return false;
+        if (
+          ![asset.name, asset.assetTag, asset.modelName, asset.manufacturerName, asset.hubName].some((s) =>
+            s?.toLowerCase().includes(q),
+          )
+        )
+          return false;
       }
       return true;
     });
-  }, [assetsList, hubs, cities, selectedStateId, selectedCityId, selectedHubId, selectedCategory, statusFilter, searchQuery]);
+  }, [
+    assetsList,
+    hubs,
+    cities,
+    selectedStateId,
+    selectedCityId,
+    selectedHubId,
+    selectedCategory,
+    statusFilter,
+    searchQuery,
+  ]);
 
   // Reset to initial 7 items when filters change
   React.useEffect(() => {
@@ -697,13 +787,13 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollTop + clientHeight >= scrollHeight - 60) {
       if (visibleCount < filteredAssets.length) {
-        setVisibleCount(prev => Math.min(prev + 7, filteredAssets.length));
+        setVisibleCount((prev) => Math.min(prev + 7, filteredAssets.length));
       }
     }
   };
 
   const handleLoadMore = () => {
-    setVisibleCount(prev => Math.min(prev + 7, filteredAssets.length));
+    setVisibleCount((prev) => Math.min(prev + 7, filteredAssets.length));
   };
 
   const handleMachineAdded = (newAsset: Asset) => {
@@ -711,17 +801,19 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
     showFeedback('success', 'Machine Added', `"${newAsset.name}" registered in fleet.`);
   };
 
-  const statsAvailable = filteredAssets.filter(a => a.status === 'AVAILABLE').length;
-  const statsOnRent    = filteredAssets.filter(a => a.status === 'ON_RENT').length;
+  const statsAvailable = filteredAssets.filter((a) => a.status === 'AVAILABLE').length;
+  const statsOnRent = filteredAssets.filter((a) => a.status === 'ON_RENT').length;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-3">
       {/* Sub-tabs Navigation Bar under Assets */}
-      <div className={`flex-shrink-0 flex items-center justify-between p-1.5 rounded-2xl border transition-all ${
-        isDaylight
-          ? 'bg-slate-100/90 border-slate-200/90 shadow-sm'
-          : 'bg-slate-900/90 border-slate-800 shadow-md backdrop-blur-md'
-      }`}>
+      <div
+        className={`flex-shrink-0 flex items-center justify-between p-1.5 rounded-2xl border transition-all ${
+          isDaylight
+            ? 'bg-slate-100/90 border-slate-200/90 shadow-sm'
+            : 'bg-slate-900/90 border-slate-800 shadow-md backdrop-blur-md'
+        }`}
+      >
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full">
           {[
             {
@@ -761,22 +853,26 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       ? 'bg-white text-slate-950 shadow-sm border border-slate-200/80 ring-1 ring-slate-300/40'
                       : 'bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-transparent border border-amber-500/40 text-amber-300 shadow-lg shadow-amber-500/5'
                     : isDaylight
-                    ? 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                      ? 'text-slate-600 hover:text-slate-950 hover:bg-white/60'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                 }`}
               >
-                <Icon className={`h-4 w-4 ${isActive ? (isDaylight ? 'text-amber-600' : 'text-amber-400') : 'text-slate-400'}`} />
+                <Icon
+                  className={`h-4 w-4 ${isActive ? (isDaylight ? 'text-amber-600' : 'text-amber-400') : 'text-slate-400'}`}
+                />
                 <span>{tab.label}</span>
                 {tab.count > 0 && (
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
-                    isActive
-                      ? isDaylight
-                        ? 'bg-amber-100 text-amber-900'
-                        : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
-                      : isDaylight
-                      ? 'bg-slate-200 text-slate-700'
-                      : 'bg-slate-800 text-slate-400'
-                  }`}>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold ${
+                      isActive
+                        ? isDaylight
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-amber-400/20 text-amber-300 border border-amber-400/30'
+                        : isDaylight
+                          ? 'bg-slate-200 text-slate-700'
+                          : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
                     {tab.count}
                   </span>
                 )}
@@ -794,268 +890,380 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
       {activeSubTab === 'fleet' && (
         <div className="flex-1 flex flex-col min-h-0 gap-2">
           {/* Header */}
-      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div>
-          <h2 className={`text-lg sm:text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-            <Truck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Fleet &amp; Machinery
-          </h2>
-          <p className={`text-[11px] mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-            {filteredAssets.length} machines · {statsAvailable} available · {statsOnRent} on rent
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className={`flex rounded-lg border p-0.5 ${isDaylight ? 'border-slate-300 bg-slate-100' : 'border-slate-700 bg-slate-800'}`}>
-            {(['grid', 'list'] as const).map(mode => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
-                  viewMode === mode
-                    ? isDaylight ? 'bg-white text-slate-900 shadow-sm' : 'bg-slate-700 text-white'
-                    : isDaylight ? 'text-slate-500' : 'text-slate-500'
-                }`}
+          <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2
+                className={`text-lg sm:text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}
               >
-                {mode === 'grid' ? '⊞ Grid' : '☰ List'}
-              </button>
-            ))}
-          </div>
+                <Truck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
+                Fleet &amp; Machinery
+              </h2>
+              <p className={`text-[11px] mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
+                {filteredAssets.length} machines · {statsAvailable} available · {statsOnRent} on rent
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* View toggle */}
+              <div
+                className={`flex rounded-lg border p-0.5 ${isDaylight ? 'border-slate-300 bg-slate-100' : 'border-slate-700 bg-slate-800'}`}
+              >
+                {(['grid', 'list'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setViewMode(mode)}
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all ${
+                      viewMode === mode
+                        ? isDaylight
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'bg-slate-700 text-white'
+                        : isDaylight
+                          ? 'text-slate-500'
+                          : 'text-slate-500'
+                    }`}
+                  >
+                    {mode === 'grid' ? '⊞ Grid' : '☰ List'}
+                  </button>
+                ))}
+              </div>
 
-          {!isGuest && (
-            <button
-              onClick={() => setIsAddModalOpen(true)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                isDaylight
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-              }`}
-            >
-              <Plus className="h-4 w-4 stroke-[2.5]" />
-              Add Machine
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className={`flex-shrink-0 p-2.5 rounded-xl border ${isDaylight ? 'border-slate-300 bg-slate-50/60' : 'border-slate-800 bg-slate-900/40'}`}>
-        <div className="flex items-center justify-between mb-1.5">
-          <span className={`text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'text-slate-400' : 'text-slate-500'}`}>Filters</span>
-          <button onClick={handleResetFilters} className={`text-[11px] flex items-center gap-1 font-bold ${isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200'}`}>
-            <RotateCcw className="h-3 w-3" /> Reset
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          <SearchSelect options={[{ value: 'ALL', label: 'All States' }, ...states.map(s => ({ value: String(s.id), label: s.name }))]} value={selectedStateId} onChange={v => handleStateChange(v || 'ALL')} placeholder="All States" isClearable={false} />
-          <SearchSelect
-            options={
-              selectedStateId !== 'ALL' && availableCities.length === 0
-                ? []
-                : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map(c => ({ value: String(c.id), label: c.name }))]
-            }
-            value={selectedCityId}
-            onChange={v => handleCityChange(v || 'ALL')}
-            placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
-            isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
-            isClearable={false}
-          />
-          <SearchSelect
-            options={
-              (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
-                ? []
-                : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map(h => ({ value: String(h.id), label: h.name }))]
-            }
-            value={selectedHubId}
-            onChange={v => setSelectedHubId(String(v || 'ALL'))}
-            placeholder={
-              selectedStateId !== 'ALL' && availableCities.length === 0
-                ? 'No cities in this State'
-                : selectedCityId !== 'ALL' && availableHubs.length === 0
-                ? 'No hubs in this City'
-                : 'All Hubs'
-            }
-            isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
-            isClearable={false}
-          />
-          <SearchSelect options={[{ value: 'ALL', label: 'All Categories' }, { value: 'CONSTRUCTION', label: 'Civil Construction' }, { value: 'AGRICULTURE', label: 'Agro-Mechanization' }]} value={selectedCategory} onChange={v => setSelectedCategory(String(v || 'ALL'))} placeholder="Category" isClearable={false} />
-          <SearchSelect options={[{ value: 'ALL', label: 'All Statuses' }, { value: 'AVAILABLE', label: 'Available' }, { value: 'ON_RENT', label: 'On Rent' }, { value: 'MAINTENANCE', label: 'Maintenance' }]} value={statusFilter} onChange={v => setStatusFilter(String(v || 'ALL'))} placeholder="Status" isClearable={false} />
-          <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search…"
-              className={`w-full rounded-lg border pl-8 pr-2.5 py-1.5 text-xs focus:outline-none transition-colors ${isDaylight ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'}`}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      {filteredAssets.length === 0 ? (
-        <div className={`flex-1 min-h-0 rounded-2xl border p-12 text-center flex flex-col items-center justify-center ${isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/30'}`}>
-          <Truck className="h-10 w-10 mx-auto opacity-20 mb-2" />
-          <p className="font-bold text-sm text-slate-500">No machinery matches your filters</p>
-          <button onClick={handleResetFilters} className="mt-2 text-xs text-amber-600 hover:text-amber-500 font-semibold">Clear filters</button>
-        </div>
-      ) : viewMode === 'grid' ? (
-        /* Grid View — scrolls within section dynamically */
-        <div
-          className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${
-            isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40'
-          }`}
-        >
-          <div
-            onScroll={handleScroll}
-            className="flex-1 min-h-0 p-3 overflow-y-auto"
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5">
-              {visibleAssets.map(asset => (
-                <MachineCard
-                  key={asset.id}
-                  asset={asset}
-                  onBook={() => onSelectForBooking(asset)}
-                  onExpand={() => setLightboxAsset(asset)}
-                  onDelete={() => setAssetToDelete(asset)}
-                  isRoot={isRoot}
-                />
-              ))}
+              {!isGuest && (
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    isDaylight
+                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                  }`}
+                >
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                  Add Machine
+                </button>
+              )}
             </div>
           </div>
-          <InfiniteScrollFooter
-            loadedCount={visibleAssets.length}
-            totalCount={filteredAssets.length}
-            onLoadMore={handleLoadMore}
-            itemName="machinery units"
-          />
-        </div>
-      ) : (
-        /* List View — compact table scrolling dynamically within section */
-        <div className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900'}`}>
+
+          {/* Filters */}
           <div
-            onScroll={handleScroll}
-            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
+            className={`flex-shrink-0 p-2.5 rounded-xl border ${isDaylight ? 'border-slate-300 bg-slate-50/60' : 'border-slate-800 bg-slate-900/40'}`}
           >
-            <table className="w-full text-left text-xs">
-              <thead className={`sticky top-0 z-10 border-b text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-800 bg-slate-950 text-slate-300'}`}>
-                <tr>
-                  <th className="py-3 px-4">Machine</th>
-                  <th className="py-3 px-4">Model</th>
-                  <th className="py-3 px-4">Hub</th>
-                  <th className="py-3 px-4">Rate / Deposit</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Action</th>
-                </tr>
-              </thead>
-              <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
-                {visibleAssets.map(asset => {
-                  const isAvail = asset.status === 'AVAILABLE';
-                  const thumb = asset.mediaItems?.find(m => m.mediaType === 'IMAGE')?.url ?? asset.imageUrl;
-                  const hasVideo = asset.mediaItems?.some(m => m.mediaType === 'VIDEO');
-                  return (
-                    <tr key={asset.id} className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="relative h-12 w-16 rounded-lg overflow-hidden bg-slate-900 shrink-0 cursor-pointer" onClick={() => setLightboxAsset(asset)}>
-                            <img
-                              src={thumb}
-                              alt={asset.name}
-                              className="h-full w-full object-cover"
-                              onError={(e) => {
-                                const img = e.target as HTMLImageElement;
-                                if (img.src && img.src.includes('?')) {
-                                  img.src = img.src.split('?')[0];
-                                } else {
-                                  img.src =
-                                    'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
-                                }
-                              }}
-                            />
-                            {hasVideo && <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center"><Play className="h-2 w-2 text-white" /></div>}
-                            {(asset.mediaItems?.filter(m => m.mediaType === 'IMAGE').length ?? 0) > 1 && (
-                              <div className="absolute top-0.5 right-0.5 bg-black/70 rounded px-1 text-[8px] text-white font-bold">
-                                +{asset.mediaItems!.filter(m => m.mediaType === 'IMAGE').length}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border font-bold ${isDaylight ? 'text-amber-900 bg-amber-50 border-amber-200' : 'text-amber-400 bg-amber-900/20 border-amber-700/40'}`}>{asset.assetTag}</span>
-                            <div className={`font-extrabold text-sm mt-0.5 ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{asset.name}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold">{asset.modelName}</div>
-                        <div className="text-slate-500 text-[11px] flex items-center gap-1"><Building2 className="h-3 w-3" />{asset.manufacturerName}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-1 font-semibold"><MapPin className="h-3 w-3 text-emerald-500" />{asset.hubName}</div>
-                        <div className="text-slate-500 text-[10px] ml-4">{asset.cityName}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>{formatINR(asset.dailyRate)}<span className="text-[10px] font-normal text-slate-500">/{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}</span></div>
-                        <div className={`text-[11px] ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : (isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400')}`}>Dep: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}</div>
-                        <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold truncate max-w-[200px]">{asset.shiftTerms || getBillingUnitShiftTerms(asset.billingUnit)}</div>
-                      </td>
-                      <td className="py-3 px-4"><StatusBadge status={asset.status} size="sm" /></td>
-                      <td className="py-3 px-4 text-right">
-                        <div className="inline-flex items-center gap-1.5 justify-end">
-                          {isRoot && (
-                            <button
-                              onClick={() => setAssetToDelete(asset)}
-                              className="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
-                              data-tooltip="Delete Machine from Fleet (Root Authority Only)"
-                              data-tooltip-pos="left"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                          <button onClick={() => onSelectForBooking(asset)} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${isAvail ? isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm' : 'bg-amber-500 hover:bg-amber-400 text-black' : isDaylight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}>
-                            <Zap className="h-3.5 w-3.5" />{isAvail ? 'Book' : 'Unavailable'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="flex items-center justify-between mb-1.5">
+              <span
+                className={`text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'text-slate-400' : 'text-slate-500'}`}
+              >
+                Filters
+              </span>
+              <button
+                onClick={handleResetFilters}
+                className={`text-[11px] flex items-center gap-1 font-bold ${isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200'}`}
+              >
+                <RotateCcw className="h-3 w-3" /> Reset
+              </button>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              <SearchSelect
+                options={[
+                  { value: 'ALL', label: 'All States' },
+                  ...states.map((s) => ({ value: String(s.id), label: s.name })),
+                ]}
+                value={selectedStateId}
+                onChange={(v) => handleStateChange(v || 'ALL')}
+                placeholder="All States"
+                isClearable={false}
+              />
+              <SearchSelect
+                options={
+                  selectedStateId !== 'ALL' && availableCities.length === 0
+                    ? []
+                    : [
+                        { value: 'ALL', label: 'All Cities' },
+                        ...availableCities.map((c) => ({ value: String(c.id), label: c.name })),
+                      ]
+                }
+                value={selectedCityId}
+                onChange={(v) => handleCityChange(v || 'ALL')}
+                placeholder={
+                  selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+                }
+                isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
+                isClearable={false}
+              />
+              <SearchSelect
+                options={
+                  (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                  (selectedStateId !== 'ALL' && availableCities.length === 0)
+                    ? []
+                    : [
+                        { value: 'ALL', label: 'All Hubs' },
+                        ...availableHubs.map((h) => ({ value: String(h.id), label: h.name })),
+                      ]
+                }
+                value={selectedHubId}
+                onChange={(v) => setSelectedHubId(String(v || 'ALL'))}
+                placeholder={
+                  selectedStateId !== 'ALL' && availableCities.length === 0
+                    ? 'No cities in this State'
+                    : selectedCityId !== 'ALL' && availableHubs.length === 0
+                      ? 'No hubs in this City'
+                      : 'All Hubs'
+                }
+                isDisabled={
+                  (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                  (selectedStateId !== 'ALL' && availableCities.length === 0)
+                }
+                isClearable={false}
+              />
+              <SearchSelect
+                options={[
+                  { value: 'ALL', label: 'All Categories' },
+                  { value: 'CONSTRUCTION', label: 'Civil Construction' },
+                  { value: 'AGRICULTURE', label: 'Agro-Mechanization' },
+                ]}
+                value={selectedCategory}
+                onChange={(v) => setSelectedCategory(String(v || 'ALL'))}
+                placeholder="Category"
+                isClearable={false}
+              />
+              <SearchSelect
+                options={[
+                  { value: 'ALL', label: 'All Statuses' },
+                  { value: 'AVAILABLE', label: 'Available' },
+                  { value: 'ON_RENT', label: 'On Rent' },
+                  { value: 'MAINTENANCE', label: 'Maintenance' },
+                ]}
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(String(v || 'ALL'))}
+                placeholder="Status"
+                isClearable={false}
+              />
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search…"
+                  className={`w-full rounded-lg border pl-8 pr-2.5 py-1.5 text-xs focus:outline-none transition-colors ${isDaylight ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'}`}
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Infinite Scroll Footer */}
-          <InfiniteScrollFooter
-            loadedCount={visibleAssets.length}
-            totalCount={filteredAssets.length}
-            onLoadMore={handleLoadMore}
-            itemName="machinery units"
+          {/* Content */}
+          {filteredAssets.length === 0 ? (
+            <div
+              className={`flex-1 min-h-0 rounded-2xl border p-12 text-center flex flex-col items-center justify-center ${isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/30'}`}
+            >
+              <Truck className="h-10 w-10 mx-auto opacity-20 mb-2" />
+              <p className="font-bold text-sm text-slate-500">No machinery matches your filters</p>
+              <button
+                onClick={handleResetFilters}
+                className="mt-2 text-xs text-amber-600 hover:text-amber-500 font-semibold"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : viewMode === 'grid' ? (
+            /* Grid View — scrolls within section dynamically */
+            <div
+              className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${
+                isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40'
+              }`}
+            >
+              <div onScroll={handleScroll} className="flex-1 min-h-0 p-3 overflow-y-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5">
+                  {visibleAssets.map((asset) => (
+                    <MachineCard
+                      key={asset.id}
+                      asset={asset}
+                      onBook={() => onSelectForBooking(asset)}
+                      onExpand={() => setLightboxAsset(asset)}
+                      onDelete={() => setAssetToDelete(asset)}
+                      isRoot={isRoot}
+                    />
+                  ))}
+                </div>
+              </div>
+              <InfiniteScrollFooter
+                loadedCount={visibleAssets.length}
+                totalCount={filteredAssets.length}
+                onLoadMore={handleLoadMore}
+                itemName="machinery units"
+              />
+            </div>
+          ) : (
+            /* List View — compact table scrolling dynamically within section */
+            <div
+              className={`flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col ${isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900'}`}
+            >
+              <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
+                <table className="w-full text-left text-xs">
+                  <thead
+                    className={`sticky top-0 z-10 border-b text-[10px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-200 bg-slate-50 text-slate-700' : 'border-slate-800 bg-slate-950 text-slate-300'}`}
+                  >
+                    <tr>
+                      <th className="py-3 px-4">Machine</th>
+                      <th className="py-3 px-4">Model</th>
+                      <th className="py-3 px-4">Hub</th>
+                      <th className="py-3 px-4">Rate / Deposit</th>
+                      <th className="py-3 px-4">Status</th>
+                      <th className="py-3 px-4 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
+                    {visibleAssets.map((asset) => {
+                      const isAvail = asset.status === 'AVAILABLE';
+                      const thumb = asset.mediaItems?.find((m) => m.mediaType === 'IMAGE')?.url ?? asset.imageUrl;
+                      const hasVideo = asset.mediaItems?.some((m) => m.mediaType === 'VIDEO');
+                      return (
+                        <tr
+                          key={asset.id}
+                          className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="relative h-12 w-16 rounded-lg overflow-hidden bg-slate-900 shrink-0 cursor-pointer"
+                                onClick={() => setLightboxAsset(asset)}
+                              >
+                                <img
+                                  src={thumb}
+                                  alt={asset.name}
+                                  className="h-full w-full object-cover"
+                                  onError={(e) => {
+                                    const img = e.target as HTMLImageElement;
+                                    if (img.src && img.src.includes('?')) {
+                                      img.src = img.src.split('?')[0];
+                                    } else {
+                                      img.src = 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+                                    }
+                                  }}
+                                />
+                                {hasVideo && (
+                                  <div className="absolute bottom-0.5 right-0.5 w-4 h-4 bg-amber-500 rounded-full flex items-center justify-center">
+                                    <Play className="h-2 w-2 text-white" />
+                                  </div>
+                                )}
+                                {(asset.mediaItems?.filter((m) => m.mediaType === 'IMAGE').length ?? 0) > 1 && (
+                                  <div className="absolute top-0.5 right-0.5 bg-black/70 rounded px-1 text-[8px] text-white font-bold">
+                                    +{asset.mediaItems!.filter((m) => m.mediaType === 'IMAGE').length}
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <span
+                                  className={`font-mono text-[9px] px-1.5 py-0.5 rounded border font-bold ${isDaylight ? 'text-amber-900 bg-amber-50 border-amber-200' : 'text-amber-400 bg-amber-900/20 border-amber-700/40'}`}
+                                >
+                                  {asset.assetTag}
+                                </span>
+                                <div
+                                  className={`font-extrabold text-sm mt-0.5 ${isDaylight ? 'text-slate-900' : 'text-white'}`}
+                                >
+                                  {asset.name}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="font-semibold">{asset.modelName}</div>
+                            <div className="text-slate-500 text-[11px] flex items-center gap-1">
+                              <Building2 className="h-3 w-3" />
+                              {asset.manufacturerName}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-1 font-semibold">
+                              <MapPin className="h-3 w-3 text-emerald-500" />
+                              {asset.hubName}
+                            </div>
+                            <div className="text-slate-500 text-[10px] ml-4">{asset.cityName}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
+                              {formatINR(asset.dailyRate)}
+                              <span className="text-[10px] font-normal text-slate-500">
+                                /{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}
+                              </span>
+                            </div>
+                            <div
+                              className={`text-[11px] ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
+                            >
+                              Dep: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}
+                            </div>
+                            <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold truncate max-w-[200px]">
+                              {asset.shiftTerms || getBillingUnitShiftTerms(asset.billingUnit)}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <StatusBadge status={asset.status} size="sm" />
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <div className="inline-flex items-center gap-1.5 justify-end">
+                              {isRoot && (
+                                <button
+                                  onClick={() => setAssetToDelete(asset)}
+                                  className="p-1.5 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition-all cursor-pointer"
+                                  data-tooltip="Delete Machine from Fleet (Root Authority Only)"
+                                  data-tooltip-pos="left"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => onSelectForBooking(asset)}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${isAvail ? (isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm' : 'bg-amber-500 hover:bg-amber-400 text-black') : isDaylight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}
+                              >
+                                <Zap className="h-3.5 w-3.5" />
+                                {isAvail ? 'Book' : 'Unavailable'}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Infinite Scroll Footer */}
+              <InfiniteScrollFooter
+                loadedCount={visibleAssets.length}
+                totalCount={filteredAssets.length}
+                onLoadMore={handleLoadMore}
+                itemName="machinery units"
+              />
+            </div>
+          )}
+
+          {/* Lightbox */}
+          {lightboxAsset && <LightboxModal asset={lightboxAsset} onClose={() => setLightboxAsset(null)} />}
+
+          {/* Add Machine Modal */}
+          <AddMachineModal
+            isOpen={isAddModalOpen}
+            onClose={() => setIsAddModalOpen(false)}
+            onMachineAdded={handleMachineAdded}
           />
-        </div>
-      )}
 
-      {/* Lightbox */}
-      {lightboxAsset && <LightboxModal asset={lightboxAsset} onClose={() => setLightboxAsset(null)} />}
+          {/* Feedback Modal */}
+          <ConfirmationModal
+            isOpen={feedbackModal.isOpen}
+            onClose={() => setFeedbackModal((p) => ({ ...p, isOpen: false }))}
+            variant={feedbackModal.variant}
+            title={feedbackModal.title}
+            message={feedbackModal.message}
+          />
 
-      {/* Add Machine Modal */}
-      <AddMachineModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onMachineAdded={handleMachineAdded} />
-
-      {/* Feedback Modal */}
-      <ConfirmationModal
-        isOpen={feedbackModal.isOpen}
-        onClose={() => setFeedbackModal(p => ({ ...p, isOpen: false }))}
-        variant={feedbackModal.variant}
-        title={feedbackModal.title}
-        message={feedbackModal.message}
-      />
-
-      {/* Machine Deletion Confirmation Modal (Root only) */}
-      <ConfirmationModal
-        isOpen={!!assetToDelete}
-        onClose={() => setAssetToDelete(null)}
-        onConfirm={handleDeleteAssetConfirm}
-        variant="error"
-        title={`Delete Machine: ${assetToDelete?.name} (${assetToDelete?.assetTag})`}
-        message={`Are you sure you want to permanently remove this machinery from the fleet? This operation is irreversible and strictly restricted to Root administrators.`}
-        confirmLabel="Confirm Permanent Delete"
-        showCancel={true}
-      />
+          {/* Machine Deletion Confirmation Modal (Root only) */}
+          <ConfirmationModal
+            isOpen={!!assetToDelete}
+            onClose={() => setAssetToDelete(null)}
+            onConfirm={handleDeleteAssetConfirm}
+            variant="error"
+            title={`Delete Machine: ${assetToDelete?.name} (${assetToDelete?.assetTag})`}
+            message={`Are you sure you want to permanently remove this machinery from the fleet? This operation is irreversible and strictly restricted to Root administrators.`}
+            confirmLabel="Confirm Permanent Delete"
+            showCancel={true}
+          />
         </div>
       )}
     </div>

@@ -4,5 +4,5 @@ import com.equipgrid.intelligence.dto.request.IntelligenceChatRequest;
 import com.equipgrid.intelligence.dto.response.IntelligenceChatResponse;
 
 public interface IIntelligenceChatService {
-    IntelligenceChatResponse chat(IntelligenceChatRequest request);
+  IntelligenceChatResponse chat(IntelligenceChatRequest request);
 }

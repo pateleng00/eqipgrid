@@ -6,8 +6,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
- * Typed configuration for AWS S3 settings.
- * All values are injected from {@code application.properties} (prefix: {@code aws.s3}).
+ * Typed configuration for AWS S3 settings. All values are injected from {@code
+ * application.properties} (prefix: {@code aws.s3}).
  *
  * <pre>
  * aws.s3.access-key=...
@@ -24,41 +24,33 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "aws.s3")
 public class AwsProperties {
 
-    /**
-     * AWS IAM access key. Use environment variable {@code AWS_S3_ACCESS_KEY} in production.
-     */
-    private String accessKey;
+  /** AWS IAM access key. Use environment variable {@code AWS_S3_ACCESS_KEY} in production. */
+  private String accessKey;
 
-    /**
-     * AWS IAM secret key. Use environment variable {@code AWS_S3_SECRET_KEY} in production.
-     */
-    private String secretKey;
+  /** AWS IAM secret key. Use environment variable {@code AWS_S3_SECRET_KEY} in production. */
+  private String secretKey;
 
-    /**
-     * AWS region, e.g. {@code ap-south-1}.
-     */
-    private String region;
+  /** AWS region, e.g. {@code ap-south-1}. */
+  private String region;
 
-    /**
-     * Temporary / staging bucket.
-     * Files are uploaded here first; promoted to {@link #commonBucketName} after validation.
-     */
-    private String tmpBucketName;
+  /**
+   * Temporary / staging bucket. Files are uploaded here first; promoted to {@link
+   * #commonBucketName} after validation.
+   */
+  private String tmpBucketName;
 
-    /**
-     * Permanent / common bucket.
-     * All production files (machine images, inspection media, documents) live here.
-     */
-    private String commonBucketName;
+  /**
+   * Permanent / common bucket. All production files (machine images, inspection media, documents)
+   * live here.
+   */
+  private String commonBucketName;
 
-    /**
-     * Expiry duration (minutes) for presigned GET / PUT URLs. Defaults to 60.
-     */
-    private Integer signedUrlExpiryMinutes = 60;
+  /** Expiry duration (minutes) for presigned GET / PUT URLs. Defaults to 60. */
+  private Integer signedUrlExpiryMinutes = 60;
 
-    /**
-     * Optional LocalStack endpoint (e.g. {@code http://localhost:4566}).
-     * When set, the S3 client points here instead of real AWS — useful for local dev and tests.
-     */
-    private String endpoint;
+  /**
+   * Optional LocalStack endpoint (e.g. {@code http://localhost:4566}). When set, the S3 client
+   * points here instead of real AWS — useful for local dev and tests.
+   */
+  private String endpoint;
 }

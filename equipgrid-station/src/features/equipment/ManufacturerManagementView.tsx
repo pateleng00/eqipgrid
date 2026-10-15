@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Building2, Plus, Search, Edit2, Trash2, CheckCircle2,
-  XCircle, AlertTriangle, ShieldAlert, Globe, Hash, RefreshCw, X
+  Building2,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ShieldAlert,
+  Globe,
+  Hash,
+  RefreshCw,
+  X,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
@@ -156,8 +167,23 @@ export const ManufacturerManagementView: React.FC = () => {
 
   const handleNameChange = (val: string) => {
     setName(val);
-    if (!editingMfg && (!code || code === name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 10))) {
-      setCode(val.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 12));
+    if (
+      !editingMfg &&
+      (!code ||
+        code ===
+          name
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '-')
+            .slice(0, 10))
+    ) {
+      setCode(
+        val
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, '-')
+          .slice(0, 12),
+      );
     }
   };
 
@@ -271,7 +297,8 @@ export const ManufacturerManagementView: React.FC = () => {
             Original Equipment Manufacturers (OEM)
           </h2>
           <p className={`text-xs ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-            Manage machinery makers, brand codes, and global provenance. Admins can add and update; deletion is restricted.
+            Manage machinery makers, brand codes, and global provenance. Admins can add and update; deletion is
+            restricted.
           </p>
         </div>
 
@@ -279,7 +306,9 @@ export const ManufacturerManagementView: React.FC = () => {
           <button
             onClick={loadData}
             className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isDaylight ? 'border-slate-200 hover:bg-slate-100 text-slate-700' : 'border-slate-800 hover:bg-slate-800 text-slate-300'
+              isDaylight
+                ? 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                : 'border-slate-800 hover:bg-slate-800 text-slate-300'
             }`}
             title="Refresh List"
           >
@@ -296,9 +325,11 @@ export const ManufacturerManagementView: React.FC = () => {
       </div>
 
       {/* Filter / Search Bar with React-Select and Balanced Proportions */}
-      <div className={`p-3 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 ${
-        isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
-      }`}>
+      <div
+        className={`p-3 rounded-2xl border flex flex-col sm:flex-row items-center justify-between gap-3 flex-shrink-0 ${
+          isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
+        }`}
+      >
         <div className="relative w-full sm:w-72 lg:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
           <input
@@ -339,9 +370,13 @@ export const ManufacturerManagementView: React.FC = () => {
         }`}
       >
         <table className="w-full text-left border-collapse text-xs">
-          <thead className={`sticky top-0 z-10 border-b ${
-            isDaylight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950/90 border-slate-800 text-slate-400'
-          }`}>
+          <thead
+            className={`sticky top-0 z-10 border-b ${
+              isDaylight
+                ? 'bg-slate-50 border-slate-200 text-slate-600'
+                : 'bg-slate-950/90 border-slate-800 text-slate-400'
+            }`}
+          >
             <tr>
               <th className="py-2.5 px-4 font-semibold">OEM Name</th>
               <th className="py-2.5 px-4 font-semibold">Brand Code</th>
@@ -366,10 +401,15 @@ export const ManufacturerManagementView: React.FC = () => {
               </tr>
             ) : (
               visibleManufacturers.map((mfg) => (
-                <tr key={mfg.id} className={`transition-colors hover:${isDaylight ? 'bg-slate-50/80' : 'bg-slate-800/40'}`}>
+                <tr
+                  key={mfg.id}
+                  className={`transition-colors hover:${isDaylight ? 'bg-slate-50/80' : 'bg-slate-800/40'}`}
+                >
                   <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                     <div className="flex items-center gap-2">
-                      <div className={`p-1.5 rounded-lg ${isDaylight ? 'bg-amber-100/60 text-amber-800' : 'bg-amber-950/40 text-amber-400'}`}>
+                      <div
+                        className={`p-1.5 rounded-lg ${isDaylight ? 'bg-amber-100/60 text-amber-800' : 'bg-amber-950/40 text-amber-400'}`}
+                      >
                         <Building2 className="w-4 h-4" />
                       </div>
                       <span>{mfg.name}</span>
@@ -402,7 +442,9 @@ export const ManufacturerManagementView: React.FC = () => {
                       <button
                         onClick={() => openEditModal(mfg)}
                         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                          isDaylight ? 'border-slate-200 hover:bg-slate-100 text-slate-700' : 'border-slate-700 hover:bg-slate-800 text-slate-300'
+                          isDaylight
+                            ? 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                            : 'border-slate-700 hover:bg-slate-800 text-slate-300'
                         }`}
                         title="Edit Manufacturer"
                       >
@@ -457,9 +499,11 @@ export const ManufacturerManagementView: React.FC = () => {
       {/* Add / Edit Modal - Increased Width (max-w-3xl) with React-Select Country List */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
+          <div
+            className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
+              isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}
+          >
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
@@ -468,7 +512,9 @@ export const ManufacturerManagementView: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3 mb-1">
-              <div className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'}`}>
+              <div
+                className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'}`}
+              >
                 <Building2 className="h-6 w-6" />
               </div>
               <div>
@@ -476,7 +522,8 @@ export const ManufacturerManagementView: React.FC = () => {
                   {editingMfg ? 'Edit Manufacturer (OEM)' : 'Register New Manufacturer (OEM)'}
                 </h3>
                 <p className={`text-xs ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  Name, brand code, and country are required. Default active status with automatic fuzzy duplicate avoidance.
+                  Name, brand code, and country are required. Default active status with automatic fuzzy duplicate
+                  avoidance.
                 </p>
               </div>
             </div>
@@ -571,7 +618,9 @@ export const ManufacturerManagementView: React.FC = () => {
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                 <div>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Active Status</span>
-                  <p className="text-[11px] text-slate-500">Allow this OEM to be selected when commissioning fleet equipment and defining models</p>
+                  <p className="text-[11px] text-slate-500">
+                    Allow this OEM to be selected when commissioning fleet equipment and defining models
+                  </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input

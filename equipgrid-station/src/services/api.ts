@@ -86,14 +86,24 @@ export function resolveAssetS3Key(assetTag: string): string {
   const raw = assetTag.toLowerCase().replace(/[^a-z0-9]/g, '_');
 
   const KNOWN_KEYS = [
-    'c_mix_001', 'c_mix_002',
-    'c_vib_001', 'c_vib_002', 'c_vib_003',
-    'c_cmp_001', 'c_cmp_002',
-    'c_jkh_001', 'c_jkh_002', 'c_jkh_003', 'c_jkh_004',
-    'c_pmp_001', 'c_pmp_002',
-    'c_gen_001', 'c_gen_002',
+    'c_mix_001',
+    'c_mix_002',
+    'c_vib_001',
+    'c_vib_002',
+    'c_vib_003',
+    'c_cmp_001',
+    'c_cmp_002',
+    'c_jkh_001',
+    'c_jkh_002',
+    'c_jkh_003',
+    'c_jkh_004',
+    'c_pmp_001',
+    'c_pmp_002',
+    'c_gen_001',
+    'c_gen_002',
     'a_rep_001',
-    'a_wed_001', 'a_wed_002',
+    'a_wed_001',
+    'a_wed_002',
     'a_aug_001',
   ];
 
@@ -121,7 +131,7 @@ export function buildMachineMedia(
   assetTag: string,
   _category: 'CONSTRUCTION' | 'AGRICULTURE' | 'MULTIPURPOSE_FLEET' = 'CONSTRUCTION',
   _typeName: string = '',
-  _baseImageUrl?: string
+  _baseImageUrl?: string,
 ): AssetMedia[] {
   const s3Prefix = resolveAssetS3Key(assetTag);
 
@@ -172,7 +182,8 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     try {
       const errBody = await res.json();
       if (errBody?.message?.text) errMsg = errBody.message.text;
-      else if (errBody?.message) errMsg = typeof errBody.message === 'string' ? errBody.message : JSON.stringify(errBody.message);
+      else if (errBody?.message)
+        errMsg = typeof errBody.message === 'string' ? errBody.message : JSON.stringify(errBody.message);
     } catch {
       // ignore
     }
@@ -440,7 +451,7 @@ function mapBooking(b: any): Booking {
     billingUnit: b.billingUnit ? resolveBillingUnitCode(b.billingUnit) : resolveBillingUnitCode(b.asset?.billingUnit),
     shiftTerms: b.shiftTerms || b.asset?.shiftTerms,
     rentalConfigId: b.rentalConfig?.id || b.rentalConfigId,
-    dailyRate: b.dailyRate != null ? Number(b.dailyRate) : (b.asset ? Number(b.asset.dailyRate) : undefined),
+    dailyRate: b.dailyRate != null ? Number(b.dailyRate) : b.asset ? Number(b.asset.dailyRate) : undefined,
     status: mapBookingStatus(b.status),
     dealerId: b.dealerId,
     notes: b.notes,
@@ -476,7 +487,7 @@ export class ApiStore {
   get types(): EquipmentType[] {
     if (this._types.length === 0 && !this._typesLoading) {
       this._typesLoading = true;
-      request<any[]>('/masters/types').then(res => {
+      request<any[]>('/masters/types').then((res) => {
         this._types = (res || []).map((t: any) => ({
           id: t.id,
           name: t.name,
@@ -493,161 +504,213 @@ export class ApiStore {
     }
     return this._types;
   }
-  set types(v) { this._types = v; }
+  set types(v) {
+    this._types = v;
+  }
 
   private _manufacturers: Manufacturer[] = [];
   private _manufacturersLoading = false;
   get manufacturers(): Manufacturer[] {
     if (this._manufacturers.length === 0 && !this._manufacturersLoading) {
       this._manufacturersLoading = true;
-      request<any[]>('/masters/manufacturers').then(res => {
+      request<any[]>('/masters/manufacturers').then((res) => {
         this._manufacturers = (res || []).map((m: any) => ({
-          id: m.id, name: m.name, code: m.code, country: m.country || 'India', active: Boolean(m.active ?? true)
+          id: m.id,
+          name: m.name,
+          code: m.code,
+          country: m.country || 'India',
+          active: Boolean(m.active ?? true),
         }));
         this.notify();
       });
     }
     return this._manufacturers;
   }
-  set manufacturers(v) { this._manufacturers = v; }
+  set manufacturers(v) {
+    this._manufacturers = v;
+  }
 
   private _models: MachineModel[] = [];
   private _modelsLoading = false;
   get models(): MachineModel[] {
     if (this._models.length === 0 && !this._modelsLoading) {
       this._modelsLoading = true;
-      request<any[]>('/masters/models').then(res => {
+      request<any[]>('/masters/models').then((res) => {
         this._models = (res || []).map((m: any) => ({
-          id: m.id, typeId: m.type?.id || m.typeId, manufacturerId: m.manufacturer?.id || m.manufacturerId, name: m.name, modelNumber: m.modelNumber, specs: m.specs, active: Boolean(m.active ?? true)
+          id: m.id,
+          typeId: m.type?.id || m.typeId,
+          manufacturerId: m.manufacturer?.id || m.manufacturerId,
+          name: m.name,
+          modelNumber: m.modelNumber,
+          specs: m.specs,
+          active: Boolean(m.active ?? true),
         }));
         this.notify();
       });
     }
     return this._models;
   }
-  set models(v) { this._models = v; }
+  set models(v) {
+    this._models = v;
+  }
 
   private _billingUnits: BillingUnitMaster[] = [];
   private _billingUnitsLoading = false;
   get billingUnits(): BillingUnitMaster[] {
     if (this._billingUnits.length === 0 && !this._billingUnitsLoading) {
       this._billingUnitsLoading = true;
-      request<any[]>('/masters/billing-units').then(res => {
-        if (Array.isArray(res) && res.length > 0) {
-          this._billingUnits = res.map((u: any) => ({
-            id: Number(u.id),
-            code: String(u.code),
-            name: String(u.name),
-            hindiName: u.hindiName || undefined,
-            unitLabel: String(u.unitLabel || u.name),
-            hindiUnitLabel: u.hindiUnitLabel || undefined,
-            unitLabelLong: u.unitLabelLong || undefined,
-            defaultShiftTerms: u.defaultShiftTerms || undefined,
-            description: u.description || undefined,
-            active: Boolean(u.active ?? true),
-            displayOrder: Number(u.displayOrder || u.id),
-          }));
-        } else {
+      request<any[]>('/masters/billing-units')
+        .then((res) => {
+          if (Array.isArray(res) && res.length > 0) {
+            this._billingUnits = res.map((u: any) => ({
+              id: Number(u.id),
+              code: String(u.code),
+              name: String(u.name),
+              hindiName: u.hindiName || undefined,
+              unitLabel: String(u.unitLabel || u.name),
+              hindiUnitLabel: u.hindiUnitLabel || undefined,
+              unitLabelLong: u.unitLabelLong || undefined,
+              defaultShiftTerms: u.defaultShiftTerms || undefined,
+              description: u.description || undefined,
+              active: Boolean(u.active ?? true),
+              displayOrder: Number(u.displayOrder || u.id),
+            }));
+          } else {
+            this._billingUnits = [...DEFAULT_BILLING_UNITS];
+          }
+          this.notify();
+        })
+        .catch((err) => {
+          console.warn('Failed to fetch billing units from backend, using defaults:', err);
           this._billingUnits = [...DEFAULT_BILLING_UNITS];
-        }
-        this.notify();
-      }).catch((err) => {
-        console.warn('Failed to fetch billing units from backend, using defaults:', err);
-        this._billingUnits = [...DEFAULT_BILLING_UNITS];
-        this.notify();
-      });
+          this.notify();
+        });
     }
     return this._billingUnits.length > 0 ? this._billingUnits : DEFAULT_BILLING_UNITS;
   }
-  set billingUnits(v) { this._billingUnits = v; }
+  set billingUnits(v) {
+    this._billingUnits = v;
+  }
 
   private _assets: Asset[] = [];
   private _assetsLoading = false;
   get assets(): Asset[] {
     if (this._assets.length === 0 && !this._assetsLoading) {
       this._assetsLoading = true;
-      request<any[]>('/assets').then(res => {
+      request<any[]>('/assets').then((res) => {
         this._assets = (res || []).map(mapAsset);
         this.notify();
       });
     }
     return this._assets;
   }
-  set assets(v) { this._assets = v; }
+  set assets(v) {
+    this._assets = v;
+  }
 
   private _rentalConfigs: RentalConfiguration[] = [];
   private _rentalConfigsLoading = false;
   get rentalConfigs(): RentalConfiguration[] {
     if (this._rentalConfigs.length === 0 && !this._rentalConfigsLoading) {
       this._rentalConfigsLoading = true;
-      request<any[]>('/rental-configs').then(res => {
+      request<any[]>('/rental-configs').then((res) => {
         this._rentalConfigs = (res || []).map(mapRentalConfig);
         this.notify();
       });
     }
     return this._rentalConfigs;
   }
-  set rentalConfigs(v) { this._rentalConfigs = v; }
+  set rentalConfigs(v) {
+    this._rentalConfigs = v;
+  }
 
   private _customers: Customer[] = [];
   private _customersLoading = false;
   get customers(): Customer[] {
     if (this._customers.length === 0 && !this._customersLoading) {
       this._customersLoading = true;
-      request<any[]>('/customers').then(res => {
+      request<any[]>('/customers').then((res) => {
         this._customers = (res || []).map((c: any) => ({
-          id: c.id, fullName: c.fullName, phone: c.phone, email: c.email, address: c.address, aadhaarNumber: c.aadhaarNumber, gstNumber: c.gstNumber, tier: c.tier === 2 ? 'TIER_2_VERIFIED' : 'TIER_1_BASIC', verified: Boolean(c.verified), notes: c.notes, hubId: c.hub?.id || c.hubId, cityId: c.hub?.cityId || c.cityId, stateId: c.hub?.city?.stateId || c.stateId
+          id: c.id,
+          fullName: c.fullName,
+          phone: c.phone,
+          email: c.email,
+          address: c.address,
+          aadhaarNumber: c.aadhaarNumber,
+          gstNumber: c.gstNumber,
+          tier: c.tier === 2 ? 'TIER_2_VERIFIED' : 'TIER_1_BASIC',
+          verified: Boolean(c.verified),
+          notes: c.notes,
+          hubId: c.hub?.id || c.hubId,
+          cityId: c.hub?.cityId || c.cityId,
+          stateId: c.hub?.city?.stateId || c.stateId,
         }));
         this.notify();
       });
     }
     return this._customers;
   }
-  set customers(v) { this._customers = v; }
+  set customers(v) {
+    this._customers = v;
+  }
 
   private _dealers: Dealer[] = [];
   private _dealersLoading = false;
   get dealers(): Dealer[] {
     if (this._dealers.length === 0 && !this._dealersLoading) {
       this._dealersLoading = true;
-      request<any[]>('/dealers').then(res => {
+      request<any[]>('/dealers').then((res) => {
         this._dealers = (res || []).map((d: any) => ({
-          id: d.id, name: d.name, tradeName: d.tradeName, phone: d.phone, location: d.location, commissionRate: Number(d.commissionRate || 0.06), totalCommissionEarned: Number(d.totalCommissionEarned || 0), totalReferrals: Number(d.totalReferrals || 0), active: Boolean(d.active ?? true)
+          id: d.id,
+          name: d.name,
+          tradeName: d.tradeName,
+          phone: d.phone,
+          location: d.location,
+          commissionRate: Number(d.commissionRate || 0.06),
+          totalCommissionEarned: Number(d.totalCommissionEarned || 0),
+          totalReferrals: Number(d.totalReferrals || 0),
+          active: Boolean(d.active ?? true),
         }));
         this.notify();
       });
     }
     return this._dealers;
   }
-  set dealers(v) { this._dealers = v; }
+  set dealers(v) {
+    this._dealers = v;
+  }
 
   private _bookings: Booking[] = [];
   private _bookingsLoading = false;
   get bookings(): Booking[] {
     if (this._bookings.length === 0 && !this._bookingsLoading) {
       this._bookingsLoading = true;
-      request<any[]>('/bookings').then(res => {
+      request<any[]>('/bookings').then((res) => {
         this._bookings = (res || []).map(mapBooking);
         this.notify();
       });
     }
     return this._bookings;
   }
-  set bookings(v) { this._bookings = v; }
+  set bookings(v) {
+    this._bookings = v;
+  }
 
   private _payments: Payment[] = [];
   private _paymentsLoading = false;
   get payments(): Payment[] {
     if (this._payments.length === 0 && !this._paymentsLoading) {
       this._paymentsLoading = true;
-      request<any[]>('/payments').then(res => {
+      request<any[]>('/payments').then((res) => {
         this._payments = (res || []).map(mapPayment);
         this.notify();
       });
     }
     return this._payments;
   }
-  set payments(v) { this._payments = v; }
+  set payments(v) {
+    this._payments = v;
+  }
   dashboardSummary: DashboardSummary = {
     totalAssets: 0,
     availableAssets: 0,
@@ -737,7 +800,9 @@ export class ApiStore {
         if (sum) {
           this.dashboardSummary = {
             totalAssets: Number(sum.totalAssets || this._assets?.length || 0),
-            availableAssets: Number(sum.availableAssets || this._assets?.filter((a: any) => a.status === 'AVAILABLE').length || 0),
+            availableAssets: Number(
+              sum.availableAssets || this._assets?.filter((a: any) => a.status === 'AVAILABLE').length || 0,
+            ),
             activeRentals: Number(sum.activeRentals || 0),
             pendingDispatch: Number(sum.pendingDispatch || 0),
             todayGrossRevenue: Number(sum.todayGrossRevenue || 0),
@@ -773,10 +838,12 @@ export class ApiStore {
     request<any>('/locations/states', {
       method: 'POST',
       body: JSON.stringify({ name, code: code.toUpperCase() }),
-    }).then((raw) => {
-      if (raw?.id) newState.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist state:', e));
+    })
+      .then((raw) => {
+        if (raw?.id) newState.id = raw.id;
+        this.notify();
+      })
+      .catch((e) => console.error('Failed to persist state:', e));
 
     return newState;
   }
@@ -802,10 +869,12 @@ export class ApiStore {
     request<any>('/locations/cities', {
       method: 'POST',
       body: JSON.stringify({ stateId, name, pinCode }),
-    }).then((raw) => {
-      if (raw?.id) newCity.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist city:', e));
+    })
+      .then((raw) => {
+        if (raw?.id) newCity.id = raw.id;
+        this.notify();
+      })
+      .catch((e) => console.error('Failed to persist city:', e));
 
     return newCity;
   }
@@ -854,10 +923,12 @@ export class ApiStore {
         latitude: data.latitude,
         longitude: data.longitude,
       }),
-    }).then((raw) => {
-      if (raw?.id) newHub.id = raw.id;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist hub:', e));
+    })
+      .then((raw) => {
+        if (raw?.id) newHub.id = raw.id;
+        this.notify();
+      })
+      .catch((e) => console.error('Failed to persist hub:', e));
 
     return newHub;
   }
@@ -900,13 +971,15 @@ export class ApiStore {
         notes: data.notes,
         hubId: data.hubId,
       }),
-    }).then((raw) => {
-      const idx = this.customers.findIndex((c) => c.id === tempId);
-      if (idx !== -1) {
-        this.customers[idx].id = raw.id;
-        this.notify();
-      }
-    }).catch((e) => console.error('Failed to persist customer:', e));
+    })
+      .then((raw) => {
+        const idx = this.customers.findIndex((c) => c.id === tempId);
+        if (idx !== -1) {
+          this.customers[idx].id = raw.id;
+          this.notify();
+        }
+      })
+      .catch((e) => console.error('Failed to persist customer:', e));
 
     return newCust;
   }
@@ -1035,7 +1108,10 @@ export class ApiStore {
     this.notify();
   }
 
-  async checkEquipmentTypeAvailability(name: string, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+  async checkEquipmentTypeAvailability(
+    name: string,
+    excludeId?: number,
+  ): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
     const params = new URLSearchParams({ name });
     if (excludeId) params.append('excludeId', String(excludeId));
     return request(`/masters/types/check-availability?${params.toString()}`);
@@ -1109,7 +1185,10 @@ export class ApiStore {
     this.notify();
   }
 
-  async checkManufacturerAvailability(name: string, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+  async checkManufacturerAvailability(
+    name: string,
+    excludeId?: number,
+  ): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
     const params = new URLSearchParams({ name });
     if (excludeId) params.append('excludeId', String(excludeId));
     return request(`/masters/manufacturers/check-availability?${params.toString()}`);
@@ -1204,7 +1283,12 @@ export class ApiStore {
     this.notify();
   }
 
-  async checkMachineModelAvailability(name: string, typeId?: number, manufacturerId?: number, excludeId?: number): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
+  async checkMachineModelAvailability(
+    name: string,
+    typeId?: number,
+    manufacturerId?: number,
+    excludeId?: number,
+  ): Promise<{ duplicate: boolean; matchedName?: string; similarityPercentage: number; message: string }> {
     const params = new URLSearchParams({ name });
     if (typeId) params.append('typeId', String(typeId));
     if (manufacturerId) params.append('manufacturerId', String(manufacturerId));
@@ -1230,21 +1314,19 @@ export class ApiStore {
 
     // 1. All active configurations explicitly tied to this machine
     const directConfigs = this.rentalConfigs.filter(
-      (c) => c.active && c.assetId === assetId && (!resolvedHubId || c.hubId === resolvedHubId)
+      (c) => c.active && c.assetId === assetId && (!resolvedHubId || c.hubId === resolvedHubId),
     );
 
     // 2. All active configurations for this machine's model / type in this hub
     const typeConfigs = asset?.typeId
       ? this.rentalConfigs.filter(
-          (c) => c.active && !c.assetId && c.typeId === asset.typeId && (!resolvedHubId || c.hubId === resolvedHubId)
+          (c) => c.active && !c.assetId && c.typeId === asset.typeId && (!resolvedHubId || c.hubId === resolvedHubId),
         )
       : [];
 
     // 3. All active configurations for this hub
     const hubConfigs = resolvedHubId
-      ? this.rentalConfigs.filter(
-          (c) => c.active && !c.assetId && !c.typeId && c.hubId === resolvedHubId
-        )
+      ? this.rentalConfigs.filter((c) => c.active && !c.assetId && !c.typeId && c.hubId === resolvedHubId)
       : [];
 
     const map = new Map<string, RentalConfiguration>();
@@ -1320,19 +1402,21 @@ export class ApiStore {
         billingUnit: resolveBillingUnitInt(data.billingUnit),
         billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
       }),
-    }).then((raw) => {
-      const mapped = mapRentalConfig(raw);
-      const idx = this.rentalConfigs.findIndex((c) => c.id === newConfig.id);
-      if (idx !== -1) this.rentalConfigs[idx] = mapped;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist rental config:', e));
+    })
+      .then((raw) => {
+        const mapped = mapRentalConfig(raw);
+        const idx = this.rentalConfigs.findIndex((c) => c.id === newConfig.id);
+        if (idx !== -1) this.rentalConfigs[idx] = mapped;
+        this.notify();
+      })
+      .catch((e) => console.error('Failed to persist rental config:', e));
 
     return newConfig;
   }
 
   updateRentalConfig(
     id: number,
-    data: Partial<Omit<RentalConfiguration, 'id' | 'hubId'>>
+    data: Partial<Omit<RentalConfiguration, 'id' | 'hubId'>>,
   ): RentalConfiguration | undefined {
     const config = this.rentalConfigs.find((c) => c.id === id);
     if (!config) return undefined;
@@ -1421,11 +1505,17 @@ export class ApiStore {
     const city = hub ? this.cities.find((c) => c.id === hub.cityId) : undefined;
     const state = city ? this.states.find((s) => s.id === city.stateId) : undefined;
 
-    const matchingConfig = this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId)
-      || this.rentalConfigs.find((rc) => rc.typeId === data.typeId)
-      || this.rentalConfigs.find((rc) => rc.hubId === data.hubId);
-    const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : (matchingConfig?.baseDailyRate || 1000);
-    const resolvedDepositAmount = data.depositAmount !== undefined ? data.depositAmount : (matchingConfig?.depositAmount != null ? matchingConfig.depositAmount : 3000);
+    const matchingConfig =
+      this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId) ||
+      this.rentalConfigs.find((rc) => rc.typeId === data.typeId) ||
+      this.rentalConfigs.find((rc) => rc.hubId === data.hubId);
+    const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : matchingConfig?.baseDailyRate || 1000;
+    const resolvedDepositAmount =
+      data.depositAmount !== undefined
+        ? data.depositAmount
+        : matchingConfig?.depositAmount != null
+          ? matchingConfig.depositAmount
+          : 3000;
 
     const prefix = type?.category === 'MULTIPURPOSE_FLEET' ? 'M' : type?.category === 'AGRICULTURE' ? 'A' : 'C';
     const subCode = type?.code?.split('-')[1] || 'MCH';
@@ -1462,13 +1552,7 @@ export class ApiStore {
       hindiUnitLabel: getBillingUnitHindiLabel(data.billingUnit),
       workingHoursLimit: data.workingHoursLimit,
       shiftTerms: data.shiftTerms,
-      mediaItems: buildMachineMedia(
-        Date.now(),
-        tag,
-        type?.category,
-        type?.name,
-        data.imageUrl
-      ),
+      mediaItems: buildMachineMedia(Date.now(), tag, type?.category, type?.name, data.imageUrl),
     };
 
     this.assets.unshift(newAsset);
@@ -1497,12 +1581,14 @@ export class ApiStore {
         workingHoursLimit: data.workingHoursLimit,
         shiftTerms: data.shiftTerms,
       }),
-    }).then((raw) => {
-      const mapped = mapAsset(raw);
-      const idx = this.assets.findIndex((a) => a.id === newAsset.id);
-      if (idx !== -1) this.assets[idx] = mapped;
-      this.notify();
-    }).catch((e) => console.error('Failed to persist asset:', e));
+    })
+      .then((raw) => {
+        const mapped = mapAsset(raw);
+        const idx = this.assets.findIndex((a) => a.id === newAsset.id);
+        if (idx !== -1) this.assets[idx] = mapped;
+        this.notify();
+      })
+      .catch((e) => console.error('Failed to persist asset:', e));
 
     return newAsset;
   }
@@ -1527,7 +1613,7 @@ export class ApiStore {
       billingUnit: BillingUnit;
       workingHoursLimit: number;
       shiftTerms: string;
-    }>
+    }>,
   ): Promise<Asset | undefined> {
     const existing = this.assets.find((a) => a.id === id);
     if (!existing) return undefined;
@@ -1545,9 +1631,12 @@ export class ApiStore {
       ...existing,
       ...data,
       billingUnit: data.billingUnit !== undefined ? resolveBillingUnitCode(data.billingUnit) : existing.billingUnit,
-      billingUnitId: (data as any).billingUnitId || (data.billingUnit !== undefined ? resolveBillingUnitInt(data.billingUnit) : existing.billingUnitId),
+      billingUnitId:
+        (data as any).billingUnitId ||
+        (data.billingUnit !== undefined ? resolveBillingUnitInt(data.billingUnit) : existing.billingUnitId),
       unitLabel: data.billingUnit !== undefined ? getBillingUnitLabel(data.billingUnit) : existing.unitLabel,
-      hindiUnitLabel: data.billingUnit !== undefined ? getBillingUnitHindiLabel(data.billingUnit) : existing.hindiUnitLabel,
+      hindiUnitLabel:
+        data.billingUnit !== undefined ? getBillingUnitHindiLabel(data.billingUnit) : existing.hindiUnitLabel,
     };
     const idx = this.assets.findIndex((a) => a.id === id);
     if (idx !== -1) {
@@ -1594,7 +1683,7 @@ export class ApiStore {
     distanceKm: number,
     operatorRequired: boolean,
     _hubId?: number,
-    rentalConfigId?: number
+    rentalConfigId?: number,
   ): Promise<QuoteCalculation> {
     try {
       const res = await request<any>('/bookings/quote', {
@@ -1629,7 +1718,9 @@ export class ApiStore {
       // Local fallback calculation based on selected rental configuration or asset defaults
       const asset = this.assets.find((a) => a.id === assetId);
       if (!asset) throw new Error('Selected machine does not exist');
-      const rc = rentalConfigId ? this.rentalConfigs.find((c) => c.id === rentalConfigId) : this.getRentalConfigForAsset(assetId, _hubId);
+      const rc = rentalConfigId
+        ? this.rentalConfigs.find((c) => c.id === rentalConfigId)
+        : this.getRentalConfigForAsset(assetId, _hubId);
       const [y1, m1, d1] = startDate.split('-').map(Number);
       const [y2, m2, d2] = endDate.split('-').map(Number);
       const date1 = new Date(y1, m1 - 1, d1);
@@ -1644,8 +1735,9 @@ export class ApiStore {
       const ratePerKm = rc ? (rc.ratePerKmAfterFree ?? 10.0) : 10.0;
 
       const baseRent = rate * days;
-      const opFee = (operatorRequired || asset.operatorRequired) ? opRate * days : 0;
-      const delFee = (freeKm === 0 && ratePerKm === 0) ? 0 : (distanceKm > freeKm ? Math.round((distanceKm - freeKm) * ratePerKm) : 0);
+      const opFee = operatorRequired || asset.operatorRequired ? opRate * days : 0;
+      const delFee =
+        freeKm === 0 && ratePerKm === 0 ? 0 : distanceKm > freeKm ? Math.round((distanceKm - freeKm) * ratePerKm) : 0;
       const total = baseRent + opFee + delFee + deposit;
 
       return {
@@ -1818,7 +1910,11 @@ export class ApiStore {
     }
   }
 
-  async updateFarmLocation(customerId: number, locationId: number, data: UpsertFarmLocationPayload): Promise<FarmLocation> {
+  async updateFarmLocation(
+    customerId: number,
+    locationId: number,
+    data: UpsertFarmLocationPayload,
+  ): Promise<FarmLocation> {
     try {
       const raw = await request<any>(`/customers/${customerId}/farm-locations/${locationId}`, {
         method: 'PATCH',
@@ -2015,7 +2111,7 @@ export class ApiStore {
 
   async verifyPaymentProof(
     id: number,
-    data: { amount?: number; paymentType?: PaymentType; verifiedBy?: string; notes?: string }
+    data: { amount?: number; paymentType?: PaymentType; verifiedBy?: string; notes?: string },
   ): Promise<PaymentProof> {
     const typeEnumMap: Record<PaymentType, number> = {
       ADVANCE: 1,
@@ -2217,9 +2313,21 @@ export class ApiStore {
     const isWeeding = taskLower.includes('weed') || taskLower.includes('nirai');
     const isHarvesting = taskLower.includes('harvest') || taskLower.includes('kata') || taskLower.includes('reap');
     const isSpraying = taskLower.includes('spray') || taskLower.includes('chhid');
-    const isTilling = taskLower.includes('till') || taskLower.includes('juta') || taskLower.includes('rotavator') || taskLower.includes('plow');
-    const isDigging = taskLower.includes('dig') || taskLower.includes('gaddha') || taskLower.includes('auger') || taskLower.includes('hole');
-    const isWater = taskLower.includes('pump') || taskLower.includes('water') || taskLower.includes('irrigation') || taskLower.includes('sinchai');
+    const isTilling =
+      taskLower.includes('till') ||
+      taskLower.includes('juta') ||
+      taskLower.includes('rotavator') ||
+      taskLower.includes('plow');
+    const isDigging =
+      taskLower.includes('dig') ||
+      taskLower.includes('gaddha') ||
+      taskLower.includes('auger') ||
+      taskLower.includes('hole');
+    const isWater =
+      taskLower.includes('pump') ||
+      taskLower.includes('water') ||
+      taskLower.includes('irrigation') ||
+      taskLower.includes('sinchai');
 
     // Filter available assets
     const available = this.assets.filter((a) => {
@@ -2362,7 +2470,7 @@ export class ApiStore {
         damageDescription: data.damageDescription,
         nextAction,
         fuelLevelReturn: data.fuelLevelReturn || '—',
-        engineHoursIn: data.engineHoursIn !== undefined ? data.engineHoursIn : (b?.asset.engineHours || 0),
+        engineHoursIn: data.engineHoursIn !== undefined ? data.engineHoursIn : b?.asset.engineHours || 0,
         accessoriesReturnedOk: data.accessoriesReturnedOk ?? true,
       }),
     });
@@ -2382,7 +2490,9 @@ export class ApiStore {
       returnTimestamp: raw.returnTimestamp || new Date().toISOString(),
       fuelLevelReturn: raw.fuelLevelReturn || data.fuelLevelReturn || '—',
       fuelDeltaCharge: Number(raw.fuelDeltaCharge !== undefined ? raw.fuelDeltaCharge : data.fuelDeltaCharge),
-      engineHoursIn: Number(raw.engineHoursIn !== undefined ? raw.engineHoursIn : (data.engineHoursIn || b?.asset.engineHours || 0)),
+      engineHoursIn: Number(
+        raw.engineHoursIn !== undefined ? raw.engineHoursIn : data.engineHoursIn || b?.asset.engineHours || 0,
+      ),
       accessoriesReturnedOk: Boolean(raw.accessoriesReturnedOk ?? true),
       hasDamage: Boolean(raw.hasDamage ?? data.hasDamage),
       damageCost: Number(raw.damageCost !== undefined ? raw.damageCost : data.damageCost),
@@ -2491,7 +2601,8 @@ export class ApiStore {
       todayGrossRevenue: this.dashboardSummary.todayGrossRevenue || totalCollected,
       totalRevenueCollected: totalCollected || this.dashboardSummary.totalRevenueCollected,
       pendingSecurityDeposits: pendingDeposits || this.dashboardSummary.pendingSecurityDeposits,
-      fleetUtilizationPercent: total > 0 ? Math.round((onRent / total) * 100) : this.dashboardSummary.fleetUtilizationPercent,
+      fleetUtilizationPercent:
+        total > 0 ? Math.round((onRent / total) * 100) : this.dashboardSummary.fleetUtilizationPercent,
       zeroCreditCompliancePercent: 100,
     };
   }
@@ -2573,12 +2684,13 @@ export class ApiStore {
 
   private normalizeStaffRole(role: any): StaffRole {
     if (role === 8 || role === '8' || role === 'ROOT') return 'ROOT';
-    if (role === 7 || role === '7' || role === 'ADMIN' || role === 1 || role === '1' || role === 'SUPER_ADMIN') return 'ADMIN';
+    if (role === 7 || role === '7' || role === 'ADMIN' || role === 1 || role === '1' || role === 'SUPER_ADMIN')
+      return 'ADMIN';
     if (role === 6 || role === '6' || role === 'MANAGER') return 'MANAGER';
     if (role === 2 || role === '2' || role === 'OPERATOR') return 'OPERATOR';
     if (role === 3 || role === '3' || role === 'TECHNICIAN') return 'TECHNICIAN';
     if (role === 4 || role === '4' || role === 'DRIVER') return 'DRIVER';
-    return (String(role || 'OPERATOR').toUpperCase() as StaffRole);
+    return String(role || 'OPERATOR').toUpperCase() as StaffRole;
   }
 
   async getUsers(hubId?: number, role?: string): Promise<UserAccount[]> {
@@ -2636,7 +2748,10 @@ export class ApiStore {
     this.notify();
   }
 
-  async getMerchantUpiDetails(amount?: number, note?: string): Promise<{
+  async getMerchantUpiDetails(
+    amount?: number,
+    note?: string,
+  ): Promise<{
     payeeVpa: string;
     payeeName: string;
     amount: number;

@@ -13,70 +13,77 @@ import com.equipgrid.core.ratelimiter.RateLimited;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.security.Principal;
+import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.security.Principal;
-import java.util.List;
-
 @RestController
 @RequestMapping("/bookings")
-@Tag(name = "Booking & Quotation", description = "Booking desk, instant quotation and reservation lifecycle")
+@Tag(
+    name = "Booking & Quotation",
+    description = "Booking desk, instant quotation and reservation lifecycle")
 public class BookingController {
 
-    private final IBookingService bookingService;
+  private final IBookingService bookingService;
 
-    public BookingController(IBookingService bookingService) {
-        this.bookingService = bookingService;
-    }
+  public BookingController(IBookingService bookingService) {
+    this.bookingService = bookingService;
+  }
 
-    @GetMapping
-    @Operation(summary = "List all bookings with optional status filter")
-    public ResponseEntity<ApiResponse<List<Booking>>> getAllBookings(@RequestParam(required = false) BookingStatus status) {
-        return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.getAllBookings(status)));
-    }
+  @GetMapping
+  @Operation(summary = "List all bookings with optional status filter")
+  public ResponseEntity<ApiResponse<List<Booking>>> getAllBookings(
+      @RequestParam(required = false) BookingStatus status) {
+    return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.getAllBookings(status)));
+  }
 
-    @GetMapping("/{id}")
-    @Operation(summary = "Get booking by ID")
-    public ResponseEntity<ApiResponse<Booking>> getBookingById(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.getBookingById(id)));
-    }
+  @GetMapping("/{id}")
+  @Operation(summary = "Get booking by ID")
+  public ResponseEntity<ApiResponse<Booking>> getBookingById(@PathVariable Long id) {
+    return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.getBookingById(id)));
+  }
 
-    @GetMapping("/number/{bookingNumber}")
-    @Operation(summary = "Get booking by reference number (e.g. BK-2026-0101)")
-    public ResponseEntity<ApiResponse<Booking>> getBookingByNumber(@PathVariable String bookingNumber) {
-        return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.getBookingByNumber(bookingNumber)));
-    }
+  @GetMapping("/number/{bookingNumber}")
+  @Operation(summary = "Get booking by reference number (e.g. BK-2026-0101)")
+  public ResponseEntity<ApiResponse<Booking>> getBookingByNumber(
+      @PathVariable String bookingNumber) {
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess(bookingService.getBookingByNumber(bookingNumber)));
+  }
 
-    @PostMapping("/quote")
-    @RequireBotShield
-    @RateLimited(limit = 10, name = "booking_quote")
-    @Operation(summary = "Instant commercial quotation calculator (Base rent, delivery zones, operator fee, deposit)")
-    public ResponseEntity<ApiResponse<QuoteResponse>> calculateQuote(@Valid @RequestBody QuoteRequest request) {
-        return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.calculateQuote(request)));
-    }
+  @PostMapping("/quote")
+  @RequireBotShield
+  @RateLimited(limit = 10, name = "booking_quote")
+  @Operation(
+      summary =
+          "Instant commercial quotation calculator (Base rent, delivery zones, operator fee, deposit)")
+  public ResponseEntity<ApiResponse<QuoteResponse>> calculateQuote(
+      @Valid @RequestBody QuoteRequest request) {
+    return ResponseEntity.ok(ApiResponse.buildSuccess(bookingService.calculateQuote(request)));
+  }
 
-    @PostMapping
-    @RequireBotShield
-    @RateLimited(name = "booking_create")
-    @Operation(summary = "Create and record a new booking reservation")
-    public ResponseEntity<ApiResponse<Booking>> createBooking(
-            @Valid @RequestBody CreateBookingRequest request,
-            Principal principal) {
-        String actor = principal != null ? principal.getName() : "RENTAL_DESK";
-        Booking saved = bookingService.createBooking(request, actor);
-        return ResponseEntity.ok(ApiResponse.buildSuccess("Booking reserved successfully", saved));
-    }
+  @PostMapping
+  @RequireBotShield
+  @RateLimited(name = "booking_create")
+  @Operation(summary = "Create and record a new booking reservation")
+  public ResponseEntity<ApiResponse<Booking>> createBooking(
+      @Valid @RequestBody CreateBookingRequest request, Principal principal) {
+    String actor = principal != null ? principal.getName() : "RENTAL_DESK";
+    Booking saved = bookingService.createBooking(request, actor);
+    return ResponseEntity.ok(ApiResponse.buildSuccess("Booking reserved successfully", saved));
+  }
 
-    @PatchMapping("/{id}/status")
-    @RateLimited(limit = 10, name = "booking_status")
-    @Operation(summary = "Update booking status")
-    public ResponseEntity<ApiResponse<Booking>> updateStatus(
-            @PathVariable Long id,
-            @Valid @RequestBody UpdateBookingStatusRequest request,
-            Principal principal) {
-        String actor = principal != null ? principal.getName() : "STAFF";
-        Booking updated = bookingService.updateStatus(id, request.getStatus(), request.getNotes(), actor);
-        return ResponseEntity.ok(ApiResponse.buildSuccess("Booking status updated", updated));
-    }
+  @PatchMapping("/{id}/status")
+  @RateLimited(limit = 10, name = "booking_status")
+  @Operation(summary = "Update booking status")
+  public ResponseEntity<ApiResponse<Booking>> updateStatus(
+      @PathVariable Long id,
+      @Valid @RequestBody UpdateBookingStatusRequest request,
+      Principal principal) {
+    String actor = principal != null ? principal.getName() : "STAFF";
+    Booking updated =
+        bookingService.updateStatus(id, request.getStatus(), request.getNotes(), actor);
+    return ResponseEntity.ok(ApiResponse.buildSuccess("Booking status updated", updated));
+  }
 }

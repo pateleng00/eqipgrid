@@ -9,9 +9,8 @@ import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.entity.MachineModel;
 import com.equipgrid.master.entity.Manufacturer;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.math.BigDecimal;
+import lombok.*;
 
 @Entity
 @Table(name = "assets")
@@ -22,120 +21,117 @@ import java.math.BigDecimal;
 @Builder
 public class Asset extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(name = "asset_tag", nullable = false, unique = true, length = 32)
-    private String assetTag;
+  @Column(name = "asset_tag", nullable = false, unique = true, length = 32)
+  private String assetTag;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "type_id")
-    private EquipmentType type;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "type_id")
+  private EquipmentType type;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "manufacturer_id")
-    private Manufacturer manufacturer;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "manufacturer_id")
+  private Manufacturer manufacturer;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "model_id")
-    private MachineModel model;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "model_id")
+  private MachineModel model;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "hub_id")
-    private Hub hub;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "hub_id")
+  private Hub hub;
 
-    @Column(name = "name")
-    private String name;
+  @Column(name = "name")
+  private String name;
 
-    @Column(name = "model_name")
-    private String modelName;
+  @Column(name = "model_name")
+  private String modelName;
 
-    @Builder.Default
-    @Column(name = "image_url", nullable = false, length = 512)
-    private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
+  @Builder.Default
+  @Column(name = "image_url", nullable = false, length = 512)
+  private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
 
+  @Column(name = "serial_number", length = 128)
+  private String serialNumber;
 
-    @Column(name = "serial_number", length = 128)
-    private String serialNumber;
+  @Column(name = "daily_rate", nullable = false, precision = 10, scale = 2)
+  private BigDecimal dailyRate;
 
-    @Column(name = "daily_rate", nullable = false, precision = 10, scale = 2)
-    private BigDecimal dailyRate;
+  @Column(name = "deposit_amount", nullable = false, precision = 10, scale = 2)
+  private BigDecimal depositAmount;
 
-    @Column(name = "deposit_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal depositAmount;
+  @Column(name = "purchase_cost", precision = 10, scale = 2)
+  private BigDecimal purchaseCost;
 
-    @Column(name = "purchase_cost", precision = 10, scale = 2)
-    private BigDecimal purchaseCost;
+  @Builder.Default
+  @Column(name = "operator_required")
+  private Boolean operatorRequired = false;
 
-    @Builder.Default
-    @Column(name = "operator_required")
-    private Boolean operatorRequired = false;
+  @Builder.Default
+  @Column(nullable = false)
+  private AssetStatus status = AssetStatus.AVAILABLE;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private AssetStatus status = AssetStatus.AVAILABLE;
+  @Column(name = "condition_notes", columnDefinition = "TEXT")
+  private String conditionNotes;
 
-    @Column(name = "condition_notes", columnDefinition = "TEXT")
-    private String conditionNotes;
+  @Builder.Default
+  @Column(name = "engine_hours", precision = 8, scale = 2)
+  private BigDecimal engineHours = BigDecimal.ZERO;
 
-    @Builder.Default
-    @Column(name = "engine_hours", precision = 8, scale = 2)
-    private BigDecimal engineHours = BigDecimal.ZERO;
+  @Column(name = "accessories_included", columnDefinition = "TEXT")
+  private String accessoriesIncluded;
 
-    @Column(name = "accessories_included", columnDefinition = "TEXT")
-    private String accessoriesIncluded;
+  @Builder.Default
+  @Column(name = "billing_unit")
+  private BillingUnit billingUnit = BillingUnit.DAILY;
 
-    @Builder.Default
-    @Column(name = "billing_unit")
-    private BillingUnit billingUnit = BillingUnit.DAILY;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "billing_unit_id")
+  private com.equipgrid.master.entity.BillingUnitMaster billingUnitMaster;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "billing_unit_id")
-    private com.equipgrid.master.entity.BillingUnitMaster billingUnitMaster;
+  @Column(name = "working_hours_limit", precision = 6, scale = 2)
+  private BigDecimal workingHoursLimit;
 
-    @Column(name = "working_hours_limit", precision = 6, scale = 2)
-    private BigDecimal workingHoursLimit;
+  @Column(name = "shift_terms", length = 256)
+  private String shiftTerms;
 
-    @Column(name = "shift_terms", length = 256)
-    private String shiftTerms;
-    /**
-     * Associated media items (images and video) populated dynamically.
-     */
-    @Transient
-    private java.util.List<AssetMedia> mediaItems;
+  /** Associated media items (images and video) populated dynamically. */
+  @Transient private java.util.List<AssetMedia> mediaItems;
 
-    public String getName() {
-        if (this.name != null && !this.name.isBlank()) {
-            return this.name;
-        }
-        return this.model != null ? this.model.getName() : null;
+  public String getName() {
+    if (this.name != null && !this.name.isBlank()) {
+      return this.name;
     }
+    return this.model != null ? this.model.getName() : null;
+  }
 
-    public String getModelName() {
-        if (this.model != null && this.model.getName() != null) {
-            return this.model.getName();
-        }
-        return this.modelName;
+  public String getModelName() {
+    if (this.model != null && this.model.getName() != null) {
+      return this.model.getName();
     }
+    return this.modelName;
+  }
 
-    public AssetCategory getCategory() {
-        return this.type != null ? this.type.getCategory() : null;
-    }
+  public AssetCategory getCategory() {
+    return this.type != null ? this.type.getCategory() : null;
+  }
 
-    public String getHindiName() {
-        return this.type != null ? this.type.getHindiName() : null;
-    }
+  public String getHindiName() {
+    return this.type != null ? this.type.getHindiName() : null;
+  }
 
-    public String getLocalLanguageName() {
-        return this.type != null ? this.type.getLocalLanguageName() : null;
-    }
+  public String getLocalLanguageName() {
+    return this.type != null ? this.type.getLocalLanguageName() : null;
+  }
 
-    public String getHindiDescription() {
-        return this.type != null ? this.type.getHindiDescription() : null;
-    }
+  public String getHindiDescription() {
+    return this.type != null ? this.type.getHindiDescription() : null;
+  }
 
-    public String getDescription() {
-        return this.type != null ? this.type.getDescription() : null;
-    }
+  public String getDescription() {
+    return this.type != null ? this.type.getDescription() : null;
+  }
 }

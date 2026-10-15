@@ -1,7 +1,19 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Wrench, Plus, Search, Edit2, Trash2, CheckCircle2,
-  XCircle, AlertTriangle, Layers, Languages, FileText, RefreshCw, X, ShieldAlert
+  Wrench,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Layers,
+  Languages,
+  FileText,
+  RefreshCw,
+  X,
+  ShieldAlert,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
@@ -139,8 +151,25 @@ export const EquipmentTypeManagementView: React.FC = () => {
 
   const handleNameChange = (val: string) => {
     setName(val);
-    if (!editingType && (!code || code === 'TYPE-' + name.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 8))) {
-      setCode('TYPE-' + val.trim().toUpperCase().replace(/[^A-Z0-9]/g, '-').slice(0, 10));
+    if (
+      !editingType &&
+      (!code ||
+        code ===
+          'TYPE-' +
+            name
+              .trim()
+              .toUpperCase()
+              .replace(/[^A-Z0-9]/g, '-')
+              .slice(0, 8))
+    ) {
+      setCode(
+        'TYPE-' +
+          val
+            .trim()
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '-')
+            .slice(0, 10),
+      );
     }
   };
 
@@ -212,7 +241,9 @@ export const EquipmentTypeManagementView: React.FC = () => {
         isOpen: true,
         variant: 'error',
         title: 'Deletion Restricted',
-        message: err.message || 'Admins can add and update, but cannot delete master records. Super-admin ROOT authority required.',
+        message:
+          err.message ||
+          'Admins can add and update, but cannot delete master records. Super-admin ROOT authority required.',
       });
       setTypeToDelete(null);
     }
@@ -284,7 +315,8 @@ export const EquipmentTypeManagementView: React.FC = () => {
             Equipment Types &amp; Categories
           </h2>
           <p className={`text-xs ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-            Define machine classifications, multilingual local names (Hindi/Awadhi/Bhojpuri), and required industry sector.
+            Define machine classifications, multilingual local names (Hindi/Awadhi/Bhojpuri), and required industry
+            sector.
           </p>
         </div>
 
@@ -292,7 +324,9 @@ export const EquipmentTypeManagementView: React.FC = () => {
           <button
             onClick={loadData}
             className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isDaylight ? 'border-slate-200 hover:bg-slate-100 text-slate-700' : 'border-slate-800 hover:bg-slate-800 text-slate-300'
+              isDaylight
+                ? 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                : 'border-slate-800 hover:bg-slate-800 text-slate-300'
             }`}
             title="Refresh List"
           >
@@ -309,9 +343,11 @@ export const EquipmentTypeManagementView: React.FC = () => {
       </div>
 
       {/* Search & Category Filter Toolbar - Reduced search width, increased filter widths using SearchSelect */}
-      <div className={`p-3 rounded-2xl border flex flex-col lg:flex-row items-center justify-between gap-3 flex-shrink-0 ${
-        isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
-      }`}>
+      <div
+        className={`p-3 rounded-2xl border flex flex-col lg:flex-row items-center justify-between gap-3 flex-shrink-0 ${
+          isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
+        }`}
+      >
         <div className="relative w-full lg:w-72 shrink-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 z-10" />
           <input
@@ -369,9 +405,13 @@ export const EquipmentTypeManagementView: React.FC = () => {
         }`}
       >
         <table className="w-full text-left border-collapse text-xs">
-          <thead className={`sticky top-0 z-10 border-b ${
-            isDaylight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950/90 border-slate-800 text-slate-400'
-          }`}>
+          <thead
+            className={`sticky top-0 z-10 border-b ${
+              isDaylight
+                ? 'bg-slate-50 border-slate-200 text-slate-600'
+                : 'bg-slate-950/90 border-slate-800 text-slate-400'
+            }`}
+          >
             <tr>
               <th className="py-2.5 px-4 font-semibold">Type Name &amp; Code</th>
               <th className="py-2.5 px-4 font-semibold">Industry Sector</th>
@@ -397,24 +437,21 @@ export const EquipmentTypeManagementView: React.FC = () => {
               </tr>
             ) : (
               visibleTypes.map((t) => (
-                <tr key={t.id} className={`transition-colors hover:${isDaylight ? 'bg-slate-50/80' : 'bg-slate-800/40'}`}>
+                <tr
+                  key={t.id}
+                  className={`transition-colors hover:${isDaylight ? 'bg-slate-50/80' : 'bg-slate-800/40'}`}
+                >
                   <td className="py-3 px-4">
                     <div className="font-bold text-slate-900 dark:text-white">{t.name}</div>
                     <div className="font-mono text-[11px] text-amber-600 dark:text-amber-400">{t.code}</div>
                   </td>
+                  <td className="py-3 px-4">{getCategoryBadge(t.category)}</td>
                   <td className="py-3 px-4">
-                    {getCategoryBadge(t.category)}
-                  </td>
-                  <td className="py-3 px-4">
-                    {t.hindiName && (
-                      <div className="font-medium text-slate-800 dark:text-slate-200">{t.hindiName}</div>
-                    )}
+                    {t.hindiName && <div className="font-medium text-slate-800 dark:text-slate-200">{t.hindiName}</div>}
                     {t.localLanguageName && (
                       <div className="text-[11px] text-slate-500 italic">{t.localLanguageName}</div>
                     )}
-                    {!t.hindiName && !t.localLanguageName && (
-                      <span className="text-slate-400 italic">None set</span>
-                    )}
+                    {!t.hindiName && !t.localLanguageName && <span className="text-slate-400 italic">None set</span>}
                   </td>
                   <td className="py-3 px-4 max-w-xs truncate text-slate-600 dark:text-slate-400" title={t.description}>
                     {t.description || '—'}
@@ -435,7 +472,9 @@ export const EquipmentTypeManagementView: React.FC = () => {
                       <button
                         onClick={() => openEditModal(t)}
                         className={`p-1.5 rounded-lg border transition-all cursor-pointer ${
-                          isDaylight ? 'border-slate-200 hover:bg-slate-100 text-slate-700' : 'border-slate-700 hover:bg-slate-800 text-slate-300'
+                          isDaylight
+                            ? 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                            : 'border-slate-700 hover:bg-slate-800 text-slate-300'
                         }`}
                         title="Edit Equipment Type"
                       >
@@ -490,9 +529,11 @@ export const EquipmentTypeManagementView: React.FC = () => {
       {/* Add / Edit Modal - Increased Width (max-w-3xl) with React-Select Category */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
-          }`}>
+          <div
+            className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
+              isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'
+            }`}
+          >
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
@@ -501,7 +542,9 @@ export const EquipmentTypeManagementView: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3 mb-1">
-              <div className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'}`}>
+              <div
+                className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'}`}
+              >
                 <Layers className="h-6 w-6" />
               </div>
               <div>
@@ -649,7 +692,9 @@ export const EquipmentTypeManagementView: React.FC = () => {
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                 <div>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Active Status</span>
-                  <p className="text-[11px] text-slate-500">Allow this equipment type to be selected when commissioning fleet equipment</p>
+                  <p className="text-[11px] text-slate-500">
+                    Allow this equipment type to be selected when commissioning fleet equipment
+                  </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input

@@ -11,9 +11,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AuthUserDetails {
-    private Long id;
-    private String username;
-    private String fullName;
-    private Role role;
-    private boolean active;
+  private Long id;
+  private String username;
+  private String fullName;
+  private Role role;
+  private boolean active;
 }

@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Users,
-  Percent,
-  Plus,
-  MapPin,
-  Phone,
-  CheckCircle,
-  Building,
-  TrendingUp,
-} from 'lucide-react';
+import { Users, Percent, Plus, MapPin, Phone, CheckCircle, Building, TrendingUp } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { formatINR, cn } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -68,7 +59,7 @@ export const DealerNetworkView: React.FC = () => {
 
   // Page filter cascading lists
   const pageAvailableCities = cities.filter((c) =>
-    filterStateId === 'ALL' ? true : c.stateId === Number(filterStateId)
+    filterStateId === 'ALL' ? true : c.stateId === Number(filterStateId),
   );
   const pageAvailableHubs = hubs.filter((h) => {
     if (filterCityId !== 'ALL') return h.cityId === Number(filterCityId);
@@ -179,11 +170,16 @@ export const DealerNetworkView: React.FC = () => {
       {/* Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className={cn("text-lg sm:text-xl font-extrabold flex items-center gap-2", isDaylight ? "text-slate-950" : "text-white")}>
+          <h2
+            className={cn(
+              'text-lg sm:text-xl font-extrabold flex items-center gap-2',
+              isDaylight ? 'text-slate-950' : 'text-white',
+            )}
+          >
             <Users className="h-5 w-5 text-amber-500" />
             Channel Partners & Dealer Network (6% Model)
           </h2>
-          <p className={cn("text-[11px] mt-0.5", isDaylight ? "text-slate-500" : "text-slate-400")}>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
             Strategic partnerships across key cement yards, brick kilns & agri equipment stores
           </p>
         </div>
@@ -203,27 +199,80 @@ export const DealerNetworkView: React.FC = () => {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
-        <div className={cn("rounded-xl border p-2.5 sm:p-3", isDaylight ? "border-slate-200 bg-white shadow-sm" : "border-slate-800 bg-slate-900/40")}>
-          <span className={cn("text-[10px] font-bold uppercase tracking-wider", isDaylight ? "text-slate-500" : "text-slate-400")}>Active Partners</span>
-          <div className={cn("text-xl sm:text-2xl font-extrabold mt-0.5", isDaylight ? "text-slate-950" : "text-white")}>{filteredDealers.length} Yards / Stores</div>
-          <p className={cn("text-[11px] mt-0.5", isDaylight ? "text-slate-500" : "text-slate-500")}>Covering network service territories</p>
+        <div
+          className={cn(
+            'rounded-xl border p-2.5 sm:p-3',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <span
+            className={cn(
+              'text-[10px] font-bold uppercase tracking-wider',
+              isDaylight ? 'text-slate-500' : 'text-slate-400',
+            )}
+          >
+            Active Partners
+          </span>
+          <div
+            className={cn('text-xl sm:text-2xl font-extrabold mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}
+          >
+            {filteredDealers.length} Yards / Stores
+          </div>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
+            Covering network service territories
+          </p>
         </div>
 
-        <div className={cn("rounded-xl border p-2.5 sm:p-3", isDaylight ? "border-slate-200 bg-white shadow-sm" : "border-slate-800 bg-slate-900/40")}>
-          <span className={cn("text-[10px] font-bold uppercase tracking-wider", isDaylight ? "text-slate-500" : "text-slate-400")}>Commission Rule</span>
+        <div
+          className={cn(
+            'rounded-xl border p-2.5 sm:p-3',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <span
+            className={cn(
+              'text-[10px] font-bold uppercase tracking-wider',
+              isDaylight ? 'text-slate-500' : 'text-slate-400',
+            )}
+          >
+            Commission Rule
+          </span>
           <div className="text-xl sm:text-2xl font-extrabold text-amber-500 mt-0.5">6.0% Flat</div>
-          <p className={cn("text-[11px] mt-0.5", isDaylight ? "text-slate-500" : "text-slate-500")}>Calculated on Gross Equipment Rent</p>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
+            Calculated on Gross Equipment Rent
+          </p>
         </div>
 
-        <div className={cn("rounded-xl border p-2.5 sm:p-3", isDaylight ? "border-slate-200 bg-white shadow-sm" : "border-slate-800 bg-slate-900/40")}>
-          <span className={cn("text-[10px] font-bold uppercase tracking-wider", isDaylight ? "text-slate-500" : "text-slate-400")}>Total Commissions Tracked</span>
-          <div className="text-xl sm:text-2xl font-extrabold text-emerald-500 mt-0.5">{formatINR(totalCommissions)}</div>
-          <p className={cn("text-[11px] mt-0.5", isDaylight ? "text-slate-500" : "text-slate-500")}>Payable upon completed rental</p>
+        <div
+          className={cn(
+            'rounded-xl border p-2.5 sm:p-3',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <span
+            className={cn(
+              'text-[10px] font-bold uppercase tracking-wider',
+              isDaylight ? 'text-slate-500' : 'text-slate-400',
+            )}
+          >
+            Total Commissions Tracked
+          </span>
+          <div className="text-xl sm:text-2xl font-extrabold text-emerald-500 mt-0.5">
+            {formatINR(totalCommissions)}
+          </div>
+          <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
+            Payable upon completed rental
+          </p>
         </div>
       </div>
 
       {/* Territory Filter Bar */}
-      <div className={cn("flex flex-wrap items-center gap-2 p-2.5 sm:p-3 rounded-xl border flex-shrink-0", isDaylight ? "border-slate-200 bg-white" : "border-slate-800 bg-slate-900/40")}>
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-2 p-2.5 sm:p-3 rounded-xl border flex-shrink-0',
+          isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40',
+        )}
+      >
         <div className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mr-1">
           <MapPin className="h-4 w-4 text-amber-500" />
           <span>Territory Filters:</span>
@@ -254,7 +303,11 @@ export const DealerNetworkView: React.FC = () => {
                 ? []
                 : [
                     { value: 'ALL', label: 'All Cities' },
-                    ...pageAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined })),
+                    ...pageAvailableCities.map((c) => ({
+                      value: c.id,
+                      label: c.name,
+                      subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
+                    })),
                   ]
             }
             value={filterCityId === 'ALL' ? 'ALL' : Number(filterCityId)}
@@ -262,7 +315,9 @@ export const DealerNetworkView: React.FC = () => {
               setFilterCityId(String(val || 'ALL'));
               setFilterHubId('ALL');
             }}
-            placeholder={filterStateId !== 'ALL' && pageAvailableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+            placeholder={
+              filterStateId !== 'ALL' && pageAvailableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+            }
             isDisabled={filterStateId !== 'ALL' && pageAvailableCities.length === 0}
             isClearable={false}
           />
@@ -272,7 +327,8 @@ export const DealerNetworkView: React.FC = () => {
         <div className="w-44 sm:w-56">
           <SearchSelect
             options={
-              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) || (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
+              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) ||
+              (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
                 ? []
                 : [
                     { value: 'ALL', label: 'All Hubs / Yards' },
@@ -285,10 +341,13 @@ export const DealerNetworkView: React.FC = () => {
               filterStateId !== 'ALL' && pageAvailableCities.length === 0
                 ? 'No cities in this State'
                 : filterCityId !== 'ALL' && pageAvailableHubs.length === 0
-                ? 'No hubs in this City'
-                : 'All Hubs / Yards'
+                  ? 'No hubs in this City'
+                  : 'All Hubs / Yards'
             }
-            isDisabled={(filterCityId !== 'ALL' && pageAvailableHubs.length === 0) || (filterStateId !== 'ALL' && pageAvailableCities.length === 0)}
+            isDisabled={
+              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) ||
+              (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
+            }
             isClearable={false}
           />
         </div>
@@ -313,14 +372,13 @@ export const DealerNetworkView: React.FC = () => {
           isDaylight ? 'border-slate-200 bg-white' : 'border-slate-800 bg-slate-900/40'
         }`}
       >
-        <div
-          onScroll={handleScroll}
-          className="flex-1 min-h-0 p-3 overflow-y-auto"
-        >
+        <div onScroll={handleScroll} className="flex-1 min-h-0 p-3 overflow-y-auto">
           {visibleDealers.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center">
               <Users className="h-10 w-10 text-slate-400 mb-2 opacity-50" />
-              <p className="text-sm font-bold text-slate-500">No channel partners found matching selected territory filters</p>
+              <p className="text-sm font-bold text-slate-500">
+                No channel partners found matching selected territory filters
+              </p>
               <button
                 onClick={() => {
                   setFilterStateId('ALL');
@@ -345,17 +403,23 @@ export const DealerNetworkView: React.FC = () => {
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className={`font-bold text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>{dealer.tradeName}</h3>
-                      <p className={`text-xs flex items-center gap-1 mt-0.5 ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                      <h3 className={`font-bold text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                        {dealer.tradeName}
+                      </h3>
+                      <p
+                        className={`text-xs flex items-center gap-1 mt-0.5 ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}
+                      >
                         <MapPin className={`h-3 w-3 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
                         {dealer.location}
                       </p>
                     </div>
-                    <span className={`rounded px-2 py-0.5 text-[10px] font-mono border ${
-                      isDaylight
-                        ? 'bg-amber-100 text-amber-950 border-amber-300 font-bold'
-                        : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
-                    }`}>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] font-mono border ${
+                        isDaylight
+                          ? 'bg-amber-100 text-amber-950 border-amber-300 font-bold'
+                          : 'bg-slate-800 text-slate-300 border-slate-700 font-medium'
+                      }`}
+                    >
                       {((dealer.commissionRate || 0.06) * 100).toFixed(0)}% Partner
                     </span>
                   </div>
@@ -363,18 +427,28 @@ export const DealerNetworkView: React.FC = () => {
                   <div className={`space-y-1.5 text-xs pt-1 ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
                     <div className="flex items-center justify-between">
                       <span className={isDaylight ? 'text-slate-500' : 'text-slate-500'}>Contact Person:</span>
-                      <span className={`font-medium ${isDaylight ? 'text-slate-900' : 'text-slate-200'}`}>{dealer.name}</span>
+                      <span className={`font-medium ${isDaylight ? 'text-slate-900' : 'text-slate-200'}`}>
+                        {dealer.name}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className={isDaylight ? 'text-slate-500' : 'text-slate-500'}>Phone:</span>
-                      <span className={`font-mono ${isDaylight ? 'text-slate-900' : 'text-slate-200'}`}>{dealer.phone}</span>
+                      <span className={`font-mono ${isDaylight ? 'text-slate-900' : 'text-slate-200'}`}>
+                        {dealer.phone}
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className={isDaylight ? 'text-slate-500' : 'text-slate-500'}>Bookings Referred:</span>
-                      <span className={`font-bold ${isDaylight ? 'text-slate-950' : 'text-white'}`}>{dealer.totalReferrals}</span>
+                      <span className={`font-bold ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                        {dealer.totalReferrals}
+                      </span>
                     </div>
-                    <div className={`flex items-center justify-between pt-1 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800/80'}`}>
-                      <span className={`font-semibold ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>Earned Commission:</span>
+                    <div
+                      className={`flex items-center justify-between pt-1 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800/80'}`}
+                    >
+                      <span className={`font-semibold ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                        Earned Commission:
+                      </span>
                       <span className="font-bold text-emerald-500 font-mono">
                         {formatINR(dealer.totalCommissionEarned)}
                       </span>
@@ -398,11 +472,15 @@ export const DealerNetworkView: React.FC = () => {
       {/* --- ENLARGED ONBOARD CHANNEL PARTNER MODAL (3X SIZE WITH STATE->CITY->HUB CASCADE) --- */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
-          <div className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
-            isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#1e1e1e] text-white'
-          }`}>
+          <div
+            className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
+              isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#1e1e1e] text-white'
+            }`}
+          >
             {/* Modal Header */}
-            <div className={`flex items-start justify-between border-b pb-3 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+            <div
+              className={`flex items-start justify-between border-b pb-3 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}
+            >
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-amber-500/15 flex items-center justify-center text-amber-500 border border-amber-500/30">
                   <Users className="h-6 w-6" />
@@ -417,7 +495,8 @@ export const DealerNetworkView: React.FC = () => {
                     </span>
                   </div>
                   <p className={`mt-1 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Select territory (State → City → Hub) first, then provide partner business credentials and commercial referral terms.
+                    Select territory (State → City → Hub) first, then provide partner business credentials and
+                    commercial referral terms.
                   </p>
                 </div>
               </div>
@@ -426,7 +505,9 @@ export const DealerNetworkView: React.FC = () => {
                 onClick={() => setShowAddModal(false)}
                 aria-label="Close dealer onboarding dialog"
                 className={`rounded-xl border p-2.5 transition-colors cursor-pointer ${
-                  isDaylight ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800' : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  isDaylight
+                    ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`}
               >
                 ✕
@@ -435,12 +516,16 @@ export const DealerNetworkView: React.FC = () => {
 
             <form onSubmit={handleAddDealer} className="space-y-6 text-left">
               {/* 1. Territory First Cascade: State -> City -> Hub */}
-              <div className={`p-5 rounded-2xl border ${
-                isDaylight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-slate-800'
-              } space-y-3`}>
+              <div
+                className={`p-5 rounded-2xl border ${
+                  isDaylight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-slate-800'
+                } space-y-3`}
+              >
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-black flex items-center gap-2 text-amber-900 dark:text-amber-400 uppercase tracking-wider">
-                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] flex items-center justify-center font-bold">1</span>
+                    <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] flex items-center justify-center font-bold">
+                      1
+                    </span>
                     <span>Territory Assignment (State → City → Stationed Hub) *</span>
                   </div>
                   <span className="text-[11px] text-slate-500">Required before partner details</span>
@@ -448,7 +533,9 @@ export const DealerNetworkView: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       State *
                     </label>
                     <SearchSelect
@@ -466,11 +553,17 @@ export const DealerNetworkView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       City / District *
                     </label>
                     <SearchSelect
-                      options={modalAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined }))}
+                      options={modalAvailableCities.map((c) => ({
+                        value: c.id,
+                        label: c.name,
+                        subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
+                      }))}
                       value={modalCityId}
                       onChange={(val) => {
                         const cid = val ? Number(val) : '';
@@ -481,8 +574,8 @@ export const DealerNetworkView: React.FC = () => {
                         !modalStateId
                           ? 'Select State First'
                           : modalAvailableCities.length === 0
-                          ? 'No cities in this State'
-                          : 'Select City *'
+                            ? 'No cities in this State'
+                            : 'Select City *'
                       }
                       isDisabled={!modalStateId || modalAvailableCities.length === 0}
                       noOptionsMessage="No cities found in this State"
@@ -491,7 +584,9 @@ export const DealerNetworkView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Stationed Hub / Yard *
                     </label>
                     <SearchSelect
@@ -502,10 +597,10 @@ export const DealerNetworkView: React.FC = () => {
                         !modalStateId
                           ? 'Select State First'
                           : !modalCityId
-                          ? 'Select City First'
-                          : modalAvailableHubs.length === 0
-                          ? 'No hubs in this City'
-                          : 'Select Hub *'
+                            ? 'Select City First'
+                            : modalAvailableHubs.length === 0
+                              ? 'No hubs in this City'
+                              : 'Select Hub *'
                       }
                       isDisabled={!modalCityId || modalAvailableHubs.length === 0}
                       noOptionsMessage="No hubs found in this City"
@@ -519,7 +614,9 @@ export const DealerNetworkView: React.FC = () => {
                     <MapPin className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                     <span>
                       Operating under yard:{' '}
-                      <strong className="font-bold underline">{hubs.find((h) => h.id === Number(modalHubId))?.name}</strong>{' '}
+                      <strong className="font-bold underline">
+                        {hubs.find((h) => h.id === Number(modalHubId))?.name}
+                      </strong>{' '}
                       ({cities.find((c) => c.id === Number(modalCityId))?.name},{' '}
                       {states.find((s) => s.id === Number(modalStateId))?.name})
                     </span>
@@ -528,17 +625,23 @@ export const DealerNetworkView: React.FC = () => {
               </div>
 
               {/* 2. Partner & Business Details */}
-              <div className={`p-5 rounded-2xl border ${
-                isDaylight ? 'bg-slate-50/70 border-slate-200' : 'bg-slate-900/40 border-slate-800'
-              } space-y-4`}>
+              <div
+                className={`p-5 rounded-2xl border ${
+                  isDaylight ? 'bg-slate-50/70 border-slate-200' : 'bg-slate-900/40 border-slate-800'
+                } space-y-4`}
+              >
                 <div className="text-xs font-black flex items-center gap-2 text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-                  <span className="w-5 h-5 rounded-full bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center font-bold">2</span>
+                  <span className="w-5 h-5 rounded-full bg-slate-700 text-white font-mono text-[10px] flex items-center justify-center font-bold">
+                    2
+                  </span>
                   <span>Partner & Business Credentials</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Business / Shop Trade Name *
                     </label>
                     <input
@@ -547,14 +650,18 @@ export const DealerNetworkView: React.FC = () => {
                       value={tradeName}
                       onChange={(e) => setTradeName(e.target.value)}
                       className={`w-full rounded-xl border p-3 text-xs focus:border-amber-500 focus:outline-none ${
-                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                        isDaylight
+                          ? 'border-slate-300 bg-white text-slate-900 font-semibold'
+                          : 'border-slate-700 bg-slate-950 text-white'
                       }`}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Proprietor / Contact Person Name *
                     </label>
                     <input
@@ -563,7 +670,9 @@ export const DealerNetworkView: React.FC = () => {
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className={`w-full rounded-xl border p-3 text-xs focus:border-amber-500 focus:outline-none ${
-                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                        isDaylight
+                          ? 'border-slate-300 bg-white text-slate-900 font-semibold'
+                          : 'border-slate-700 bg-slate-950 text-white'
                       }`}
                       required
                     />
@@ -572,7 +681,9 @@ export const DealerNetworkView: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Primary Mobile Phone *
                     </label>
                     <input
@@ -581,14 +692,18 @@ export const DealerNetworkView: React.FC = () => {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       className={`w-full rounded-xl border p-3 text-xs font-mono focus:border-amber-500 focus:outline-none ${
-                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                        isDaylight
+                          ? 'border-slate-300 bg-white text-slate-900 font-semibold'
+                          : 'border-slate-700 bg-slate-950 text-white'
                       }`}
                       required
                     />
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Alternate Phone / WhatsApp
                     </label>
                     <input
@@ -597,7 +712,9 @@ export const DealerNetworkView: React.FC = () => {
                       value={altPhone}
                       onChange={(e) => setAltPhone(e.target.value)}
                       className={`w-full rounded-xl border p-3 text-xs font-mono focus:border-amber-500 focus:outline-none ${
-                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                        isDaylight
+                          ? 'border-slate-300 bg-white text-slate-900 font-semibold'
+                          : 'border-slate-700 bg-slate-950 text-white'
                       }`}
                     />
                   </div>
@@ -605,7 +722,9 @@ export const DealerNetworkView: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="sm:col-span-2">
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Shop / Yard Street Address & Landmark
                     </label>
                     <input
@@ -614,13 +733,17 @@ export const DealerNetworkView: React.FC = () => {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       className={`w-full rounded-xl border p-3 text-xs focus:border-amber-500 focus:outline-none ${
-                        isDaylight ? 'border-slate-300 bg-white text-slate-900 font-semibold' : 'border-slate-700 bg-slate-950 text-white'
+                        isDaylight
+                          ? 'border-slate-300 bg-white text-slate-900 font-semibold'
+                          : 'border-slate-700 bg-slate-950 text-white'
                       }`}
                     />
                   </div>
 
                   <div>
-                    <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                    <label
+                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                    >
                       Commission Rate (%)
                     </label>
                     <div className="relative">
@@ -632,7 +755,9 @@ export const DealerNetworkView: React.FC = () => {
                         value={commissionRate * 100}
                         onChange={(e) => setCommissionRate(parseFloat(e.target.value) / 100 || 0.06)}
                         className={`w-full rounded-xl border p-3 text-xs font-mono font-bold focus:border-amber-500 focus:outline-none ${
-                          isDaylight ? 'border-slate-300 bg-white text-slate-900' : 'border-slate-700 bg-slate-950 text-white'
+                          isDaylight
+                            ? 'border-slate-300 bg-white text-slate-900'
+                            : 'border-slate-700 bg-slate-950 text-white'
                         }`}
                       />
                       <span className="absolute right-3.5 top-3 text-xs font-bold text-amber-500">%</span>
@@ -641,7 +766,9 @@ export const DealerNetworkView: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}>
+                  <label
+                    className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
+                  >
                     Partnership Notes & Territory Agreement
                   </label>
                   <textarea
@@ -650,7 +777,9 @@ export const DealerNetworkView: React.FC = () => {
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className={`w-full rounded-xl border p-3 text-xs focus:border-amber-500 focus:outline-none ${
-                      isDaylight ? 'border-slate-300 bg-white text-slate-900 font-normal' : 'border-slate-700 bg-slate-950 text-white'
+                      isDaylight
+                        ? 'border-slate-300 bg-white text-slate-900 font-normal'
+                        : 'border-slate-700 bg-slate-950 text-white'
                     }`}
                   />
                 </div>
@@ -662,7 +791,9 @@ export const DealerNetworkView: React.FC = () => {
                   type="button"
                   onClick={() => setShowAddModal(false)}
                   className={`px-5 py-2.5 rounded-xl border text-xs font-bold cursor-pointer transition-colors ${
-                    isDaylight ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100' : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                    isDaylight
+                      ? 'border-slate-300 bg-white text-slate-700 hover:bg-slate-100'
+                      : 'border-slate-700 bg-slate-900 text-slate-300 hover:bg-slate-800'
                   }`}
                 >
                   Cancel

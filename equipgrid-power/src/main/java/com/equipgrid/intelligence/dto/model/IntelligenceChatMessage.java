@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class IntelligenceChatMessage {
-    private String role; // "user" or "model" or "assistant"
-    private String content;
-    private Long timestamp;
+  private String role; // "user" or "model" or "assistant"
+  private String content;
+  private Long timestamp;
 }

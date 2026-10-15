@@ -5,9 +5,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 /**
- * Persistence repository for ReturnInspection entity.
- * QueryDSL inspection lookups are in ReturnInspectionQueryRepository.
+ * Persistence repository for ReturnInspection entity. QueryDSL inspection lookups are in
+ * ReturnInspectionQueryRepository.
  */
 @Repository
-public interface ReturnInspectionRepository extends JpaRepository<ReturnInspection, Long> {
-}
+public interface ReturnInspectionRepository extends JpaRepository<ReturnInspection, Long> {}

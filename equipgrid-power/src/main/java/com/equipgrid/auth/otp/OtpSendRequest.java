@@ -13,7 +13,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OtpSendRequest {
 
-    @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^(?:\\+91|91)?[6-9]\\d{9}$", message = "Invalid 10-digit Indian mobile phone number")
-    private String phone;
+  @NotBlank(message = "Mobile number is required")
+  @Pattern(
+      regexp = "^(?:\\+91|91)?[6-9]\\d{9}$",
+      message = "Invalid 10-digit Indian mobile phone number")
+  private String phone;
 }

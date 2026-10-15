@@ -11,11 +11,11 @@ import lombok.NoArgsConstructor;
 @Builder
 public class FuzzyCheckResponse {
 
-    private boolean duplicate;
+  private boolean duplicate;
 
-    private String matchedName;
+  private String matchedName;
 
-    private double similarityPercentage;
+  private double similarityPercentage;
 
-    private String message;
+  private String message;
 }

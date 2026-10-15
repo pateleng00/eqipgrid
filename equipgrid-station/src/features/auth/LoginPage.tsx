@@ -1,16 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  ArrowRight,
-  Sun,
-  Moon,
-  ExternalLink,
-  Headphones,
-  Truck,
-} from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, ArrowRight, Sun, Moon, ExternalLink, Headphones, Truck } from 'lucide-react';
 import { useAuth } from '../../lib/AuthContext';
 import { useTheme } from '../../lib/ThemeContext';
 import { ConfirmationModal } from '../../components/ConfirmationModal';
@@ -46,7 +35,11 @@ export const LoginPage: React.FC = () => {
     try {
       const success = await loginWithCredentials(emailInput, passwordInput);
       if (!success) {
-        showInfo('Authentication Failed', 'Invalid email, username, or password. Please verify your credentials.', 'error');
+        showInfo(
+          'Authentication Failed',
+          'Invalid email, username, or password. Please verify your credentials.',
+          'error',
+        );
       }
     } catch (err: any) {
       showInfo('Authentication Error', err.message || 'Unable to complete sign-in.', 'error');
@@ -70,9 +63,7 @@ export const LoginPage: React.FC = () => {
           ========================================================================= */}
       <div
         className={`relative w-full lg:w-[52%] xl:w-[54%] flex flex-col justify-between p-8 sm:p-8 lg:p-16 overflow-hidden border-b lg:border-b-0 lg:border-r transition-colors duration-200 ${
-          isDaylight
-            ? 'bg-slate-100/90 text-slate-950 border-slate-300'
-            : 'bg-[#1e1e1e] text-white border-slate-800'
+          isDaylight ? 'bg-slate-100/90 text-slate-950 border-slate-300' : 'bg-[#1e1e1e] text-white border-slate-800'
         }`}
       >
         {/* Decorative Grid Lines and Diagonal Ambient Lighting */}
@@ -89,20 +80,26 @@ export const LoginPage: React.FC = () => {
         />
 
         {/* Diagonal Perspective Accent Light Rays */}
-        <div className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
-          isDaylight ? 'bg-blue-500/10' : 'bg-blue-600/10'
-        }`} />
-        <div className={`absolute top-1/3 -right-32 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
-          isDaylight ? 'bg-amber-400/10' : 'bg-amber-500/10'
-        }`} />
-        <div className={`absolute bottom-10 left-1/4 w-72 h-72 rounded-full blur-3xl pointer-events-none ${
-          isDaylight ? 'bg-emerald-400/10' : 'bg-emerald-500/10'
-        }`} />
+        <div
+          className={`absolute -top-32 -left-32 w-96 h-96 rounded-full blur-3xl pointer-events-none ${
+            isDaylight ? 'bg-blue-500/10' : 'bg-blue-600/10'
+          }`}
+        />
+        <div
+          className={`absolute top-1/3 -right-32 w-80 h-80 rounded-full blur-3xl pointer-events-none ${
+            isDaylight ? 'bg-amber-400/10' : 'bg-amber-500/10'
+          }`}
+        />
+        <div
+          className={`absolute bottom-10 left-1/4 w-72 h-72 rounded-full blur-3xl pointer-events-none ${
+            isDaylight ? 'bg-emerald-400/10' : 'bg-emerald-500/10'
+          }`}
+        />
 
         {/* Diagonal Accent Lines */}
-        <div className={`absolute inset-0 pointer-events-none overflow-hidden ${
-          isDaylight ? 'opacity-20' : 'opacity-30'
-        }`}>
+        <div
+          className={`absolute inset-0 pointer-events-none overflow-hidden ${isDaylight ? 'opacity-20' : 'opacity-30'}`}
+        >
           <div className="absolute -top-10 left-1/3 w-[2px] h-[140%] bg-gradient-to-b from-transparent via-blue-400/40 to-transparent rotate-[35deg]" />
           <div className="absolute top-20 left-1/4 w-[1px] h-[120%] bg-gradient-to-b from-transparent via-amber-400/30 to-transparent rotate-[35deg]" />
         </div>
@@ -116,17 +113,15 @@ export const LoginPage: React.FC = () => {
               alt="EquipGrid"
               className="h-20 sm:h-24 md:h-28 w-auto max-w-[480px] object-contain drop-shadow-lg"
             />
-            <div className={`hidden xl:block border-l pl-3 ${
-              isDaylight ? 'border-slate-300' : 'border-slate-700/80'
-            }`}>
-              <span className={`text-xs font-semibold tracking-wide block ${
-                isDaylight ? 'text-slate-800' : 'text-slate-300'
-              }`}>
+            <div className={`hidden xl:block border-l pl-3 ${isDaylight ? 'border-slate-300' : 'border-slate-700/80'}`}>
+              <span
+                className={`text-xs font-semibold tracking-wide block ${
+                  isDaylight ? 'text-slate-800' : 'text-slate-300'
+                }`}
+              >
                 Construction & Agri Equipment OS
               </span>
-              <span className="text-slate-500 text-[10px] font-mono tracking-wider uppercase">
-                Enterprise Portal
-              </span>
+              <span className="text-slate-500 text-[10px] font-mono tracking-wider uppercase">Enterprise Portal</span>
             </div>
           </div>
 
@@ -146,68 +141,91 @@ export const LoginPage: React.FC = () => {
         {/* Middle Hero Content: Tag, Punchy Typography, Narrative Description */}
         <div className="relative z-10 my-12 lg:my-auto max-w-xl space-y-6">
           {/* Tag Pill */}
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${
-            isDaylight
-              ? 'border-blue-400/70 bg-blue-100 text-blue-900 font-bold'
-              : 'border-blue-500/30 bg-blue-500/10 text-blue-300'
-          }`}>
+          <div
+            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-semibold ${
+              isDaylight
+                ? 'border-blue-400/70 bg-blue-100 text-blue-900 font-bold'
+                : 'border-blue-500/30 bg-blue-500/10 text-blue-300'
+            }`}
+          >
             <span className={`h-1.5 w-1.5 rounded-full ${isDaylight ? 'bg-blue-600' : 'bg-blue-400'} animate-pulse`} />
             <span>Rural Agro & Civil Equipment Grid</span>
           </div>
 
           {/* Bold Heading */}
-          <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] ${
-            isDaylight ? 'text-slate-950' : 'text-white'
-          }`}>
+          <h1
+            className={`text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] ${
+              isDaylight ? 'text-slate-950' : 'text-white'
+            }`}
+          >
             Powering Work. <br />
             Growing Progress.
           </h1>
 
           {/* Narrative Paragraph */}
-          <p className={`text-sm sm:text-base leading-relaxed max-w-2xl ${
-            isDaylight ? 'text-slate-700 font-medium' : 'text-slate-400'
-          }`}>
-            A complete operating platform for the equipment ecosystem, built to manage the journey from equipment availability and customer booking to dispatch, rental, return, inspection, maintenance, payments and operational analytics — creating a connected and efficient equipment network for construction and agriculture.
+          <p
+            className={`text-sm sm:text-base leading-relaxed max-w-2xl ${
+              isDaylight ? 'text-slate-700 font-medium' : 'text-slate-400'
+            }`}
+          >
+            A complete operating platform for the equipment ecosystem, built to manage the journey from equipment
+            availability and customer booking to dispatch, rental, return, inspection, maintenance, payments and
+            operational analytics — creating a connected and efficient equipment network for construction and
+            agriculture.
           </p>
         </div>
 
         {/* Bottom Hero Stats: 3 Metric Columns */}
-        <div className={`relative z-10 grid grid-cols-3 gap-6 pt-6 border-t ${
-          isDaylight ? 'border-slate-300' : 'border-slate-800/80'
-        }`}>
+        <div
+          className={`relative z-10 grid grid-cols-3 gap-6 pt-6 border-t ${
+            isDaylight ? 'border-slate-300' : 'border-slate-800/80'
+          }`}
+        >
           <div>
-            <div className={`text-2xl sm:text-3xl font-black tracking-tight ${
-              isDaylight ? 'text-slate-950' : 'text-white'
-            }`}>
+            <div
+              className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                isDaylight ? 'text-slate-950' : 'text-white'
+              }`}
+            >
               11+
             </div>
-            <div className={`text-[11px] sm:text-xs mt-1 font-medium ${
-              isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
-            }`}>
+            <div
+              className={`text-[11px] sm:text-xs mt-1 font-medium ${
+                isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
+              }`}
+            >
               Machines Ready
             </div>
           </div>
           <div>
-            <div className={`text-2xl sm:text-3xl font-black tracking-tight ${
-              isDaylight ? 'text-slate-950' : 'text-white'
-            }`}>
+            <div
+              className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                isDaylight ? 'text-slate-950' : 'text-white'
+              }`}
+            >
               ₹0
             </div>
-            <div className={`text-[11px] sm:text-xs mt-1 font-medium ${
-              isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
-            }`}>
+            <div
+              className={`text-[11px] sm:text-xs mt-1 font-medium ${
+                isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
+              }`}
+            >
               Credit Barrier
             </div>
           </div>
           <div>
-            <div className={`text-2xl sm:text-3xl font-black tracking-tight ${
-              isDaylight ? 'text-slate-950' : 'text-white'
-            }`}>
+            <div
+              className={`text-2xl sm:text-3xl font-black tracking-tight ${
+                isDaylight ? 'text-slate-950' : 'text-white'
+              }`}
+            >
               5 KM
             </div>
-            <div className={`text-[11px] sm:text-xs mt-1 font-medium ${
-              isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
-            }`}>
+            <div
+              className={`text-[11px] sm:text-xs mt-1 font-medium ${
+                isDaylight ? 'text-slate-700 font-bold' : 'text-slate-400'
+              }`}
+            >
               Free Delivery
             </div>
           </div>
@@ -253,11 +271,7 @@ export const LoginPage: React.FC = () => {
             {/* Header Titles */}
             <div>
               <div className="mb-4 lg:hidden">
-                <img
-                  src="/logo-rectangle.png"
-                  alt="EquipGrid"
-                  className="h-16 w-auto max-w-[320px] object-contain"
-                />
+                <img src="/logo-rectangle.png" alt="EquipGrid" className="h-16 w-auto max-w-[320px] object-contain" />
               </div>
               <h2 className="text-3xl font-extrabold tracking-tight">Sign in</h2>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
@@ -301,11 +315,13 @@ export const LoginPage: React.FC = () => {
                       showInfo(
                         'Password Reset',
                         'A PIN reset link has been dispatched via WhatsApp to your registered mobile number. Contact your Station Manager if you need immediate access.',
-                        'info'
+                        'info',
                       )
                     }
                     className={`text-[11px] transition-colors cursor-pointer ${
-                      isDaylight ? 'text-slate-600 hover:text-slate-900 font-semibold' : 'text-slate-400 hover:text-slate-200'
+                      isDaylight
+                        ? 'text-slate-600 hover:text-slate-900 font-semibold'
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
                     Forgot password?
@@ -361,9 +377,11 @@ export const LoginPage: React.FC = () => {
             {/* Divider */}
             <div className="relative my-5 flex items-center justify-center">
               <div className={`w-full border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`} />
-              <span className={`absolute px-3 text-[10px] font-bold uppercase tracking-wider ${
-                isDaylight ? 'bg-slate-50 text-slate-500' : 'bg-slate-900 text-slate-500'
-              }`}>
+              <span
+                className={`absolute px-3 text-[10px] font-bold uppercase tracking-wider ${
+                  isDaylight ? 'bg-slate-50 text-slate-500' : 'bg-slate-900 text-slate-500'
+                }`}
+              >
                 Customer Access
               </span>
             </div>
@@ -413,9 +431,7 @@ export const LoginPage: React.FC = () => {
                 Write to Us:{' '}
                 <a
                   href="mailto:support@equipgrid.in"
-                  className={`font-bold hover:underline ${
-                    isDaylight ? 'text-blue-700' : 'text-blue-400'
-                  }`}
+                  className={`font-bold hover:underline ${isDaylight ? 'text-blue-700' : 'text-blue-400'}`}
                 >
                   support@equipgrid.in
                 </a>
@@ -426,11 +442,13 @@ export const LoginPage: React.FC = () => {
           {/* Privacy & Legal Links */}
           <div className="flex items-center justify-center gap-4 text-xs text-slate-500">
             <button
-              onClick={() => showInfo(
-                'Data Privacy & Security',
-                'EquipGrid Station Data Security: 256-bit AES encrypted with zero-credit escrow validation. All data is processed locally and never shared with third parties.',
-                'info'
-              )}
+              onClick={() =>
+                showInfo(
+                  'Data Privacy & Security',
+                  'EquipGrid Station Data Security: 256-bit AES encrypted with zero-credit escrow validation. All data is processed locally and never shared with third parties.',
+                  'info',
+                )
+              }
               className={`transition-colors cursor-pointer ${
                 isDaylight ? 'hover:text-slate-900 text-slate-600' : 'hover:text-slate-200 text-slate-400'
               }`}
@@ -439,11 +457,13 @@ export const LoginPage: React.FC = () => {
             </button>
             <span>•</span>
             <button
-              onClick={() => showInfo(
-                'Legal Disclosures',
-                'Operating under Uttar Pradesh Rural Equipment Dispatch Regulations 2026. All rental contracts are governed by applicable UP state equipment leasing norms.',
-                'info'
-              )}
+              onClick={() =>
+                showInfo(
+                  'Legal Disclosures',
+                  'Operating under Uttar Pradesh Rural Equipment Dispatch Regulations 2026. All rental contracts are governed by applicable UP state equipment leasing norms.',
+                  'info',
+                )
+              }
               className={`transition-colors cursor-pointer ${
                 isDaylight ? 'hover:text-slate-900 text-slate-600' : 'hover:text-slate-200 text-slate-400'
               }`}

@@ -25,11 +25,7 @@ interface AddMachineModalProps {
   onMachineAdded: (asset: Asset) => void;
 }
 
-export const AddMachineModal: React.FC<AddMachineModalProps> = ({
-  isOpen,
-  onClose,
-  onMachineAdded,
-}) => {
+export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClose, onMachineAdded }) => {
   const { isDaylight } = useTheme();
 
   // Master Data from DB Tables
@@ -92,7 +88,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
   // Step 2 Fields: Media & Operations
   const [imageUrl, setImageUrl] = useState<string>(
-    'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_mix_001/photo_1.jpg'
+    'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_mix_001/photo_1.jpg',
   );
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [imageError, setImageError] = useState<boolean>(false);
@@ -104,15 +100,42 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
 
   // Quick preset machine images
   const sampleImages = [
-    { label: 'Concrete Mixer', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_mix_001/photo_1.jpg' },
-    { label: 'Concrete Vibrator', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_vib_001/photo_1.jpg' },
-    { label: 'Plate Compactor', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_cmp_001/photo_1.jpg' },
-    { label: 'Demolition Hammer', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_jkh_001/photo_1.jpg' },
-    { label: 'Water Pump', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_pmp_001/photo_1.jpg' },
-    { label: 'Generator', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_gen_001/photo_1.jpg' },
-    { label: 'Power Reaper', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_rep_001/photo_1.jpg' },
-    { label: 'Rotary Weeder', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_wed_001/photo_1.jpg' },
-    { label: 'Earth Auger', url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_aug_001/photo_1.jpg' },
+    {
+      label: 'Concrete Mixer',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_mix_001/photo_1.jpg',
+    },
+    {
+      label: 'Concrete Vibrator',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_vib_001/photo_1.jpg',
+    },
+    {
+      label: 'Plate Compactor',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_cmp_001/photo_1.jpg',
+    },
+    {
+      label: 'Demolition Hammer',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_jkh_001/photo_1.jpg',
+    },
+    {
+      label: 'Water Pump',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_pmp_001/photo_1.jpg',
+    },
+    {
+      label: 'Generator',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/c_gen_001/photo_1.jpg',
+    },
+    {
+      label: 'Power Reaper',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_rep_001/photo_1.jpg',
+    },
+    {
+      label: 'Rotary Weeder',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_wed_001/photo_1.jpg',
+    },
+    {
+      label: 'Earth Auger',
+      url: 'https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com/asset/images/a_aug_001/photo_1.jpg',
+    },
   ];
 
   if (!isOpen) return null;
@@ -227,9 +250,13 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
         }`}
       >
         {/* Modal Header */}
-        <div className={`flex items-center justify-between border-b pb-3.5 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+        <div
+          className={`flex items-center justify-between border-b pb-3.5 ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}
+        >
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-400 border border-slate-700'}`}>
+            <div
+              className={`p-2.5 rounded-xl ${isDaylight ? 'bg-amber-500 text-slate-950' : 'bg-slate-800 text-amber-400 border border-slate-700'}`}
+            >
               <Truck className="h-5 w-5" />
             </div>
             <div>
@@ -260,7 +287,9 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
         {step === 1 && (
           <form onSubmit={handleProceedToStep2} className="space-y-5">
             {/* 1. Territory Row: State -> City -> Hub */}
-            <div className={`rounded-xl border p-4 space-y-3 ${isDaylight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}>
+            <div
+              className={`rounded-xl border p-4 space-y-3 ${isDaylight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}
+            >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold mb-1">State *</label>
@@ -290,8 +319,8 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                       !selectedStateId
                         ? 'Select State First'
                         : availableCities.length === 0
-                        ? 'No cities in this State'
-                        : 'Select City *'
+                          ? 'No cities in this State'
+                          : 'Select City *'
                     }
                     isDisabled={!selectedStateId || availableCities.length === 0}
                     noOptionsMessage="No cities found in this State"
@@ -314,10 +343,10 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                       !selectedStateId
                         ? 'Select State First'
                         : !selectedCityId
-                        ? 'Select City First'
-                        : availableHubs.length === 0
-                        ? 'No hubs in this City'
-                        : 'Select Hub *'
+                          ? 'Select City First'
+                          : availableHubs.length === 0
+                            ? 'No hubs in this City'
+                            : 'Select Hub *'
                     }
                     isDisabled={!selectedCityId || availableHubs.length === 0}
                     noOptionsMessage="No hubs found in this City"
@@ -380,13 +409,11 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
               <div>
                 <label className="block text-xs font-bold mb-1">Machine Model *</label>
                 <SearchSelect
-                  options={
-                    availableModels.map((mod) => ({
-                      value: mod.id,
-                      label: mod.name,
-                      subLabel: `Model: ${mod.modelNumber} • ${mod.specs?.slice(0, 30)}...`,
-                    }))
-                  }
+                  options={availableModels.map((mod) => ({
+                    value: mod.id,
+                    label: mod.name,
+                    subLabel: `Model: ${mod.modelNumber} • ${mod.specs?.slice(0, 30)}...`,
+                  }))}
                   value={selectedModelId}
                   onChange={(val) => val && handleModelChange(Number(val))}
                   placeholder="Select Model..."
@@ -436,12 +463,16 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
                 required
               />
               <p className={`text-[11px] mt-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                Capital expenditure for inventory asset tracking. Multi-rate tariffs, variable billing units (per day, acre, trip, shift), deposits, and shift terms are managed flexibly under <strong>Rental Configuration</strong>.
+                Capital expenditure for inventory asset tracking. Multi-rate tariffs, variable billing units (per day,
+                acre, trip, shift), deposits, and shift terms are managed flexibly under{' '}
+                <strong>Rental Configuration</strong>.
               </p>
             </div>
 
             {/* Step 1 Actions */}
-            <div className={`flex justify-end gap-3 pt-3 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+            <div
+              className={`flex justify-end gap-3 pt-3 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}
+            >
               <button
                 type="button"
                 onClick={onClose}
@@ -528,7 +559,9 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
             </div>
 
             {/* Video Section (Optional) */}
-            <div className={`rounded-xl border p-4 space-y-2 ${isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}>
+            <div
+              className={`rounded-xl border p-4 space-y-2 ${isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}
+            >
               <div className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
                 <Video className="h-4 w-4 text-blue-500" />
                 <span>2. Field Demonstration Video (Optional)</span>
@@ -546,15 +579,19 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
             </div>
 
             {/* Operator Confirmation */}
-            <div className={`flex items-center justify-between p-4 rounded-xl border ${
-              operatorRequired
-                ? 'border-amber-500 bg-amber-500/10'
-                : isDaylight
-                ? 'border-slate-200 bg-slate-50'
-                : 'border-slate-800 bg-slate-900/40'
-            }`}>
+            <div
+              className={`flex items-center justify-between p-4 rounded-xl border ${
+                operatorRequired
+                  ? 'border-amber-500 bg-amber-500/10'
+                  : isDaylight
+                    ? 'border-slate-200 bg-slate-50'
+                    : 'border-slate-800 bg-slate-900/40'
+              }`}
+            >
               <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${operatorRequired ? 'bg-amber-500 text-slate-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                <div
+                  className={`p-2 rounded-lg ${operatorRequired ? 'bg-amber-500 text-slate-950' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}
+                >
                   <UserCheck className="h-5 w-5" />
                 </div>
                 <div>
@@ -573,9 +610,13 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
             </div>
 
             {/* Machine Summary Pill */}
-            <div className={`p-3 rounded-xl border text-xs grid grid-cols-2 sm:grid-cols-4 gap-2 ${
-              isDaylight ? 'bg-amber-50/40 border-amber-200 text-slate-800' : 'bg-slate-900/60 border-slate-800 text-slate-300'
-            }`}>
+            <div
+              className={`p-3 rounded-xl border text-xs grid grid-cols-2 sm:grid-cols-4 gap-2 ${
+                isDaylight
+                  ? 'bg-amber-50/40 border-amber-200 text-slate-800'
+                  : 'bg-slate-900/60 border-slate-800 text-slate-300'
+              }`}
+            >
               <div>
                 <span className="text-[10px] uppercase font-bold text-slate-400 block">Machine Name</span>
                 <span className="font-bold">{machineName}</span>
@@ -595,7 +636,9 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({
             </div>
 
             {/* Step 2 Actions */}
-            <div className={`flex justify-between items-center pt-3 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}>
+            <div
+              className={`flex justify-between items-center pt-3 border-t ${isDaylight ? 'border-slate-200' : 'border-slate-800'}`}
+            >
               <button
                 type="button"
                 onClick={() => setStep(1)}

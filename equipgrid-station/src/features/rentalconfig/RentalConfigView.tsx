@@ -20,7 +20,13 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
-import { RentalConfiguration, AssetCategory, resolveBillingUnitCode, BillingUnitCode, getBillingUnitLabel } from '../../types';
+import {
+  RentalConfiguration,
+  AssetCategory,
+  resolveBillingUnitCode,
+  BillingUnitCode,
+  getBillingUnitLabel,
+} from '../../types';
 import { SearchSelect } from '../../components/SearchSelect';
 import { formatINR } from '../../lib/utils';
 import { SkeletonTable } from '../../components/SkeletonTable';
@@ -56,7 +62,7 @@ export const RentalConfigView: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState<number>(7);
 
   const availableCities = cities.filter((c) =>
-    selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)
+    selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId),
   );
   const availableHubs = hubs.filter((h) => {
     if (selectedCityId !== 'ALL') return h.cityId === Number(selectedCityId);
@@ -222,7 +228,11 @@ export const RentalConfigView: React.FC = () => {
     const hub = hubs.find((h) => h.id === c.hubId);
     const city = cities.find((cty) => cty.id === hub?.cityId);
     const asset = c.assetId ? assets.find((a) => a.id === c.assetId) : undefined;
-    const model = asset?.modelId ? models.find((m) => m.id === asset.modelId) : (c.typeId ? models.find((m) => m.typeId === c.typeId) : undefined);
+    const model = asset?.modelId
+      ? models.find((m) => m.id === asset.modelId)
+      : c.typeId
+        ? models.find((m) => m.typeId === c.typeId)
+        : undefined;
     const resolvedTypeId = c.typeId || asset?.typeId || model?.typeId || '';
     const typeObj = resolvedTypeId ? types.find((t) => t.id === resolvedTypeId) : undefined;
     const category = asset?.category || typeObj?.category || 'CONSTRUCTION';
@@ -256,7 +266,7 @@ export const RentalConfigView: React.FC = () => {
     }
     const modelObj = formModelId ? models.find((m) => m.id === Number(formModelId)) : undefined;
     const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
-    const resolvedTypeId = formTypeId ? Number(formTypeId) : (modelObj?.typeId || undefined);
+    const resolvedTypeId = formTypeId ? Number(formTypeId) : modelObj?.typeId || undefined;
 
     const parsedRate = parseFloat(formBaseRate);
     const added = api.addRentalConfig({
@@ -265,7 +275,8 @@ export const RentalConfigView: React.FC = () => {
       typeId: resolvedTypeId,
       baseDailyRate: !isNaN(parsedRate) ? parsedRate : 1000,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
-      operatorDailyRate: formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
+      operatorDailyRate:
+        formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
       freeDeliveryDistanceKm: formFreeKm !== '' && !isNaN(parseFloat(formFreeKm)) ? parseFloat(formFreeKm) : 0,
       ratePerKmAfterFree: formRatePerKm !== '' && !isNaN(parseFloat(formRatePerKm)) ? parseFloat(formRatePerKm) : 0,
       notes: formNotes,
@@ -284,13 +295,14 @@ export const RentalConfigView: React.FC = () => {
     if (!editingConfig) return;
     const modelObj = formModelId ? models.find((m) => m.id === Number(formModelId)) : undefined;
     const matchingUnit = billingUnits.find((u) => u.code === formBillingUnit);
-    const resolvedTypeId = formTypeId ? Number(formTypeId) : (modelObj?.typeId || undefined);
+    const resolvedTypeId = formTypeId ? Number(formTypeId) : modelObj?.typeId || undefined;
 
     const parsedRate = parseFloat(formBaseRate);
     const updated = api.updateRentalConfig(editingConfig.id, {
       baseDailyRate: !isNaN(parsedRate) ? parsedRate : editingConfig.baseDailyRate,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
-      operatorDailyRate: formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
+      operatorDailyRate:
+        formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
       freeDeliveryDistanceKm: formFreeKm !== '' && !isNaN(parseFloat(formFreeKm)) ? parseFloat(formFreeKm) : 0,
       ratePerKmAfterFree: formRatePerKm !== '' && !isNaN(parseFloat(formRatePerKm)) ? parseFloat(formRatePerKm) : 0,
       notes: formNotes,
@@ -323,9 +335,7 @@ export const RentalConfigView: React.FC = () => {
   const activeSimConfig = configs.find((c) => c.id === simConfigId) || configs[0];
   const simFree = activeSimConfig?.freeDeliveryDistanceKm ?? 5.0;
   const simRateKm = activeSimConfig?.ratePerKmAfterFree ?? 10.0;
-  const simDeliveryFee = simDistanceKm <= simFree
-    ? 0
-    : Math.round((simDistanceKm - simFree) * simRateKm);
+  const simDeliveryFee = simDistanceKm <= simFree ? 0 : Math.round((simDistanceKm - simFree) * simRateKm);
   const simRent = (activeSimConfig?.baseDailyRate || 1000) * simDays;
   const simOperator = (activeSimConfig?.operatorDailyRate || 500) * simDays;
   const simTotal = simRent + simOperator + simDeliveryFee + (activeSimConfig?.depositAmount || 0);
@@ -376,7 +386,9 @@ export const RentalConfigView: React.FC = () => {
       {/* Cascading Regional Filters */}
       <div
         className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-end">
@@ -397,7 +409,10 @@ export const RentalConfigView: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
             <SearchSelect
-              options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
+              options={[
+                { value: 'ALL', label: 'All States' },
+                ...states.map((s) => ({ value: String(s.id), label: s.name })),
+              ]}
               value={selectedStateId}
               onChange={(val) => {
                 setSelectedStateId(String(val || 'ALL'));
@@ -413,14 +428,19 @@ export const RentalConfigView: React.FC = () => {
               options={
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? []
-                  : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]
+                  : [
+                      { value: 'ALL', label: 'All Cities' },
+                      ...availableCities.map((c) => ({ value: String(c.id), label: c.name })),
+                    ]
               }
               value={selectedCityId}
               onChange={(val) => {
                 setSelectedCityId(String(val || 'ALL'));
                 setSelectedHubId('ALL');
               }}
-              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+              }
               isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
@@ -428,9 +448,13 @@ export const RentalConfigView: React.FC = () => {
           <div>
             <SearchSelect
               options={
-                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
                   ? []
-                  : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]
+                  : [
+                      { value: 'ALL', label: 'All Hubs' },
+                      ...availableHubs.map((h) => ({ value: String(h.id), label: h.name })),
+                    ]
               }
               value={selectedHubId}
               onChange={(val) => setSelectedHubId(String(val || 'ALL'))}
@@ -438,10 +462,13 @@ export const RentalConfigView: React.FC = () => {
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? 'No cities in this State'
                   : selectedCityId !== 'ALL' && availableHubs.length === 0
-                  ? 'No hubs in this City'
-                  : 'All Hubs'
+                    ? 'No hubs in this City'
+                    : 'All Hubs'
               }
-              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+              isDisabled={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
+              }
               isClearable={false}
             />
           </div>
@@ -451,10 +478,14 @@ export const RentalConfigView: React.FC = () => {
       {/* Configurations Table */}
       <div
         className={`flex-1 min-h-0 rounded-2xl border overflow-hidden transition-colors flex flex-col ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
-        <div className={`px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0 ${isDaylight ? 'border-slate-200' : 'border-slate-800/60'}`}>
+        <div
+          className={`px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0 ${isDaylight ? 'border-slate-200' : 'border-slate-800/60'}`}
+        >
           <div className="flex items-center gap-2">
             <Calculator className={`h-4 w-4 ${isDaylight ? 'text-amber-700' : 'text-purple-400'}`} />
             <h3 className={`font-black text-xs sm:text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
@@ -462,12 +493,11 @@ export const RentalConfigView: React.FC = () => {
             </h3>
           </div>
         </div>
-        <div
-          onScroll={handleScroll}
-          className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
-        >
+        <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
           <table className="w-full text-left text-xs">
-            <thead className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'}`}>
+            <thead
+              className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs'}`}
+            >
               <tr>
                 <th className="py-2.5 px-3">Scope (Machine / Hub)</th>
                 <th className="py-2.5 px-3">Yard & City</th>
@@ -481,29 +511,44 @@ export const RentalConfigView: React.FC = () => {
             </thead>
             <tbody className={`divide-y ${isDaylight ? 'divide-slate-100' : 'divide-slate-800/50'}`}>
               {visibleConfigs.map((c) => (
-                <tr key={c.id} className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}>
+                <tr
+                  key={c.id}
+                  className={`transition-colors ${isDaylight ? 'hover:bg-slate-50' : 'hover:bg-slate-800/30'}`}
+                >
                   <td className="py-2.5 px-3">
                     <div className={`font-bold text-sm ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
                       {c.assetName || (c.typeName ? `All ${c.typeName}` : 'All Hub Machines')}
                     </div>
                     {c.shiftTerms && (
-                      <div className={`text-[11px] font-medium flex items-center gap-1 ${isDaylight ? 'text-amber-800' : 'text-amber-400'}`}>
+                      <div
+                        className={`text-[11px] font-medium flex items-center gap-1 ${isDaylight ? 'text-amber-800' : 'text-amber-400'}`}
+                      >
                         <span>⏱️</span>
                         <span className="truncate max-w-[240px]">{c.shiftTerms}</span>
                       </div>
                     )}
                     {c.notes && (
-                      <div className={`text-[11px] max-w-[200px] truncate ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.notes}</div>
+                      <div
+                        className={`text-[11px] max-w-[200px] truncate ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}
+                      >
+                        {c.notes}
+                      </div>
                     )}
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="font-bold">{c.hubName || 'Yard'}</div>
-                    <div className={`text-[11px] ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>{c.cityName || 'City'}</div>
+                    <div className={`text-[11px] ${isDaylight ? 'text-slate-600' : 'text-slate-500'}`}>
+                      {c.cityName || 'City'}
+                    </div>
                   </td>
-                  <td className={`py-2.5 px-3 font-mono font-black whitespace-nowrap ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
+                  <td
+                    className={`py-2.5 px-3 font-mono font-black whitespace-nowrap ${isDaylight ? 'text-slate-950' : 'text-white'}`}
+                  >
                     {formatINR(c.baseDailyRate)}/{c.unitLabel || getBillingUnitLabel(c.billingUnit)}
                   </td>
-                  <td className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`}>
+                  <td
+                    className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`}
+                  >
                     {formatINR(c.depositAmount)}
                   </td>
                   <td className="py-2.5 px-3 whitespace-nowrap">
@@ -512,15 +557,21 @@ export const RentalConfigView: React.FC = () => {
                         Zero / Trip Rate
                       </span>
                     ) : (
-                      <span className={`font-mono font-black px-2 py-0.5 rounded border border-emerald-400 ${isDaylight ? 'text-emerald-700 bg-emerald-500/10' : 'text-emerald-300 bg-emerald-500/10'}`}>
+                      <span
+                        className={`font-mono font-black px-2 py-0.5 rounded border border-emerald-400 ${isDaylight ? 'text-emerald-700 bg-emerald-500/10' : 'text-emerald-300 bg-emerald-500/10'}`}
+                      >
                         {c.freeDeliveryDistanceKm} KM (₹0)
                       </span>
                     )}
                   </td>
-                  <td className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-slate-800' : 'text-slate-300'}`}>
+                  <td
+                    className={`py-2.5 px-3 font-mono font-bold whitespace-nowrap ${isDaylight ? 'text-slate-800' : 'text-slate-300'}`}
+                  >
                     {c.ratePerKmAfterFree === 0 ? '—' : `₹${c.ratePerKmAfterFree}/km`}
                   </td>
-                  <td className={`py-2.5 px-3 font-mono whitespace-nowrap ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <td
+                    className={`py-2.5 px-3 font-mono whitespace-nowrap ${isDaylight ? 'text-slate-700' : 'text-slate-300'}`}
+                  >
                     {!c.operatorDailyRate || c.operatorDailyRate === 0 ? (
                       <span className="text-slate-500 text-[11px]">Optional / ₹0</span>
                     ) : (
@@ -571,17 +622,26 @@ export const RentalConfigView: React.FC = () => {
       {/* --- ADD / EDIT RENTAL CONFIG MODAL --- */}
       {(showAddModal || editingConfig) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
-          <div className={`w-full max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-3.5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}>
-            <div className={`flex items-center justify-between border-b pb-3 ${
-              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
-            }`}>
+          <div
+            className={`w-full max-w-6xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 shadow-2xl space-y-3.5 ${isDaylight ? 'border-slate-300 bg-white text-slate-950' : 'border-slate-800 bg-[#1e1e1e] text-slate-100'}`}
+          >
+            <div
+              className={`flex items-center justify-between border-b pb-3 ${
+                isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+              }`}
+            >
               <h3 className="text-base font-black flex items-center gap-2">
                 <SlidersHorizontal className="h-5 w-5 text-amber-500" />
-                <span>{editingConfig ? 'Update Rental Configuration' : 'Create Machine & Hub Rental Configuration'}</span>
+                <span>
+                  {editingConfig ? 'Update Rental Configuration' : 'Create Machine & Hub Rental Configuration'}
+                </span>
               </h3>
               <button
                 type="button"
-                onClick={() => { setShowAddModal(false); setEditingConfig(null); }}
+                onClick={() => {
+                  setShowAddModal(false);
+                  setEditingConfig(null);
+                }}
                 aria-label="Close rental configuration dialog"
                 className={`rounded-lg border p-2 transition-colors cursor-pointer ${
                   isDaylight
@@ -595,11 +655,17 @@ export const RentalConfigView: React.FC = () => {
 
             <form onSubmit={editingConfig ? handleUpdate : handleSaveNew} className="space-y-3">
               {/* === STEP 3.1: Territory & Machine Target Scope (Collapsible Step 1) === */}
-              <div className={`rounded-xl border transition-all ${
-                expandedSection === 'SCOPE'
-                  ? isDaylight ? 'border-amber-400 bg-white shadow-sm' : 'border-amber-500/60 bg-slate-900/60 shadow-lg'
-                  : isDaylight ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/70' : 'border-slate-800 bg-slate-900/30 hover:bg-slate-800/60'
-              }`}>
+              <div
+                className={`rounded-xl border transition-all ${
+                  expandedSection === 'SCOPE'
+                    ? isDaylight
+                      ? 'border-amber-400 bg-white shadow-sm'
+                      : 'border-amber-500/60 bg-slate-900/60 shadow-lg'
+                    : isDaylight
+                      ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/70'
+                      : 'border-slate-800 bg-slate-900/30 hover:bg-slate-800/60'
+                }`}
+              >
                 {/* Accordion Header 3.1 */}
                 <button
                   type="button"
@@ -607,11 +673,13 @@ export const RentalConfigView: React.FC = () => {
                   className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      expandedSection === 'SCOPE'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'bg-emerald-600 text-white'
-                    }`}>
+                    <span
+                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                        expandedSection === 'SCOPE'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'bg-emerald-600 text-white'
+                      }`}
+                    >
                       {expandedSection !== 'SCOPE' && formHubId ? '✓' : '1'}
                     </span>
                     <div className="min-w-0">
@@ -619,16 +687,24 @@ export const RentalConfigView: React.FC = () => {
                         <span className="text-xs sm:text-sm font-black tracking-tight">
                           Territory & Machine Target Scope
                         </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                          expandedSection === 'SCOPE'
-                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            expandedSection === 'SCOPE'
+                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
                           {expandedSection === 'SCOPE' ? 'Expanded' : 'Scope Set'}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                        {hubs.find((h) => h.id === Number(formHubId))?.name || 'Yard'} • {formCategory || 'Category'} • {formTypeId ? (types.find((t) => t.id === Number(formTypeId))?.name || 'Type') : 'All Types'} • {formModelId ? (models.find((m) => m.id === Number(formModelId))?.name || 'Model') : 'All Models'} • {formAssetId ? (assets.find((a) => a.id === Number(formAssetId))?.name || 'Target Unit') : 'All Matching Machines in Hub'}
+                        {hubs.find((h) => h.id === Number(formHubId))?.name || 'Yard'} • {formCategory || 'Category'} •{' '}
+                        {formTypeId ? types.find((t) => t.id === Number(formTypeId))?.name || 'Type' : 'All Types'} •{' '}
+                        {formModelId ? models.find((m) => m.id === Number(formModelId))?.name || 'Model' : 'All Models'}{' '}
+                        •{' '}
+                        {formAssetId
+                          ? assets.find((a) => a.id === Number(formAssetId))?.name || 'Target Unit'
+                          : 'All Matching Machines in Hub'}
                       </div>
                     </div>
                   </div>
@@ -666,7 +742,11 @@ export const RentalConfigView: React.FC = () => {
                       <div>
                         <label className="block text-xs font-bold mb-1">City *</label>
                         <SearchSelect
-                          options={formAvailableCities.map((c) => ({ value: c.id, label: c.name, subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined }))}
+                          options={formAvailableCities.map((c) => ({
+                            value: c.id,
+                            label: c.name,
+                            subLabel: c.pinCode ? `PIN: ${c.pinCode}` : undefined,
+                          }))}
                           value={formCityId}
                           onChange={(val) => {
                             const cid = val ? Number(val) : '';
@@ -678,8 +758,8 @@ export const RentalConfigView: React.FC = () => {
                             !formStateId
                               ? 'Select State First'
                               : formAvailableCities.length === 0
-                              ? 'No cities in this State'
-                              : 'Select City *'
+                                ? 'No cities in this State'
+                                : 'Select City *'
                           }
                           isDisabled={!formStateId || formAvailableCities.length === 0}
                           noOptionsMessage="No cities found in this State"
@@ -701,10 +781,10 @@ export const RentalConfigView: React.FC = () => {
                             !formStateId
                               ? 'Select State First'
                               : !formCityId
-                              ? 'Select City First'
-                              : formAvailableHubs.length === 0
-                              ? 'No hubs in this City'
-                              : 'Select Hub *'
+                                ? 'Select City First'
+                                : formAvailableHubs.length === 0
+                                  ? 'No hubs in this City'
+                                  : 'Select Hub *'
                           }
                           isDisabled={!formCityId || formAvailableHubs.length === 0}
                           noOptionsMessage="No hubs found in this City"
@@ -719,9 +799,21 @@ export const RentalConfigView: React.FC = () => {
                         <label className="block text-xs font-bold mb-1">Category *</label>
                         <SearchSelect
                           options={[
-                            { value: 'CONSTRUCTION', label: 'Construction Fleet', subLabel: 'Mixers, Vibrators, Breakers' },
-                            { value: 'AGRICULTURE', label: 'Agriculture Machinery', subLabel: 'Harvesters, Weeders, Tillers' },
-                            { value: 'MULTIPURPOSE_FLEET', label: 'Multipurpose Fleet', subLabel: 'Tractors, Trailers, Haulage' },
+                            {
+                              value: 'CONSTRUCTION',
+                              label: 'Construction Fleet',
+                              subLabel: 'Mixers, Vibrators, Breakers',
+                            },
+                            {
+                              value: 'AGRICULTURE',
+                              label: 'Agriculture Machinery',
+                              subLabel: 'Harvesters, Weeders, Tillers',
+                            },
+                            {
+                              value: 'MULTIPURPOSE_FLEET',
+                              label: 'Multipurpose Fleet',
+                              subLabel: 'Tractors, Trailers, Haulage',
+                            },
                           ]}
                           value={formCategory}
                           onChange={(val) => {
@@ -844,11 +936,17 @@ export const RentalConfigView: React.FC = () => {
               </div>
 
               {/* === STEP 3.2: Tariff Rates, Billing Unit & Delivery Policy (Collapsible Step 2) === */}
-              <div className={`rounded-xl border transition-all ${
-                expandedSection === 'COMMERCIALS'
-                  ? isDaylight ? 'border-amber-400 bg-white shadow-sm' : 'border-amber-500/60 bg-slate-900/60 shadow-lg'
-                  : isDaylight ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/70' : 'border-slate-800 bg-slate-900/30 hover:bg-slate-800/60'
-              }`}>
+              <div
+                className={`rounded-xl border transition-all ${
+                  expandedSection === 'COMMERCIALS'
+                    ? isDaylight
+                      ? 'border-amber-400 bg-white shadow-sm'
+                      : 'border-amber-500/60 bg-slate-900/60 shadow-lg'
+                    : isDaylight
+                      ? 'border-slate-200 bg-slate-50/70 hover:bg-slate-100/70'
+                      : 'border-slate-800 bg-slate-900/30 hover:bg-slate-800/60'
+                }`}
+              >
                 {/* Accordion Header 3.2 */}
                 <button
                   type="button"
@@ -856,11 +954,13 @@ export const RentalConfigView: React.FC = () => {
                   className="w-full px-4 py-3 flex items-center justify-between text-left cursor-pointer transition-colors"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <span className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
-                      expandedSection === 'COMMERCIALS'
-                        ? 'bg-amber-500 text-slate-950 shadow-sm'
-                        : 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                    }`}>
+                    <span
+                      className={`h-6 w-6 rounded-full flex items-center justify-center text-xs font-black shrink-0 ${
+                        expandedSection === 'COMMERCIALS'
+                          ? 'bg-amber-500 text-slate-950 shadow-sm'
+                          : 'bg-slate-300 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+                      }`}
+                    >
                       2
                     </span>
                     <div className="min-w-0">
@@ -868,16 +968,21 @@ export const RentalConfigView: React.FC = () => {
                         <span className="text-xs sm:text-sm font-black tracking-tight">
                           Tariff Rates & Billing Unit
                         </span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                          expandedSection === 'COMMERCIALS'
-                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                            expandedSection === 'COMMERCIALS'
+                              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30'
+                              : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                          }`}
+                        >
                           {expandedSection === 'COMMERCIALS' ? 'Expanded' : 'Tariff Details'}
                         </span>
                       </div>
                       <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                        {formBillingUnit} • Base Rate: {formBaseRate ? `₹${formBaseRate}/${getBillingUnitLabel(formBillingUnit)}` : 'Not set'} • Deposit: ₹{formDeposit || 0} • Operator: {formOperatorRate ? `₹${formOperatorRate}/day` : 'Optional (₹0)'}
+                        {formBillingUnit} • Base Rate:{' '}
+                        {formBaseRate ? `₹${formBaseRate}/${getBillingUnitLabel(formBillingUnit)}` : 'Not set'} •
+                        Deposit: ₹{formDeposit || 0} • Operator:{' '}
+                        {formOperatorRate ? `₹${formOperatorRate}/day` : 'Optional (₹0)'}
                       </div>
                     </div>
                   </div>
@@ -936,9 +1041,7 @@ export const RentalConfigView: React.FC = () => {
                       </div>
 
                       <div>
-                        <label className="block text-xs font-bold mb-1">
-                          Security Deposit (₹) *
-                        </label>
+                        <label className="block text-xs font-bold mb-1">Security Deposit (₹) *</label>
                         <input
                           type="number"
                           min="0"
@@ -1040,7 +1143,9 @@ export const RentalConfigView: React.FC = () => {
                             onChange={(e) => setFormFreeKm(e.target.value)}
                             className="w-full rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold mt-0.5 block">0 Rs charged till this distance</span>
+                          <span className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold mt-0.5 block">
+                            0 Rs charged till this distance
+                          </span>
                         </div>
 
                         <div>
@@ -1056,7 +1161,9 @@ export const RentalConfigView: React.FC = () => {
                             onChange={(e) => setFormRatePerKm(e.target.value)}
                             className="w-full rounded border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 p-2 text-xs font-mono font-bold text-slate-950 dark:text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold mt-0.5 block">Rate per excess km</span>
+                          <span className="text-[10px] text-amber-900 dark:text-amber-400 font-semibold mt-0.5 block">
+                            Rate per excess km
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -1064,9 +1171,7 @@ export const RentalConfigView: React.FC = () => {
                     {/* Operator DPR & Policy Notes */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold mb-1">
-                          Operator Daily DPR (₹/day) (Optional)
-                        </label>
+                        <label className="block text-xs font-bold mb-1">Operator Daily DPR (₹/day) (Optional)</label>
                         <input
                           type="number"
                           min="0"
@@ -1099,7 +1204,9 @@ export const RentalConfigView: React.FC = () => {
                         type="button"
                         onClick={() => setExpandedSection('SCOPE')}
                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
-                          isDaylight ? 'border-slate-300 text-slate-700 hover:bg-slate-100 font-bold' : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                          isDaylight
+                            ? 'border-slate-300 text-slate-700 hover:bg-slate-100 font-bold'
+                            : 'border-slate-700 text-slate-300 hover:bg-slate-800'
                         }`}
                       >
                         <ArrowLeft className="h-3.5 w-3.5" />
@@ -1114,7 +1221,9 @@ export const RentalConfigView: React.FC = () => {
                             setEditingConfig(null);
                           }}
                           className={`px-3 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-colors ${
-                            isDaylight ? 'border-slate-300 text-slate-700 hover:bg-slate-100 font-bold' : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                            isDaylight
+                              ? 'border-slate-300 text-slate-700 hover:bg-slate-100 font-bold'
+                              : 'border-slate-700 text-slate-300 hover:bg-slate-800'
                           }`}
                         >
                           Cancel

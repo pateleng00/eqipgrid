@@ -5,19 +5,18 @@ import com.equipgrid.dealer.dto.request.CreateDealerRequest;
 import com.equipgrid.dealer.dto.response.DealerSummaryResponse;
 import com.equipgrid.dealer.entity.Dealer;
 import com.equipgrid.dealer.entity.DealerCommission;
-
 import java.util.List;
 
 public interface IDealerService {
-    List<DealerSummaryResponse> getAllDealers();
+  List<DealerSummaryResponse> getAllDealers();
 
-    Dealer getDealerById(Long id);
+  Dealer getDealerById(Long id);
 
-    Dealer createDealer(CreateDealerRequest request, String performedBy);
+  Dealer createDealer(CreateDealerRequest request, String performedBy);
 
-    DealerCommission recordReferralCommission(Booking booking);
+  DealerCommission recordReferralCommission(Booking booking);
 
-    DealerCommission settleCommission(Long commissionId, String performedBy);
+  DealerCommission settleCommission(Long commissionId, String performedBy);
 
-    List<DealerCommission> getCommissionsByDealer(Long dealerId);
+  List<DealerCommission> getCommissionsByDealer(Long dealerId);
 }

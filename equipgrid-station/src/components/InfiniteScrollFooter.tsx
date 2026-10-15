@@ -31,13 +31,16 @@ export const InfiniteScrollFooter: React.FC<InfiniteScrollFooterProps> = ({
         isDaylight
           ? 'border-slate-200 bg-slate-50/70 text-slate-700'
           : 'border-slate-800/80 bg-slate-950/60 text-slate-300',
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-2">
         <span className={cn('text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
-          Showing <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{loadedCount}</span> of{' '}
-          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{totalCount}</span> {itemName}
+          Showing{' '}
+          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{loadedCount}</span>{' '}
+          of{' '}
+          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{totalCount}</span>{' '}
+          {itemName}
         </span>
         {!hasMore && (
           <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 ml-1">
@@ -54,7 +57,7 @@ export const InfiniteScrollFooter: React.FC<InfiniteScrollFooterProps> = ({
             'px-3 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs',
             isDaylight
               ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-100 hover:border-slate-400'
-              : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:text-white'
+              : 'border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 hover:text-white',
           )}
         >
           <span>Load More (+7)</span>

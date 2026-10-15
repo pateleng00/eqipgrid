@@ -32,16 +32,41 @@ import { Payment, PaymentProof, RefundTransaction, PaymentType } from '../../typ
 import { cn } from '../../lib/utils';
 
 const PAYMENT_TYPE_STYLE: Record<string, { label: string; color: string; darkColor: string; isCredit: boolean }> = {
-  DEPOSIT:          { label: 'Deposit',          color: 'bg-blue-100 text-blue-800 border-blue-300',     darkColor: 'bg-blue-900/30 text-blue-300 border-blue-800/50',    isCredit: true },
-  ADVANCE:          { label: 'Advance Rent',      color: 'bg-amber-100 text-amber-800 border-amber-300',  darkColor: 'bg-amber-900/30 text-amber-300 border-amber-700/50', isCredit: true },
-  FINAL_SETTLEMENT: { label: 'Final Settlement',  color: 'bg-emerald-100 text-emerald-800 border-emerald-300', darkColor: 'bg-emerald-900/30 text-emerald-300 border-emerald-800/50', isCredit: true },
-  DAMAGE_CHARGE:    { label: 'Damage Charge',     color: 'bg-rose-100 text-rose-800 border-rose-300',     darkColor: 'bg-rose-900/30 text-rose-300 border-rose-800/50',    isCredit: true },
-  REFUND:           { label: 'Refund',            color: 'bg-purple-100 text-purple-800 border-purple-300', darkColor: 'bg-purple-900/30 text-purple-300 border-purple-800/50', isCredit: false },
+  DEPOSIT: {
+    label: 'Deposit',
+    color: 'bg-blue-100 text-blue-800 border-blue-300',
+    darkColor: 'bg-blue-900/30 text-blue-300 border-blue-800/50',
+    isCredit: true,
+  },
+  ADVANCE: {
+    label: 'Advance Rent',
+    color: 'bg-amber-100 text-amber-800 border-amber-300',
+    darkColor: 'bg-amber-900/30 text-amber-300 border-amber-700/50',
+    isCredit: true,
+  },
+  FINAL_SETTLEMENT: {
+    label: 'Final Settlement',
+    color: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+    darkColor: 'bg-emerald-900/30 text-emerald-300 border-emerald-800/50',
+    isCredit: true,
+  },
+  DAMAGE_CHARGE: {
+    label: 'Damage Charge',
+    color: 'bg-rose-100 text-rose-800 border-rose-300',
+    darkColor: 'bg-rose-900/30 text-rose-300 border-rose-800/50',
+    isCredit: true,
+  },
+  REFUND: {
+    label: 'Refund',
+    color: 'bg-purple-100 text-purple-800 border-purple-300',
+    darkColor: 'bg-purple-900/30 text-purple-300 border-purple-800/50',
+    isCredit: false,
+  },
 };
 
 const PAYMENT_MODE_ICON: Record<string, React.ReactNode> = {
-  UPI:           <Smartphone className="h-3 w-3" />,
-  CASH:          <Banknote className="h-3 w-3" />,
+  UPI: <Smartphone className="h-3 w-3" />,
+  CASH: <Banknote className="h-3 w-3" />,
   BANK_TRANSFER: <Building2 className="h-3 w-3" />,
 };
 
@@ -158,9 +183,9 @@ export const PaymentLedgerView: React.FC = () => {
   const pendingProofsCount = useMemo(() => proofs.filter((p) => p.status === 'PENDING').length, [proofs]);
   const pendingRefundsCount = useMemo(() => refunds.filter((r) => r.status === 'PENDING').length, [refunds]);
 
-  const availableCities = useMemo(() =>
-    cities.filter((c) => selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId)),
-    [cities, selectedStateId]
+  const availableCities = useMemo(
+    () => cities.filter((c) => (selectedStateId === 'ALL' ? true : c.stateId === Number(selectedStateId))),
+    [cities, selectedStateId],
   );
   const availableHubs = useMemo(() => {
     if (selectedCityId !== 'ALL') return hubs.filter((h) => h.cityId === Number(selectedCityId));
@@ -239,7 +264,12 @@ export const PaymentLedgerView: React.FC = () => {
       {/* Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
-          <h2 className={cn('text-lg sm:text-xl font-black flex items-center gap-2', isDaylight ? 'text-slate-950' : 'text-white')}>
+          <h2
+            className={cn(
+              'text-lg sm:text-xl font-black flex items-center gap-2',
+              isDaylight ? 'text-slate-950' : 'text-white',
+            )}
+          >
             <CreditCard className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
             Payments & Ledger
           </h2>
@@ -264,19 +294,49 @@ export const PaymentLedgerView: React.FC = () => {
       {/* Summary Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
         {[
-          { label: 'Total Collected', value: formatINR(totalCollected), color: isDaylight ? 'text-emerald-700' : 'text-emerald-400', icon: <ArrowUpRight className="h-4 w-4" /> },
-          { label: 'Total Refunded', value: formatINR(totalRefunded), color: isDaylight ? 'text-rose-600' : 'text-rose-400', icon: <ArrowDownLeft className="h-4 w-4" /> },
-          { label: 'Net Balance', value: formatINR(netBalance), color: isDaylight ? 'text-slate-950' : 'text-white', icon: <CreditCard className="h-4 w-4" /> },
+          {
+            label: 'Total Collected',
+            value: formatINR(totalCollected),
+            color: isDaylight ? 'text-emerald-700' : 'text-emerald-400',
+            icon: <ArrowUpRight className="h-4 w-4" />,
+          },
+          {
+            label: 'Total Refunded',
+            value: formatINR(totalRefunded),
+            color: isDaylight ? 'text-rose-600' : 'text-rose-400',
+            icon: <ArrowDownLeft className="h-4 w-4" />,
+          },
+          {
+            label: 'Net Balance',
+            value: formatINR(netBalance),
+            color: isDaylight ? 'text-slate-950' : 'text-white',
+            icon: <CreditCard className="h-4 w-4" />,
+          },
         ].map((stat) => (
           <div
             key={stat.label}
-            className={cn('rounded-xl border p-2.5 sm:p-3 flex items-center justify-between', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}
+            className={cn(
+              'rounded-xl border p-2.5 sm:p-3 flex items-center justify-between',
+              isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+            )}
           >
             <div>
-              <div className={cn('text-[10px] font-bold uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>{stat.label}</div>
+              <div
+                className={cn(
+                  'text-[10px] font-bold uppercase tracking-wider',
+                  isDaylight ? 'text-slate-500' : 'text-slate-400',
+                )}
+              >
+                {stat.label}
+              </div>
               <div className={cn('text-lg sm:text-xl font-black font-mono mt-0.5', stat.color)}>{stat.value}</div>
             </div>
-            <div className={cn('p-2 rounded-lg', isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400')}>
+            <div
+              className={cn(
+                'p-2 rounded-lg',
+                isDaylight ? 'bg-slate-100 text-slate-500' : 'bg-slate-800 text-slate-400',
+              )}
+            >
               {stat.icon}
             </div>
           </div>
@@ -284,7 +344,12 @@ export const PaymentLedgerView: React.FC = () => {
       </div>
 
       {/* Sub Tabs Switcher */}
-      <div className={cn('flex items-center gap-1.5 p-1 rounded-xl border flex-shrink-0', isDaylight ? 'border-slate-200 bg-slate-100' : 'border-slate-800 bg-slate-900/60')}>
+      <div
+        className={cn(
+          'flex items-center gap-1.5 p-1 rounded-xl border flex-shrink-0',
+          isDaylight ? 'border-slate-200 bg-slate-100' : 'border-slate-800 bg-slate-900/60',
+        )}
+      >
         <button
           onClick={() => setActiveSubTab('ledger')}
           className={cn(
@@ -294,8 +359,8 @@ export const PaymentLedgerView: React.FC = () => {
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <CreditCard className="h-3.5 w-3.5" />
@@ -311,8 +376,8 @@ export const PaymentLedgerView: React.FC = () => {
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <FileCheck className="h-3.5 w-3.5 text-amber-500" />
@@ -337,8 +402,8 @@ export const PaymentLedgerView: React.FC = () => {
                 ? 'bg-white text-slate-950 shadow-xs'
                 : 'bg-slate-800 text-white shadow-xs'
               : isDaylight
-              ? 'text-slate-600 hover:text-slate-950'
-              : 'text-slate-400 hover:text-white'
+                ? 'text-slate-600 hover:text-slate-950'
+                : 'text-slate-400 hover:text-white',
           )}
         >
           <DollarSign className="h-3.5 w-3.5 text-purple-500" />
@@ -357,39 +422,67 @@ export const PaymentLedgerView: React.FC = () => {
 
       {/* Filters (only for transaction ledger) */}
       {activeSubTab === 'ledger' && (
-        <div className={cn('flex-shrink-0 p-2.5 rounded-xl border transition-colors', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
+        <div
+          className={cn(
+            'flex-shrink-0 p-2.5 rounded-xl border transition-colors',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
           <div className="flex items-center justify-end mb-1.5">
             <button
               onClick={resetFilters}
-              className={cn('text-[11px] font-bold flex items-center gap-1 cursor-pointer', isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200')}
+              className={cn(
+                'text-[11px] font-bold flex items-center gap-1 cursor-pointer',
+                isDaylight ? 'text-amber-800 hover:text-amber-950' : 'text-slate-400 hover:text-slate-200',
+              )}
             >
               <RotateCcw className="h-3 w-3" /> Reset
             </button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
             <SearchSelect
-              options={[{ value: 'ALL', label: 'All States' }, ...states.map((s) => ({ value: String(s.id), label: s.name }))]}
+              options={[
+                { value: 'ALL', label: 'All States' },
+                ...states.map((s) => ({ value: String(s.id), label: s.name })),
+              ]}
               value={selectedStateId}
-              onChange={(v) => { setSelectedStateId(String(v || 'ALL')); setSelectedCityId('ALL'); setSelectedHubId('ALL'); }}
-              placeholder="All States" isClearable={false}
+              onChange={(v) => {
+                setSelectedStateId(String(v || 'ALL'));
+                setSelectedCityId('ALL');
+                setSelectedHubId('ALL');
+              }}
+              placeholder="All States"
+              isClearable={false}
             />
             <SearchSelect
               options={
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? []
-                  : [{ value: 'ALL', label: 'All Cities' }, ...availableCities.map((c) => ({ value: String(c.id), label: c.name }))]
+                  : [
+                      { value: 'ALL', label: 'All Cities' },
+                      ...availableCities.map((c) => ({ value: String(c.id), label: c.name })),
+                    ]
               }
               value={selectedCityId}
-              onChange={(v) => { setSelectedCityId(String(v || 'ALL')); setSelectedHubId('ALL'); }}
-              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              onChange={(v) => {
+                setSelectedCityId(String(v || 'ALL'));
+                setSelectedHubId('ALL');
+              }}
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+              }
               isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
             <SearchSelect
               options={
-                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
                   ? []
-                  : [{ value: 'ALL', label: 'All Hubs' }, ...availableHubs.map((h) => ({ value: String(h.id), label: h.name }))]
+                  : [
+                      { value: 'ALL', label: 'All Hubs' },
+                      ...availableHubs.map((h) => ({ value: String(h.id), label: h.name })),
+                    ]
               }
               value={selectedHubId}
               onChange={(v) => setSelectedHubId(String(v || 'ALL'))}
@@ -397,10 +490,13 @@ export const PaymentLedgerView: React.FC = () => {
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? 'No cities in this State'
                   : selectedCityId !== 'ALL' && availableHubs.length === 0
-                  ? 'No hubs in this City'
-                  : 'All Hubs'
+                    ? 'No hubs in this City'
+                    : 'All Hubs'
               }
-              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+              isDisabled={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
+              }
               isClearable={false}
             />
             {/* Search */}
@@ -415,7 +511,7 @@ export const PaymentLedgerView: React.FC = () => {
                   'w-full rounded-lg border pl-8 pr-3 py-1.5 text-xs focus:outline-none transition-colors',
                   isDaylight
                     ? 'border-slate-300 bg-white text-slate-950 placeholder-slate-400 focus:border-amber-500'
-                    : 'border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500'
+                    : 'border-slate-800 bg-slate-950 text-white placeholder-slate-600 focus:border-amber-500',
                 )}
               />
             </div>
@@ -427,8 +523,18 @@ export const PaymentLedgerView: React.FC = () => {
       {/* 1. TRANSACTION LEDGER TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSubTab === 'ledger' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <CreditCard className={cn('h-4 w-4', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
               <h3 className={cn('font-black text-xs sm:text-sm', isDaylight ? 'text-slate-950' : 'text-white')}>
@@ -443,16 +549,24 @@ export const PaymentLedgerView: React.FC = () => {
           {filteredPayments.length === 0 ? (
             <div className="flex-1 min-h-0 p-8 text-center flex flex-col items-center justify-center space-y-1.5">
               <CreditCard className="h-7 w-7 mx-auto opacity-25 text-slate-500" />
-              <p className={cn('text-xs font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>No transactions found</p>
-              <p className="text-[11px] text-slate-500">Payments are recorded when bookings are confirmed, dispatched, and returned.</p>
+              <p className={cn('text-xs font-bold', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+                No transactions found
+              </p>
+              <p className="text-[11px] text-slate-500">
+                Payments are recorded when bookings are confirmed, dispatched, and returned.
+              </p>
             </div>
           ) : (
-            <div
-              onScroll={handleScroll}
-              className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
-            >
+            <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs' : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800 shadow-xs'
+                      : 'border-slate-800 bg-slate-950 text-slate-300 shadow-xs',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Transaction Ref</th>
                     <th className="py-3 px-4">Booking / Customer</th>
@@ -473,11 +587,21 @@ export const PaymentLedgerView: React.FC = () => {
                       >
                         {/* Transaction ref */}
                         <td className="py-3.5 px-4">
-                          <div className={cn('font-mono font-bold text-xs', isDaylight ? 'text-slate-800' : 'text-slate-200')}>
+                          <div
+                            className={cn(
+                              'font-mono font-bold text-xs',
+                              isDaylight ? 'text-slate-800' : 'text-slate-200',
+                            )}
+                          >
                             {p.transactionRef || '—'}
                           </div>
                           {p.notes && (
-                            <div className={cn('text-[10px] mt-0.5 truncate max-w-[160px]', isDaylight ? 'text-slate-400' : 'text-slate-500')}>
+                            <div
+                              className={cn(
+                                'text-[10px] mt-0.5 truncate max-w-[160px]',
+                                isDaylight ? 'text-slate-400' : 'text-slate-500',
+                              )}
+                            >
                               {p.notes}
                             </div>
                           )}
@@ -485,7 +609,12 @@ export const PaymentLedgerView: React.FC = () => {
 
                         {/* Booking / Customer */}
                         <td className="py-3.5 px-4">
-                          <div className={cn('font-mono font-bold text-[11px]', isDaylight ? 'text-amber-700' : 'text-amber-400')}>
+                          <div
+                            className={cn(
+                              'font-mono font-bold text-[11px]',
+                              isDaylight ? 'text-amber-700' : 'text-amber-400',
+                            )}
+                          >
                             {p.bookingNumber}
                           </div>
                           <div className={cn('font-medium mt-0.5', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
@@ -495,10 +624,12 @@ export const PaymentLedgerView: React.FC = () => {
 
                         {/* Payment type badge */}
                         <td className="py-3.5 px-4">
-                          <span className={cn(
-                            'inline-block text-[10px] font-bold px-2 py-0.5 rounded border',
-                            isDaylight ? typeStyle?.color : typeStyle?.darkColor
-                          )}>
+                          <span
+                            className={cn(
+                              'inline-block text-[10px] font-bold px-2 py-0.5 rounded border',
+                              isDaylight ? typeStyle?.color : typeStyle?.darkColor,
+                            )}
+                          >
                             {typeStyle?.label || p.paymentType}
                           </span>
                         </td>
@@ -509,7 +640,12 @@ export const PaymentLedgerView: React.FC = () => {
                             <span className={cn(isDaylight ? 'text-slate-500' : 'text-slate-400')}>
                               {PAYMENT_MODE_ICON[p.paymentMode] || null}
                             </span>
-                            <span className={cn('font-mono text-[11px] font-bold', isDaylight ? 'text-slate-700' : 'text-slate-300')}>
+                            <span
+                              className={cn(
+                                'font-mono text-[11px] font-bold',
+                                isDaylight ? 'text-slate-700' : 'text-slate-300',
+                              )}
+                            >
                               {p.paymentMode}
                             </span>
                           </div>
@@ -517,7 +653,9 @@ export const PaymentLedgerView: React.FC = () => {
 
                         {/* Date */}
                         <td className="py-3.5 px-4">
-                          <div className={cn('text-[11px] font-mono', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+                          <div
+                            className={cn('text-[11px] font-mono', isDaylight ? 'text-slate-500' : 'text-slate-400')}
+                          >
                             {formatDate(p.createdAt)}
                           </div>
                         </td>
@@ -525,17 +663,25 @@ export const PaymentLedgerView: React.FC = () => {
                         {/* Amount — red for refunds, green for inflows */}
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {isRefund
-                              ? <ArrowDownLeft className="h-3.5 w-3.5 text-rose-500" />
-                              : <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
-                            }
-                            <span className={cn(
-                              'font-mono font-extrabold text-sm',
-                              isRefund
-                                ? (isDaylight ? 'text-rose-600' : 'text-rose-400')
-                                : (isDaylight ? 'text-emerald-700' : 'text-emerald-400')
-                            )}>
-                              {isRefund ? '−' : '+'}{formatINR(p.amount)}
+                            {isRefund ? (
+                              <ArrowDownLeft className="h-3.5 w-3.5 text-rose-500" />
+                            ) : (
+                              <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500" />
+                            )}
+                            <span
+                              className={cn(
+                                'font-mono font-extrabold text-sm',
+                                isRefund
+                                  ? isDaylight
+                                    ? 'text-rose-600'
+                                    : 'text-rose-400'
+                                  : isDaylight
+                                    ? 'text-emerald-700'
+                                    : 'text-emerald-400',
+                              )}
+                            >
+                              {isRefund ? '−' : '+'}
+                              {formatINR(p.amount)}
                             </span>
                           </div>
                         </td>
@@ -546,14 +692,29 @@ export const PaymentLedgerView: React.FC = () => {
 
                 {/* Footer totals row */}
                 <tfoot>
-                  <tr className={cn('border-t-2 font-black text-sm', isDaylight ? 'border-slate-300 bg-slate-100/60' : 'border-slate-700 bg-slate-950/60')}>
+                  <tr
+                    className={cn(
+                      'border-t-2 font-black text-sm',
+                      isDaylight ? 'border-slate-300 bg-slate-100/60' : 'border-slate-700 bg-slate-950/60',
+                    )}
+                  >
                     <td colSpan={5} className="py-3 px-4">
-                      <span className={cn('text-xs uppercase tracking-wider font-black', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+                      <span
+                        className={cn(
+                          'text-xs uppercase tracking-wider font-black',
+                          isDaylight ? 'text-slate-500' : 'text-slate-400',
+                        )}
+                      >
                         Net Balance ({filteredPayments.length} txns)
                       </span>
                     </td>
                     <td className="py-3 px-4 text-right">
-                      <span className={cn('font-mono font-extrabold text-base', isDaylight ? 'text-slate-950' : 'text-white')}>
+                      <span
+                        className={cn(
+                          'font-mono font-extrabold text-base',
+                          isDaylight ? 'text-slate-950' : 'text-white',
+                        )}
+                      >
                         {formatINR(netBalance)}
                       </span>
                     </td>
@@ -579,8 +740,18 @@ export const PaymentLedgerView: React.FC = () => {
       {/* 2. PAYMENT PROOF VERIFICATION QUEUE TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSubTab === 'proofs' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <FileCheck className="h-4 w-4 text-amber-500" />
               <div>
@@ -588,7 +759,8 @@ export const PaymentLedgerView: React.FC = () => {
                   Farmer Payment Proof Verification Queue
                 </h3>
                 <p className="text-[10px] text-slate-500">
-                  Farmers submitting UPI transaction IDs/UTRs via WhatsApp require staff verification before booking lock.
+                  Farmers submitting UPI transaction IDs/UTRs via WhatsApp require staff verification before booking
+                  lock.
                 </p>
               </div>
             </div>
@@ -608,13 +780,21 @@ export const PaymentLedgerView: React.FC = () => {
                 Payment Proof Queue is Clean
               </p>
               <p className="text-[11px] text-slate-500 max-w-sm">
-                No unverified farmer UPI/UTR payment proofs pending. When a farmer submits a UTR on WhatsApp, it appears here for bank reconciliation.
+                No unverified farmer UPI/UTR payment proofs pending. When a farmer submits a UTR on WhatsApp, it appears
+                here for bank reconciliation.
               </p>
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800' : 'border-slate-800 bg-slate-950 text-slate-300')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800'
+                      : 'border-slate-800 bg-slate-950 text-slate-300',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Submitted Ref / UTR</th>
                     <th className="py-3 px-4">Farmer / Phone</th>
@@ -658,9 +838,7 @@ export const PaymentLedgerView: React.FC = () => {
                           <div className="font-bold text-slate-900 dark:text-slate-100">
                             {booking?.customer?.fullName || 'Walk-in Farmer'}
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            {booking?.customer?.phone || '—'}
-                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">{booking?.customer?.phone || '—'}</div>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-mono text-amber-600 dark:text-amber-400 font-bold">
@@ -679,10 +857,15 @@ export const PaymentLedgerView: React.FC = () => {
                               'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border',
                               isPending
                                 ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700/50'
-                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/50'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700/50',
                             )}
                           >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', isPending ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500')} />
+                            <span
+                              className={cn(
+                                'h-1.5 w-1.5 rounded-full',
+                                isPending ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500',
+                              )}
+                            />
                             {proof.status}
                           </span>
                         </td>
@@ -723,8 +906,18 @@ export const PaymentLedgerView: React.FC = () => {
       {/* 3. REFUND SETTLEMENT QUEUE TAB */}
       {/* ─────────────────────────────────────────────────────────────────── */}
       {activeSubTab === 'refunds' && (
-        <div className={cn('flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col', isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40')}>
-          <div className={cn('px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0', isDaylight ? 'border-slate-200' : 'border-slate-800/60')}>
+        <div
+          className={cn(
+            'flex-1 min-h-0 rounded-2xl border overflow-hidden flex flex-col',
+            isDaylight ? 'border-slate-200 bg-white shadow-sm' : 'border-slate-800 bg-slate-900/40',
+          )}
+        >
+          <div
+            className={cn(
+              'px-3.5 py-2.5 border-b flex items-center justify-between flex-shrink-0',
+              isDaylight ? 'border-slate-200' : 'border-slate-800/60',
+            )}
+          >
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-purple-500" />
               <div>
@@ -752,13 +945,21 @@ export const PaymentLedgerView: React.FC = () => {
                 No Refunds in Queue
               </p>
               <p className="text-[11px] text-slate-500 max-w-sm">
-                When a return inspection completes with refundable security deposit, it automatically appears here for payout processing.
+                When a return inspection completes with refundable security deposit, it automatically appears here for
+                payout processing.
               </p>
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
               <table className="w-full text-left text-xs">
-                <thead className={cn('sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider', isDaylight ? 'border-slate-300 bg-slate-100 text-slate-800' : 'border-slate-800 bg-slate-950 text-slate-300')}>
+                <thead
+                  className={cn(
+                    'sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider',
+                    isDaylight
+                      ? 'border-slate-300 bg-slate-100 text-slate-800'
+                      : 'border-slate-800 bg-slate-950 text-slate-300',
+                  )}
+                >
                   <tr>
                     <th className="py-3 px-4">Booking / Customer</th>
                     <th className="py-3 px-4">Machine</th>
@@ -786,17 +987,11 @@ export const PaymentLedgerView: React.FC = () => {
                           <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
                             {booking?.customer?.fullName || 'Farmer'}
                           </div>
-                          <div className="text-[10px] text-slate-500 font-mono">
-                            {booking?.customer?.phone}
-                          </div>
+                          <div className="text-[10px] text-slate-500 font-mono">{booking?.customer?.phone}</div>
                         </td>
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-slate-800 dark:text-slate-200">
-                            {booking?.asset?.name}
-                          </div>
-                          <div className="font-mono text-[10px] text-slate-500">
-                            {booking?.asset?.assetTag}
-                          </div>
+                          <div className="font-bold text-slate-800 dark:text-slate-200">{booking?.asset?.name}</div>
+                          <div className="font-mono text-[10px] text-slate-500">{booking?.asset?.assetTag}</div>
                         </td>
                         <td className="py-3.5 px-4 font-mono font-black text-sm text-emerald-600 dark:text-emerald-400">
                           {formatINR(refund.amount)}
@@ -810,10 +1005,15 @@ export const PaymentLedgerView: React.FC = () => {
                               'inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border',
                               isPending
                                 ? 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50'
-                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50'
+                                : 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50',
                             )}
                           >
-                            <span className={cn('h-1.5 w-1.5 rounded-full', isPending ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500')} />
+                            <span
+                              className={cn(
+                                'h-1.5 w-1.5 rounded-full',
+                                isPending ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500',
+                              )}
+                            />
                             {refund.status}
                           </span>
                         </td>
@@ -854,7 +1054,12 @@ export const PaymentLedgerView: React.FC = () => {
       {/* Verify Proof Modal */}
       {selectedProof && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-3 overflow-y-auto">
-          <div className={cn('w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl', isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-emerald-500/30 text-white')}>
+          <div
+            className={cn(
+              'w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl',
+              isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-emerald-500/30 text-white',
+            )}
+          >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-500" />
@@ -872,7 +1077,9 @@ export const PaymentLedgerView: React.FC = () => {
             <div className="rounded-xl border p-3 text-xs space-y-1.5 bg-slate-50 dark:bg-slate-900/50">
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Submitted Reference (UTR):</span>
-                <span className="font-mono font-black text-amber-600 dark:text-amber-400">{selectedProof.submittedReference}</span>
+                <span className="font-mono font-black text-amber-600 dark:text-amber-400">
+                  {selectedProof.submittedReference}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Booking Number:</span>
@@ -970,7 +1177,12 @@ export const PaymentLedgerView: React.FC = () => {
       {/* Mark Refund Complete Modal */}
       {selectedRefund && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-3 overflow-y-auto">
-          <div className={cn('w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl', isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-purple-500/30 text-white')}>
+          <div
+            className={cn(
+              'w-full max-w-lg rounded-2xl border p-5 space-y-4 shadow-2xl',
+              isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#242424] border-purple-500/30 text-white',
+            )}
+          >
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-purple-500" />
@@ -994,7 +1206,9 @@ export const PaymentLedgerView: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Farmer:</span>
-                <span className="font-bold">{selectedRefund.booking?.customer?.fullName} ({selectedRefund.booking?.customer?.phone})</span>
+                <span className="font-bold">
+                  {selectedRefund.booking?.customer?.fullName} ({selectedRefund.booking?.customer?.phone})
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500 font-medium">Booking Number:</span>
@@ -1066,14 +1280,28 @@ export const PaymentLedgerView: React.FC = () => {
       {/* Dynamic Merchant UPI QR Modal */}
       {showQrModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
-          <div className={cn(
-            'w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-3.5 shadow-2xl transition-all',
-            isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#1e1e1e] border-slate-800 text-white'
-          )}>
+          <div
+            className={cn(
+              'w-full max-w-md max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-3.5 shadow-2xl transition-all',
+              isDaylight ? 'bg-white border-slate-200 text-slate-950' : 'bg-[#1e1e1e] border-slate-800 text-white',
+            )}
+          >
             {/* Header */}
-            <div className={cn('flex items-center justify-between border-b pb-3', isDaylight ? 'border-slate-200' : 'border-slate-800')}>
+            <div
+              className={cn(
+                'flex items-center justify-between border-b pb-3',
+                isDaylight ? 'border-slate-200' : 'border-slate-800',
+              )}
+            >
               <div className="flex items-center gap-2">
-                <div className={cn('p-1.5 rounded-lg border', isDaylight ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400')}>
+                <div
+                  className={cn(
+                    'p-1.5 rounded-lg border',
+                    isDaylight
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+                  )}
+                >
                   <QrCode className="h-4 w-4" />
                 </div>
                 <div>
@@ -1094,7 +1322,9 @@ export const PaymentLedgerView: React.FC = () => {
                 aria-label="Close UPI QR dialog"
                 className={cn(
                   'rounded-lg border p-1.5 transition-colors cursor-pointer text-xs font-bold',
-                  isDaylight ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800' : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  isDaylight
+                    ? 'border-slate-200 text-slate-400 hover:bg-slate-100 hover:text-slate-800'
+                    : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-100',
                 )}
               >
                 ✕
@@ -1102,9 +1332,19 @@ export const PaymentLedgerView: React.FC = () => {
             </div>
 
             {/* Payee Info & Copy VPA */}
-            <div className={cn('p-2.5 rounded-xl border flex items-center justify-between gap-2', isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800')}>
+            <div
+              className={cn(
+                'p-2.5 rounded-xl border flex items-center justify-between gap-2',
+                isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800',
+              )}
+            >
               <div className="min-w-0">
-                <div className={cn('text-[10px] font-bold uppercase tracking-wider', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
+                <div
+                  className={cn(
+                    'text-[10px] font-bold uppercase tracking-wider',
+                    isDaylight ? 'text-slate-500' : 'text-slate-400',
+                  )}
+                >
                   Official Payee Account
                 </div>
                 <div className={cn('text-xs font-black truncate', isDaylight ? 'text-slate-900' : 'text-white')}>
@@ -1127,8 +1367,8 @@ export const PaymentLedgerView: React.FC = () => {
                   qrCopied
                     ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                     : isDaylight
-                    ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
-                    : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+                      ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                      : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700',
                 )}
               >
                 {qrCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -1158,7 +1398,12 @@ export const PaymentLedgerView: React.FC = () => {
             {/* Optional Amount Preset / Field */}
             <div className="space-y-1.5 text-left">
               <div className="flex items-center justify-between">
-                <label className={cn('text-[10px] font-bold uppercase tracking-wider', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
+                <label
+                  className={cn(
+                    'text-[10px] font-bold uppercase tracking-wider',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
                   Pre-set Amount on Customer Phone (Optional)
                 </label>
                 {qrAmount && (
@@ -1176,7 +1421,12 @@ export const PaymentLedgerView: React.FC = () => {
               </div>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
-                  <span className={cn('absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold font-mono', isDaylight ? 'text-slate-400' : 'text-slate-500')}>
+                  <span
+                    className={cn(
+                      'absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold font-mono',
+                      isDaylight ? 'text-slate-400' : 'text-slate-500',
+                    )}
+                  >
                     ₹
                   </span>
                   <input
@@ -1193,7 +1443,9 @@ export const PaymentLedgerView: React.FC = () => {
                     }}
                     className={cn(
                       'w-full pl-6 pr-3 py-1.5 rounded-xl border text-xs font-mono font-bold focus:outline-none focus:ring-1 focus:ring-emerald-500',
-                      isDaylight ? 'bg-white border-slate-300 text-slate-900' : 'bg-slate-900 border-slate-700 text-white'
+                      isDaylight
+                        ? 'bg-white border-slate-300 text-slate-900'
+                        : 'bg-slate-900 border-slate-700 text-white',
                     )}
                   />
                 </div>
@@ -1214,8 +1466,8 @@ export const PaymentLedgerView: React.FC = () => {
                       qrAmount === amt.toString()
                         ? 'bg-emerald-500 text-slate-950 border-emerald-400'
                         : isDaylight
-                        ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
-                        : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
+                          ? 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
+                          : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300',
                     )}
                   >
                     +₹{amt.toLocaleString('en-IN')}
@@ -1234,7 +1486,7 @@ export const PaymentLedgerView: React.FC = () => {
                   'flex-1 py-2 px-3 rounded-xl border text-xs font-bold transition-colors flex items-center justify-center gap-1.5',
                   isDaylight
                     ? 'border-slate-300 bg-white hover:bg-slate-100 text-slate-800 shadow-xs'
-                    : 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200'
+                    : 'border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200',
                 )}
               >
                 <Printer className="h-3.5 w-3.5" />

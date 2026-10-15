@@ -127,7 +127,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
       return true;
     });
-  }, [bookings, hubs, cities, selectedDateScope, selectedStateId, selectedCityId, selectedHubId, selectedStatus, searchQuery]);
+  }, [
+    bookings,
+    hubs,
+    cities,
+    selectedDateScope,
+    selectedStateId,
+    selectedCityId,
+    selectedHubId,
+    selectedStatus,
+    searchQuery,
+  ]);
 
   // Reset to initial 7 items when any search or filter criteria change
   useEffect(() => {
@@ -154,11 +164,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
   // Current Day's Reservation and Dispatched metrics
   const todayReservations = filteredBookings.filter(
-    (b) => b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY'
+    (b) => b.status === 'CONFIRMED' || b.status === 'ALLOCATED' || b.status === 'DISPATCH_READY',
   );
-  const todayDispatched = filteredBookings.filter(
-    (b) => b.status === 'DISPATCHED' || b.status === 'ON_RENT'
-  );
+  const todayDispatched = filteredBookings.filter((b) => b.status === 'DISPATCHED' || b.status === 'ON_RENT');
 
   // Dispatch Handover action flow
   const handleDispatchHandoverClick = (b: Booking) => {
@@ -209,13 +217,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* Filters Bar: Date Scope, State, City, Hub, Status, Search */}
       <div
         className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-500">
             <Calendar className="h-3 w-3 text-amber-500" />
-            <span>Today's Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+            <span>
+              Today's Date:{' '}
+              {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+            </span>
           </div>
 
           <button
@@ -234,7 +247,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div>
             <SearchSelect
               options={[
-                { value: 'TODAY', label: `Active Today (${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })})` },
+                {
+                  value: 'TODAY',
+                  label: `Active Today (${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })})`,
+                },
                 { value: 'UPCOMING', label: 'Upcoming Reservations' },
                 { value: 'PAST', label: 'Past / Expired Dates' },
                 { value: 'ALL', label: 'All Dates' },
@@ -280,7 +296,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
               }
               value={selectedCityId}
               onChange={(val) => handleCityChange(val || 'ALL')}
-              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+              }
               isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
@@ -290,7 +308,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
           <div>
             <SearchSelect
               options={
-                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
                   ? []
                   : [
                       { value: 'ALL', label: 'All Hubs' },
@@ -306,10 +325,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? 'No cities in this State'
                   : selectedCityId !== 'ALL' && availableHubs.length === 0
-                  ? 'No hubs in this City'
-                  : 'All Hubs'
+                    ? 'No hubs in this City'
+                    : 'All Hubs'
               }
-              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+              isDisabled={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
+              }
               isClearable={false}
             />
           </div>
@@ -356,7 +378,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
       {/* Full Page Width Operational Table */}
       <div
         className={`flex-1 min-h-0 w-full rounded-2xl border overflow-hidden transition-colors flex flex-col ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="px-3.5 py-2 border-b flex items-center justify-between border-slate-700/20 flex-shrink-0">
@@ -388,10 +412,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             </p>
           </div>
         ) : (
-          <div
-            onScroll={handleScroll}
-            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
-          >
+          <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
             <table className="w-full text-left text-xs">
               <thead
                 className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${
@@ -411,11 +432,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody
-                className={`divide-y ${
-                  isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'
-                }`}
-              >
+              <tbody className={`divide-y ${isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
                 {visibleBookings.map((b) => {
                   const paid = (b.advancePaid || 0) + (b.depositPaid || 0);
                   const depositReq = b.depositAmount || 0;
@@ -426,14 +443,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                   return (
                     <tr
                       key={b.id}
-                      className={`transition-colors ${
-                        isDaylight ? 'hover:bg-slate-200/40' : 'hover:bg-slate-800/30'
-                      }`}
+                      className={`transition-colors ${isDaylight ? 'hover:bg-slate-200/40' : 'hover:bg-slate-800/30'}`}
                     >
                       {/* Booking Number */}
-                      <td className={`py-3.5 px-4 font-mono ${
-                        isDaylight ? 'font-black text-amber-800' : 'font-medium text-slate-300'
-                      }`}>
+                      <td
+                        className={`py-3.5 px-4 font-mono ${
+                          isDaylight ? 'font-black text-amber-800' : 'font-medium text-slate-300'
+                        }`}
+                      >
                         {b.bookingNumber}
                       </td>
 
@@ -441,9 +458,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                       <td className="py-3.5 px-4">
                         <div className="font-extrabold text-sm">{b.asset.name}</div>
                         <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
-                          <span className={`font-mono text-xs px-1.5 py-0.2 rounded border ${
-                            isDaylight ? 'text-amber-950 bg-amber-100 border-amber-300 font-bold' : 'text-slate-300 bg-slate-800 border-slate-700 font-medium'
-                          }`}>
+                          <span
+                            className={`font-mono text-xs px-1.5 py-0.2 rounded border ${
+                              isDaylight
+                                ? 'text-amber-950 bg-amber-100 border-amber-300 font-bold'
+                                : 'text-slate-300 bg-slate-800 border-slate-700 font-medium'
+                            }`}
+                          >
                             {b.asset.assetTag}
                           </span>
                           <span>•</span>
@@ -475,11 +496,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                       <td className="py-3.5 px-4">
                         <div className="font-extrabold text-sm">{formatINR(b.totalAmount)}</div>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className={`text-[11px] font-medium ${
-                            isPaymentCleared
-                              ? isDaylight ? 'text-emerald-800 font-bold' : 'text-emerald-400'
-                              : isDaylight ? 'text-rose-700 font-bold' : 'text-rose-400'
-                          }`}>
+                          <span
+                            className={`text-[11px] font-medium ${
+                              isPaymentCleared
+                                ? isDaylight
+                                  ? 'text-emerald-800 font-bold'
+                                  : 'text-emerald-400'
+                                : isDaylight
+                                  ? 'text-rose-700 font-bold'
+                                  : 'text-rose-400'
+                            }`}
+                          >
                             Paid: {formatINR(paid)}
                           </span>
                           {!isPaymentCleared && (
@@ -517,8 +544,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
                                   ? 'bg-amber-500 text-slate-950 hover:bg-amber-400'
                                   : 'bg-amber-600/90 text-slate-950 hover:bg-amber-500'
                                 : isDaylight
-                                ? 'bg-rose-600 text-white hover:bg-rose-500'
-                                : 'bg-rose-700 text-white hover:bg-rose-600'
+                                  ? 'bg-rose-600 text-white hover:bg-rose-500'
+                                  : 'bg-rose-700 text-white hover:bg-rose-600'
                             }`}
                           >
                             {!isPaymentCleared && <ShieldAlert className="h-3.5 w-3.5 shrink-0" />}
@@ -573,4 +600,3 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
     </div>
   );
 };
-

@@ -77,11 +77,12 @@ interface BookingDeskViewProps {
 
 const estimateDistanceKm = (fromLat?: number, fromLng?: number, toLat?: number, toLng?: number): number | null => {
   if ([fromLat, fromLng, toLat, toLng].some((value) => value == null)) return null;
-  const radians = (value: number) => value * Math.PI / 180;
+  const radians = (value: number) => (value * Math.PI) / 180;
   const deltaLat = radians((toLat as number) - (fromLat as number));
   const deltaLng = radians((toLng as number) - (fromLng as number));
-  const a = Math.sin(deltaLat / 2) ** 2
-    + Math.cos(radians(fromLat as number)) * Math.cos(radians(toLat as number)) * Math.sin(deltaLng / 2) ** 2;
+  const a =
+    Math.sin(deltaLat / 2) ** 2 +
+    Math.cos(radians(fromLat as number)) * Math.cos(radians(toLat as number)) * Math.sin(deltaLng / 2) ** 2;
   return Math.round(6371.0088 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * 10) / 10;
 };
 
@@ -116,7 +117,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
   // Modal states for creating new booking, WhatsApp notice, yard handover, payment collection
   const [showCreateModal, setShowCreateModal] = useState<boolean>(
-    () => getUrlParam('modal') === 'create' || !!preselectedAsset
+    () => getUrlParam('modal') === 'create' || !!preselectedAsset,
   );
   const [whatsAppModalBooking, setWhatsAppModalBooking] = useState<Booking | null>(null);
   const [dispatchModalBooking, setDispatchModalBooking] = useState<Booking | null>(null);
@@ -128,7 +129,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
   // SubView filter tab: 'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'
   const [subView, setSubView] = useState<'ALL' | 'READY_DISPATCH' | 'DISPATCHED' | 'PENDING_PAYMENT'>(
-    initialViewMode === 'dispatch' ? 'READY_DISPATCH' : 'ALL'
+    initialViewMode === 'dispatch' ? 'READY_DISPATCH' : 'ALL',
   );
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       setShowCreateModal(true);
       onCreateModalOpened?.();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openCreateModal]);
 
   // Masters for filters
@@ -295,25 +296,33 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   };
 
   // Form State for creating new reservation
-  const [selectedAssetId, setSelectedAssetId] = useState<number>(
-    preselectedAsset ? preselectedAsset.id : 0
-  );
+  const [selectedAssetId, setSelectedAssetId] = useState<number>(preselectedAsset ? preselectedAsset.id : 0);
   const [selectedRentalConfigId, setSelectedRentalConfigId] = useState<number | ''>('');
   const [bookingModelId, setBookingModelId] = useState<string>('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number>(0);
   const [farmLocations, setFarmLocations] = useState<FarmLocation[]>([]);
   const [selectedFarmLocationId, setSelectedFarmLocationId] = useState<number>(0);
-  const [bookingStateId, setBookingStateId] = useState<string>(preselectedAsset?.stateName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '') : '');
-  const [bookingCityId, setBookingCityId] = useState<string>(preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '');
+  const [bookingStateId, setBookingStateId] = useState<string>(
+    preselectedAsset?.stateName
+      ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.stateId || '')
+      : '',
+  );
+  const [bookingCityId, setBookingCityId] = useState<string>(
+    preselectedAsset?.cityName ? String(cities.find((city) => city.name === preselectedAsset.cityName)?.id || '') : '',
+  );
   const [bookingHubId, setBookingHubId] = useState<string>(
-    preselectedAsset?.hubId
-      ? String(preselectedAsset.hubId)
-      : managerHubId || ''
+    preselectedAsset?.hubId ? String(preselectedAsset.hubId) : managerHubId || '',
   );
   const [bookingCategory, setBookingCategory] = useState<string>(preselectedAsset?.category || '');
   const [customerDialog, setCustomerDialog] = useState<'add' | 'edit' | null>(null);
   const [customerPendingDelete, setCustomerPendingDelete] = useState<Customer | null>(null);
-  const [customerForm, setCustomerForm] = useState({ fullName: '', phone: '', address: '', email: '', tier: 'TIER_1_BASIC' as CustomerTier });
+  const [customerForm, setCustomerForm] = useState({
+    fullName: '',
+    phone: '',
+    address: '',
+    email: '',
+    tier: 'TIER_1_BASIC' as CustomerTier,
+  });
   const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState<string>(() => {
     const d = new Date();
@@ -434,31 +443,46 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     let active = true;
     setFarmLocations([]);
     setSelectedFarmLocationId(0);
-    if (!selectedCustomerId || selectedCustomerId < 0) return () => { active = false; };
+    if (!selectedCustomerId || selectedCustomerId < 0)
+      return () => {
+        active = false;
+      };
 
-    api.getFarmLocations(selectedCustomerId)
+    api
+      .getFarmLocations(selectedCustomerId)
       .then((locations) => {
         if (!active) return;
         setFarmLocations(locations);
         const preferred = locations.find((location) => location.isDefault) || locations[0];
         if (preferred) {
           setSelectedFarmLocationId(preferred.id);
-          setDeliveryAddress([preferred.localName, preferred.landmark || preferred.village].filter(Boolean).join(' — '));
+          setDeliveryAddress(
+            [preferred.localName, preferred.landmark || preferred.village].filter(Boolean).join(' — '),
+          );
         }
       })
       .catch(() => active && setFarmLocations([]));
 
-    return () => { active = false; };
+    return () => {
+      active = false;
+    };
   }, [selectedCustomerId]);
 
   useEffect(() => {
     const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
     const hub = hubs.find((item) => item.id === currentAsset?.hubId);
-    const calculatedDistance = estimateDistanceKm(hub?.latitude, hub?.longitude, location?.latitude, location?.longitude);
+    const calculatedDistance = estimateDistanceKm(
+      hub?.latitude,
+      hub?.longitude,
+      location?.latitude,
+      location?.longitude,
+    );
     if (calculatedDistance != null) setDistanceKm(calculatedDistance);
   }, [selectedFarmLocationId, farmLocations, currentAsset?.hubId, hubs]);
 
-  const hasSelectedFilters = Boolean(bookingStateId || bookingCityId || bookingHubId || bookingCategory || bookingModelId);
+  const hasSelectedFilters = Boolean(
+    bookingStateId || bookingCityId || bookingHubId || bookingCategory || bookingModelId,
+  );
 
   const bookingCities = useMemo(() => {
     if (!bookingStateId || bookingStateId === 'ALL') return [];
@@ -473,7 +497,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   const availableBookingModels = useMemo(() => {
     let list = models.filter((m) => m.active !== false);
     if (bookingCategory && bookingCategory !== 'ALL') {
-      const typeIds = new Set(api.getEquipmentTypes().filter((t) => t.category === bookingCategory).map((t) => t.id));
+      const typeIds = new Set(
+        api
+          .getEquipmentTypes()
+          .filter((t) => t.category === bookingCategory)
+          .map((t) => t.id),
+      );
       list = list.filter((m) => typeIds.has(m.typeId));
     }
     return list;
@@ -483,7 +512,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     if (!hasSelectedFilters) return [];
     return assets.filter((asset) => {
       if (asset.status !== 'AVAILABLE') return false;
-      if (bookingHubId && bookingHubId !== 'ALL' && (!asset.hubId || asset.hubId !== Number(bookingHubId))) return false;
+      if (bookingHubId && bookingHubId !== 'ALL' && (!asset.hubId || asset.hubId !== Number(bookingHubId)))
+        return false;
       if (bookingCityId && bookingCityId !== 'ALL') {
         const hub = hubs.find((h) => h.id === asset.hubId);
         if (!hub || hub.cityId !== Number(bookingCityId)) return false;
@@ -497,7 +527,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       if (bookingModelId && bookingModelId !== 'ALL' && asset.modelId !== Number(bookingModelId)) return false;
       return true;
     });
-  }, [assets, hasSelectedFilters, bookingHubId, bookingCityId, bookingStateId, bookingCategory, bookingModelId, hubs, cities]);
+  }, [
+    assets,
+    hasSelectedFilters,
+    bookingHubId,
+    bookingCityId,
+    bookingStateId,
+    bookingCategory,
+    bookingModelId,
+    hubs,
+    cities,
+  ]);
 
   const scopedCustomers = useMemo(() => {
     // Before hub selection, NO customer should show!
@@ -553,7 +593,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         distanceKm,
         operatorRequired || !!currentAsset.operatorRequired,
         currentAsset.hubId,
-        selectedRentalConfigId ? Number(selectedRentalConfigId) : undefined
+        selectedRentalConfigId ? Number(selectedRentalConfigId) : undefined,
       );
       setQuote(q);
     };
@@ -611,7 +651,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         console.warn('WhatsApp booking notification call:', err);
       }
     } catch (err: any) {
-      setErrorModal({ isOpen: true, message: err.message || 'Booking creation failed. Please verify machine availability and customer details.' });
+      setErrorModal({
+        isOpen: true,
+        message: err.message || 'Booking creation failed. Please verify machine availability and customer details.',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -626,9 +669,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       return;
     }
     const customer = customerList.find((item) => item.id === selectedCustomerId);
-    setCustomerForm(mode === 'edit' && customer
-      ? { fullName: customer.fullName, phone: customer.phone, address: customer.address, email: customer.email || '', tier: customer.tier }
-      : { fullName: '', phone: '', address: '', email: '', tier: 'TIER_1_BASIC' });
+    setCustomerForm(
+      mode === 'edit' && customer
+        ? {
+            fullName: customer.fullName,
+            phone: customer.phone,
+            address: customer.address,
+            email: customer.email || '',
+            tier: customer.tier,
+          }
+        : { fullName: '', phone: '', address: '', email: '', tier: 'TIER_1_BASIC' },
+    );
     setCustomerDialog(mode);
   };
 
@@ -641,9 +692,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     };
     const selected = customerList.find((item) => item.id === selectedCustomerId);
     const payload = { ...customerForm, verified: customerForm.tier === 'TIER_2_VERIFIED', ...territory };
-    const customer = customerDialog === 'edit' && selected
-      ? api.updateCustomer(selected.id, payload)
-      : api.addCustomer(payload);
+    const customer =
+      customerDialog === 'edit' && selected ? api.updateCustomer(selected.id, payload) : api.addCustomer(payload);
     setCustomerList([...api.customers]);
     if (customer) setSelectedCustomerId(customer.id);
     setCustomerDialog(null);
@@ -724,85 +774,91 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         </div>
       </div>
 
-      {bookingSuccess && (() => {
-        const recentBooking = bookingsList.find((b) => b.bookingNumber === bookingSuccess);
-        return (
-          <div
-            className={`flex-shrink-0 rounded-xl border p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
-              isDaylight
-                ? 'border-emerald-500/60 bg-emerald-50/50 text-emerald-950'
-                : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300'
-            }`}
-          >
-            <div className="flex items-center gap-2.5">
-              <CheckCircle className={`h-4 w-4 ${isDaylight ? 'text-emerald-700' : 'text-emerald-400'}`} />
-              <div>
-                <div className="font-extrabold text-xs">Booking {bookingSuccess} Reserved Successfully!</div>
-                <div className="text-[11px] opacity-80">
-                  Machine staged for yard handover. WhatsApp notification queued for customer.
+      {bookingSuccess &&
+        (() => {
+          const recentBooking = bookingsList.find((b) => b.bookingNumber === bookingSuccess);
+          return (
+            <div
+              className={`flex-shrink-0 rounded-xl border p-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${
+                isDaylight
+                  ? 'border-emerald-500/60 bg-emerald-50/50 text-emerald-950'
+                  : 'border-emerald-500/40 bg-emerald-950/40 text-emerald-300'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <CheckCircle className={`h-4 w-4 ${isDaylight ? 'text-emerald-700' : 'text-emerald-400'}`} />
+                <div>
+                  <div className="font-extrabold text-xs">Booking {bookingSuccess} Reserved Successfully!</div>
+                  <div className="text-[11px] opacity-80">
+                    Machine staged for yard handover. WhatsApp notification queued for customer.
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
-              {recentBooking && (
-                <>
-                  {recentBooking.status === 'PENDING_PAYMENT' ? (
-                    <button
-                      type="button"
-                      onClick={() => setPaymentModalBooking(recentBooking)}
-                      className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
-                    >
-                      <Banknote className="h-3 w-3" />
-                      <span>Collect Payment</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setDispatchModalBooking(recentBooking)}
-                      className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer transition-colors shadow-xs"
-                    >
-                      <Truck className="h-3 w-3" />
-                      <span>Dispatch Machine (DC)</span>
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setWhatsAppModalBooking(recentBooking)}
-                    className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
-                  >
-                    <MessageSquare className="h-3 w-3" />
-                    <span>WhatsApp Notice</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => printBookingConfirmationPdf({ booking: recentBooking })}
-                    className={cn(
-                      'flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer transition-colors',
-                      isDaylight
-                        ? 'border-amber-300 bg-white text-amber-900 hover:bg-amber-50'
-                        : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700'
+              <div className="flex items-center gap-2 self-end sm:self-auto flex-wrap">
+                {recentBooking && (
+                  <>
+                    {recentBooking.status === 'PENDING_PAYMENT' ? (
+                      <button
+                        type="button"
+                        onClick={() => setPaymentModalBooking(recentBooking)}
+                        className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
+                      >
+                        <Banknote className="h-3 w-3" />
+                        <span>Collect Payment</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setDispatchModalBooking(recentBooking)}
+                        className="flex items-center gap-1 text-[11px] font-black px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 cursor-pointer transition-colors shadow-xs"
+                      >
+                        <Truck className="h-3 w-3" />
+                        <span>Dispatch Machine (DC)</span>
+                      </button>
                     )}
-                  >
-                    <Printer className="h-3 w-3" />
-                    <span>PDF Voucher</span>
-                  </button>
-                </>
-              )}
-              <button
-                onClick={() => setBookingSuccess(null)}
-                className={cn('text-xs px-2 py-1 font-bold cursor-pointer transition-colors', isDaylight ? 'text-slate-600 hover:text-slate-950' : 'text-slate-400 hover:text-white')}
-              >
-                Dismiss
-              </button>
+                    <button
+                      type="button"
+                      onClick={() => setWhatsAppModalBooking(recentBooking)}
+                      className="flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer transition-colors shadow-xs"
+                    >
+                      <MessageSquare className="h-3 w-3" />
+                      <span>WhatsApp Notice</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => printBookingConfirmationPdf({ booking: recentBooking })}
+                      className={cn(
+                        'flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer transition-colors',
+                        isDaylight
+                          ? 'border-amber-300 bg-white text-amber-900 hover:bg-amber-50'
+                          : 'border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700',
+                      )}
+                    >
+                      <Printer className="h-3 w-3" />
+                      <span>PDF Voucher</span>
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={() => setBookingSuccess(null)}
+                  className={cn(
+                    'text-xs px-2 py-1 font-bold cursor-pointer transition-colors',
+                    isDaylight ? 'text-slate-600 hover:text-slate-950' : 'text-slate-400 hover:text-white',
+                  )}
+                >
+                  Dismiss
+                </button>
+              </div>
             </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
 
       {/* Cascading Filter Bar */}
       <div
         className={`flex-shrink-0 p-2.5 rounded-xl border transition-colors space-y-1.5 ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="flex items-center justify-end">
@@ -852,7 +908,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               }
               value={selectedCityId}
               onChange={(val) => handleCityChange(val || 'ALL')}
-              placeholder={selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'}
+              placeholder={
+                selectedStateId !== 'ALL' && availableCities.length === 0 ? 'No cities in this State' : 'All Cities'
+              }
               isDisabled={selectedStateId !== 'ALL' && availableCities.length === 0}
               isClearable={false}
             />
@@ -862,7 +920,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           <div>
             <SearchSelect
               options={
-                (selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
                   ? []
                   : [
                       { value: 'ALL', label: 'All Hubs' },
@@ -878,10 +937,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 selectedStateId !== 'ALL' && availableCities.length === 0
                   ? 'No cities in this State'
                   : selectedCityId !== 'ALL' && availableHubs.length === 0
-                  ? 'No hubs in this City'
-                  : 'All Hubs'
+                    ? 'No hubs in this City'
+                    : 'All Hubs'
               }
-              isDisabled={(selectedCityId !== 'ALL' && availableHubs.length === 0) || (selectedStateId !== 'ALL' && availableCities.length === 0)}
+              isDisabled={
+                (selectedCityId !== 'ALL' && availableHubs.length === 0) ||
+                (selectedStateId !== 'ALL' && availableCities.length === 0)
+              }
               isClearable={false}
             />
           </div>
@@ -909,7 +971,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       {/* Reserved Machines Not Dispatched Yet (Table) */}
       <div
         className={`flex-1 min-h-0 w-full rounded-2xl border overflow-hidden transition-colors flex flex-col ${
-          isDaylight ? 'border-slate-200 bg-white text-slate-950 shadow-sm' : 'border-slate-800 bg-slate-900/40 text-slate-200'
+          isDaylight
+            ? 'border-slate-200 bg-white text-slate-950 shadow-sm'
+            : 'border-slate-800 bg-slate-900/40 text-slate-200'
         }`}
       >
         <div className="px-3.5 py-2.5 border-b flex flex-col md:flex-row md:items-center justify-between gap-2 border-slate-700/20 flex-shrink-0">
@@ -933,11 +997,18 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     : 'bg-amber-500 text-slate-950 font-black'
                   : isDaylight
                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
               <span>All Bookings</span>
-              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono', subView === 'ALL' ? 'bg-slate-950/20 text-slate-950 font-bold' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300')}>
+              <span
+                className={cn(
+                  'text-[10px] px-1.5 py-0.2 rounded-full font-mono',
+                  subView === 'ALL'
+                    ? 'bg-slate-950/20 text-slate-950 font-bold'
+                    : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300',
+                )}
+              >
                 {counts.all}
               </span>
             </button>
@@ -951,12 +1022,19 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   ? 'bg-amber-500 text-slate-950 shadow-xs font-black'
                   : isDaylight
                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
               <Truck className="h-3 w-3" />
               <span>Ready for Dispatch</span>
-              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'READY_DISPATCH' ? 'bg-slate-950/20 text-slate-950' : 'bg-amber-500/20 text-amber-700 dark:text-amber-400')}>
+              <span
+                className={cn(
+                  'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+                  subView === 'READY_DISPATCH'
+                    ? 'bg-slate-950/20 text-slate-950'
+                    : 'bg-amber-500/20 text-amber-700 dark:text-amber-400',
+                )}
+              >
                 {counts.readyDispatch}
               </span>
             </button>
@@ -970,11 +1048,18 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   ? 'bg-blue-600 text-white shadow-xs font-black'
                   : isDaylight
                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
               <span>Dispatched & On Rent</span>
-              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'DISPATCHED' ? 'bg-white/20 text-white' : 'bg-blue-500/20 text-blue-600 dark:text-blue-400')}>
+              <span
+                className={cn(
+                  'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+                  subView === 'DISPATCHED'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+                )}
+              >
                 {counts.dispatched}
               </span>
             </button>
@@ -988,12 +1073,19 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   ? 'bg-emerald-600 text-white shadow-xs font-black'
                   : isDaylight
                     ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700'
+                    : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
               <Banknote className="h-3 w-3" />
               <span>Pending Payment</span>
-              <span className={cn('text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold', subView === 'PENDING_PAYMENT' ? 'bg-white/20 text-white' : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400')}>
+              <span
+                className={cn(
+                  'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
+                  subView === 'PENDING_PAYMENT'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+                )}
+              >
                 {counts.pendingPayment}
               </span>
             </button>
@@ -1012,17 +1104,14 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               {subView === 'READY_DISPATCH'
                 ? 'All reserved machines have been dispatched, or no reservations match the current filter.'
                 : subView === 'DISPATCHED'
-                ? 'No machinery is currently active on customer rental sites.'
-                : subView === 'PENDING_PAYMENT'
-                ? 'No bookings currently have pending advance or deposit payments.'
-                : 'No bookings match your selected location and search filters.'}
+                  ? 'No machinery is currently active on customer rental sites.'
+                  : subView === 'PENDING_PAYMENT'
+                    ? 'No bookings currently have pending advance or deposit payments.'
+                    : 'No bookings match your selected location and search filters.'}
             </p>
           </div>
         ) : (
-          <div
-            onScroll={handleScroll}
-            className="flex-1 min-h-0 overflow-x-auto overflow-y-auto"
-          >
+          <div onScroll={handleScroll} className="flex-1 min-h-0 overflow-x-auto overflow-y-auto">
             <table className="w-full text-left text-xs">
               <thead
                 className={`sticky top-0 z-10 border-b text-[11px] font-black uppercase tracking-wider ${
@@ -1042,31 +1131,29 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   <th className="py-3 px-4 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody
-                className={`divide-y ${
-                  isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'
-                }`}
-              >
+              <tbody className={`divide-y ${isDaylight ? 'divide-slate-200' : 'divide-slate-800/60'}`}>
                 {visibleReservations.map((b) => (
                   <tr
                     key={b.id}
-                    className={`transition-colors ${
-                      isDaylight ? 'hover:bg-slate-200/40' : 'hover:bg-slate-800/30'
-                    }`}
+                    className={`transition-colors ${isDaylight ? 'hover:bg-slate-200/40' : 'hover:bg-slate-800/30'}`}
                   >
                     {/* Booking Number */}
-                    <td className={`py-3.5 px-4 font-mono ${
-                      isDaylight ? 'font-black text-amber-800' : 'font-medium text-slate-300'
-                    }`}>
+                    <td
+                      className={`py-3.5 px-4 font-mono ${
+                        isDaylight ? 'font-black text-amber-800' : 'font-medium text-slate-300'
+                      }`}
+                    >
                       {b.bookingNumber}
                     </td>
 
                     {/* Reserved Machine */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className={`h-10 w-12 rounded-lg overflow-hidden shrink-0 border ${
-                          isDaylight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-700'
-                        }`}>
+                        <div
+                          className={`h-10 w-12 rounded-lg overflow-hidden shrink-0 border ${
+                            isDaylight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-700'
+                          }`}
+                        >
                           {b.asset.imageUrl ? (
                             <img
                               src={b.asset.imageUrl}
@@ -1085,23 +1172,28 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-mono text-xs px-1.5 py-0.2 rounded border ${
-                              isDaylight
-                                ? 'text-amber-950 bg-amber-100 border-amber-300 font-bold'
-                                : 'text-slate-300 bg-slate-800 border-slate-700 font-medium'
-                            }`}>
+                            <span
+                              className={`font-mono text-xs px-1.5 py-0.2 rounded border ${
+                                isDaylight
+                                  ? 'text-amber-950 bg-amber-100 border-amber-300 font-bold'
+                                  : 'text-slate-300 bg-slate-800 border-slate-700 font-medium'
+                              }`}
+                            >
                               {b.asset.assetTag}
                             </span>
                             <span className="text-[10px] font-mono uppercase text-slate-500 font-bold">
                               {b.asset.category}
                             </span>
                             {(b.billingUnit || b.dailyRate) && (
-                              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
-                                isDaylight
-                                  ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30'
-                                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                              }`}>
-                                {b.dailyRate ? formatINR(b.dailyRate) : ''}/{getBillingUnitLabel(b.billingUnit || b.asset.billingUnit)}
+                              <span
+                                className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold ${
+                                  isDaylight
+                                    ? 'bg-amber-500/15 text-amber-900 border border-amber-500/30'
+                                    : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                }`}
+                              >
+                                {b.dailyRate ? formatINR(b.dailyRate) : ''}/
+                                {getBillingUnitLabel(b.billingUnit || b.asset.billingUnit)}
                               </span>
                             )}
                           </div>
@@ -1144,7 +1236,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       )}
                       {(b.deliveryLocationName || b.farmLocation) && (
                         <div className="text-[10px] text-slate-500 truncate max-w-[150px] mt-0.5">
-                          🌾 {b.deliveryLocationName || b.farmLocation?.localName} {b.farmLocation?.localNameHindi ? `(${b.farmLocation.localNameHindi})` : ''}
+                          🌾 {b.deliveryLocationName || b.farmLocation?.localName}{' '}
+                          {b.farmLocation?.localNameHindi ? `(${b.farmLocation.localNameHindi})` : ''}
                         </div>
                       )}
                     </td>
@@ -1158,12 +1251,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     {/* Financials & Deposit */}
                     <td className="py-3.5 px-4">
                       <div className="font-extrabold text-xs">{formatINR(b.totalAmount)}</div>
-                      <div className={`text-[11px] mt-0.5 ${
-                        isDaylight ? 'text-amber-800 font-bold' : 'text-slate-400 font-medium'
-                      }`}>
-                        Deposit: {b.depositAmount === 0 ? (
+                      <div
+                        className={`text-[11px] mt-0.5 ${
+                          isDaylight ? 'text-amber-800 font-bold' : 'text-slate-400 font-medium'
+                        }`}
+                      >
+                        Deposit:{' '}
+                        {b.depositAmount === 0 ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-bold">₹0 (Zero Scheme)</span>
-                        ) : formatINR(b.depositAmount)}
+                        ) : (
+                          formatINR(b.depositAmount)
+                        )}
                       </div>
                     </td>
 
@@ -1187,8 +1285,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                       isCurrent
                                         ? 'bg-amber-500 ring-1 ring-amber-400'
                                         : isPast
-                                        ? 'bg-emerald-500'
-                                        : 'bg-slate-200 dark:bg-slate-700'
+                                          ? 'bg-emerald-500'
+                                          : 'bg-slate-200 dark:bg-slate-700',
                                     )}
                                   />
                                 );
@@ -1226,7 +1324,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             'p-1.5 rounded-lg border transition-colors cursor-pointer',
                             isDaylight
                               ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                              : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                              : 'border-slate-700 text-slate-300 hover:bg-slate-800',
                           )}
                         >
                           <Printer className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
@@ -1334,16 +1432,20 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-white'
             }`}
           >
-            <div className={`flex items-center justify-between border-b pb-3 ${
-              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
-            }`}>
+            <div
+              className={`flex items-center justify-between border-b pb-3 ${
+                isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+              }`}
+            >
               <div className="flex items-center gap-3">
                 <div className="rounded-xl bg-amber-500/15 p-2.5 text-amber-400">
                   <CalendarCheck className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="font-black text-lg">New Equipment Reservation</h3>
-                  <p className="mt-0.5 text-xs text-slate-400">Set the rental dates, delivery details, and commercial terms.</p>
+                  <p className="mt-0.5 text-xs text-slate-400">
+                    Set the rental dates, delivery details, and commercial terms.
+                  </p>
                 </div>
               </div>
               <button
@@ -1353,7 +1455,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   'rounded-lg border p-2 transition-colors cursor-pointer',
                   isDaylight
                     ? 'border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100',
                 )}
               >
                 ✕
@@ -1370,25 +1472,31 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
                   reservationStep === 'MACHINE'
                     ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400',
                 )}
               >
-                <div className={cn(
-                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
-                  reservationStep === 'MACHINE'
-                    ? 'bg-slate-950 text-amber-400'
-                    : currentAsset
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                )}>
+                <div
+                  className={cn(
+                    'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                    reservationStep === 'MACHINE'
+                      ? 'bg-slate-950 text-amber-400'
+                      : currentAsset
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+                  )}
+                >
                   {currentAsset && reservationStep !== 'MACHINE' ? '✓' : '1'}
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-black truncate leading-tight">1. Machine & Tariff</div>
-                  <div className={cn(
-                    'text-[10px] truncate leading-tight mt-0.5',
-                    reservationStep === 'MACHINE' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
-                  )}>
+                  <div
+                    className={cn(
+                      'text-[10px] truncate leading-tight mt-0.5',
+                      reservationStep === 'MACHINE'
+                        ? 'text-slate-900/80 font-medium'
+                        : 'text-slate-500 dark:text-slate-400',
+                    )}
+                  >
                     {currentAsset ? currentAsset.name : 'Choose Equipment'}
                   </div>
                 </div>
@@ -1399,7 +1507,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 type="button"
                 onClick={() => {
                   if (!currentAsset) {
-                    setErrorModal({ isOpen: true, message: 'Please select an available machine before proceeding to customer & delivery details.' });
+                    setErrorModal({
+                      isOpen: true,
+                      message: 'Please select an available machine before proceeding to customer & delivery details.',
+                    });
                     return;
                   }
                   setReservationStep('CUSTOMER_LOGISTICS');
@@ -1408,26 +1519,34 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
                   reservationStep === 'CUSTOMER_LOGISTICS'
                     ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400',
                 )}
               >
-                <div className={cn(
-                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
-                  reservationStep === 'CUSTOMER_LOGISTICS'
-                    ? 'bg-slate-950 text-amber-400'
-                    : selectedCustomerId && deliveryAddress
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                )}>
+                <div
+                  className={cn(
+                    'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                    reservationStep === 'CUSTOMER_LOGISTICS'
+                      ? 'bg-slate-950 text-amber-400'
+                      : selectedCustomerId && deliveryAddress
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+                  )}
+                >
                   {selectedCustomerId && deliveryAddress && reservationStep !== 'CUSTOMER_LOGISTICS' ? '✓' : '2'}
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-black truncate leading-tight">2. Customer & Delivery</div>
-                  <div className={cn(
-                    'text-[10px] truncate leading-tight mt-0.5',
-                    reservationStep === 'CUSTOMER_LOGISTICS' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
-                  )}>
-                    {selectedCustomerId ? (scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Farmer Set') : 'Farmer & Location'}
+                  <div
+                    className={cn(
+                      'text-[10px] truncate leading-tight mt-0.5',
+                      reservationStep === 'CUSTOMER_LOGISTICS'
+                        ? 'text-slate-900/80 font-medium'
+                        : 'text-slate-500 dark:text-slate-400',
+                    )}
+                  >
+                    {selectedCustomerId
+                      ? scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Farmer Set'
+                      : 'Farmer & Location'}
                   </div>
                 </div>
               </button>
@@ -1454,23 +1573,29 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
                   reservationStep === 'CONFIRMATION'
                     ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
-                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400',
                 )}
               >
-                <div className={cn(
-                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
-                  reservationStep === 'CONFIRMATION'
-                    ? 'bg-slate-950 text-amber-400'
-                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                )}>
+                <div
+                  className={cn(
+                    'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                    reservationStep === 'CONFIRMATION'
+                      ? 'bg-slate-950 text-amber-400'
+                      : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400',
+                  )}
+                >
                   3
                 </div>
                 <div className="min-w-0">
                   <div className="text-xs font-black truncate leading-tight">3. Operations & Review</div>
-                  <div className={cn(
-                    'text-[10px] truncate leading-tight mt-0.5',
-                    reservationStep === 'CONFIRMATION' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
-                  )}>
+                  <div
+                    className={cn(
+                      'text-[10px] truncate leading-tight mt-0.5',
+                      reservationStep === 'CONFIRMATION'
+                        ? 'text-slate-900/80 font-medium'
+                        : 'text-slate-500 dark:text-slate-400',
+                    )}
+                  >
                     {quote ? `${formatINR(quote.totalAmount)} • Finalize` : 'Operator & Channels'}
                   </div>
                 </div>
@@ -1480,16 +1605,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             <form onSubmit={handleCreateReservation} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Left 2 Cols: Step-Based Content */}
               <div className="lg:col-span-2 space-y-5">
-
                 {/* ═══════════════════════════════════════════════════════════════════════ */}
                 {/* STEP 1: MACHINE & TARIFF SELECTION                                    */}
                 {/* ═══════════════════════════════════════════════════════════════════════ */}
                 {reservationStep === 'MACHINE' && (
                   <div className="space-y-5">
                     {/* Farmer Task Recommendation Assistant */}
-                    <div className={`rounded-2xl border p-4 transition-all ${
-                      isDaylight ? 'border-amber-300 bg-amber-50/50' : 'border-amber-500/30 bg-amber-950/20'
-                    }`}>
+                    <div
+                      className={`rounded-2xl border p-4 transition-all ${
+                        isDaylight ? 'border-amber-300 bg-amber-50/50' : 'border-amber-500/30 bg-amber-950/20'
+                      }`}
+                    >
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-amber-500" />
@@ -1502,7 +1628,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-                        Select the farmer’s immediate field operation. We’ll find matching machines with zero-deposit eligibility & fuel-efficient specs.
+                        Select the farmer’s immediate field operation. We’ll find matching machines with zero-deposit
+                        eligibility & fuel-efficient specs.
                       </p>
 
                       {/* Task Chips */}
@@ -1523,7 +1650,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                               'py-2 px-1 text-center rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
                               selectedTask === t.key
                                 ? 'border-amber-500 bg-amber-500 text-slate-950 shadow-sm'
-                                : 'border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                                : 'border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300',
                             )}
                           >
                             <span className="text-base">{t.icon}</span>
@@ -1536,7 +1663,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       {selectedTask && (
                         <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-3">
                           <div className="flex items-center justify-between text-xs font-bold">
-                            <span className="text-slate-700 dark:text-slate-300">Field Size: {taskAcreage} Acres (बीघा / एकड़)</span>
+                            <span className="text-slate-700 dark:text-slate-300">
+                              Field Size: {taskAcreage} Acres (बीघा / एकड़)
+                            </span>
                             <input
                               type="range"
                               min="0.5"
@@ -1569,13 +1698,21 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 >
                                   <div className="flex items-start justify-between gap-1">
                                     <div>
-                                      <div className="font-black text-xs text-slate-900 dark:text-slate-100">{rec.assetName}</div>
-                                      <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">{rec.assetTag}</div>
+                                      <div className="font-black text-xs text-slate-900 dark:text-slate-100">
+                                        {rec.assetName}
+                                      </div>
+                                      <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                        {rec.assetTag}
+                                      </div>
                                     </div>
                                     <div className="text-right">
-                                      <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/{getBillingUnitLabel((rec as any).billingUnit)}</div>
+                                      <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">
+                                        {formatINR(rec.dailyRate)}/{getBillingUnitLabel((rec as any).billingUnit)}
+                                      </div>
                                       <div className="text-[10px] text-slate-500 font-semibold">
-                                        {rec.depositAmount === 0 ? 'Zero Deposit' : `Deposit ${formatINR(rec.depositAmount)}`}
+                                        {rec.depositAmount === 0
+                                          ? 'Zero Deposit'
+                                          : `Deposit ${formatINR(rec.depositAmount)}`}
                                       </div>
                                     </div>
                                   </div>
@@ -1589,7 +1726,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                       'mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center justify-center gap-1',
                                       selectedAssetId === rec.assetId
                                         ? 'bg-emerald-600 text-white'
-                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950',
                                     )}
                                   >
                                     {selectedAssetId === rec.assetId ? (
@@ -1614,7 +1751,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     </div>
 
                     {/* Machine Availability Filters (Organized cleanly in 2 ROWS for full visibility) */}
-                    <div className={`rounded-2xl border p-4 space-y-3.5 ${isDaylight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-700/70 bg-[#1e1e1e]'}`}>
+                    <div
+                      className={`rounded-2xl border p-4 space-y-3.5 ${isDaylight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-700/70 bg-[#1e1e1e]'}`}
+                    >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <MapPin className="h-4 w-4 text-amber-500" />
@@ -1633,7 +1772,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">State *</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                              State *
+                            </label>
                             <SearchSelect
                               options={states.map((state) => ({ value: String(state.id), label: state.name }))}
                               value={bookingStateId}
@@ -1648,7 +1789,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">City / District *</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                              City / District *
+                            </label>
                             <SearchSelect
                               options={bookingCities.map((city) => ({ value: String(city.id), label: city.name }))}
                               value={bookingCityId}
@@ -1660,8 +1803,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 !bookingStateId
                                   ? 'Select State First'
                                   : bookingCities.length === 0
-                                  ? 'No cities in this State'
-                                  : 'Select City *'
+                                    ? 'No cities in this State'
+                                    : 'Select City *'
                               }
                               isDisabled={!bookingStateId || bookingCities.length === 0}
                               noOptionsMessage="No cities found in this State"
@@ -1670,7 +1813,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Dispatch Hub Yard *</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                              Dispatch Hub Yard *
+                            </label>
                             <SearchSelect
                               options={bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))}
                               value={bookingHubId}
@@ -1679,10 +1824,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 !bookingStateId
                                   ? 'Select State First'
                                   : !bookingCityId
-                                  ? 'Select City First'
-                                  : bookingHubs.length === 0
-                                  ? 'No hubs in this City'
-                                  : 'Select Hub Yard *'
+                                    ? 'Select City First'
+                                    : bookingHubs.length === 0
+                                      ? 'No hubs in this City'
+                                      : 'Select Hub Yard *'
                               }
                               isDisabled={!bookingCityId || bookingHubs.length === 0}
                               noOptionsMessage="No hubs found in this City"
@@ -1700,7 +1845,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Fleet Category</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                              Fleet Category
+                            </label>
                             <SearchSelect
                               options={[
                                 { value: 'CONSTRUCTION', label: 'Construction Fleet' },
@@ -1718,7 +1865,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
 
                           <div>
-                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Machine Model</label>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
+                              Machine Model
+                            </label>
                             <SearchSelect
                               options={[
                                 { value: '', label: 'All Machine Models' },
@@ -1741,7 +1890,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     {/* Equipment Selection */}
                     <div>
                       <div className="mb-1 flex items-center justify-between gap-3">
-                        <label className="block text-xs font-bold">Available machine <span className="text-amber-500">*</span></label>
+                        <label className="block text-xs font-bold">
+                          Available machine <span className="text-amber-500">*</span>
+                        </label>
                         <span className="text-[11px] font-bold text-emerald-500">
                           {hasSelectedFilters ? `${availableMachines.length} available in fleet` : 'Filters required'}
                         </span>
@@ -1749,13 +1900,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       {!hasSelectedFilters ? (
                         <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
                           <Filter className="h-4 w-4 text-amber-500 shrink-0" />
-                          <span>Please select filters above (State, City, Hub, Category or Model) to display available machinery.</span>
+                          <span>
+                            Please select filters above (State, City, Hub, Category or Model) to display available
+                            machinery.
+                          </span>
                         </div>
                       ) : availableMachines.length ? (
                         <SearchSelect
                           options={availableMachines.map((a) => {
                             const unitSuffix = `/${a.unitLabel || getBillingUnitLabel(a.billingUnit)}`;
-                            const depText = a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
+                            const depText =
+                              a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
                             const shiftPolicy = a.shiftTerms || getBillingUnitShiftTerms(a.billingUnit);
                             return {
                               value: a.id,
@@ -1778,9 +1933,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                     {/* Selected Machine Detail Spec Card */}
                     {currentAsset && (
-                      <div className={`p-3.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        isDaylight ? 'bg-amber-50/60 border-amber-200 text-slate-900' : 'bg-amber-950/20 border-amber-500/30 text-slate-100'
-                      }`}>
+                      <div
+                        className={`p-3.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          isDaylight
+                            ? 'bg-amber-50/60 border-amber-200 text-slate-900'
+                            : 'bg-amber-950/20 border-amber-500/30 text-slate-100'
+                        }`}
+                      >
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
@@ -1791,9 +1950,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             </span>
                           </div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-                            <span>📍 Yard: <strong>{currentAsset.hubName || 'Dispatched Yard'}</strong></span>
+                            <span>
+                              📍 Yard: <strong>{currentAsset.hubName || 'Dispatched Yard'}</strong>
+                            </span>
                             <span>•</span>
-                            <span>Category: <strong>{currentAsset.category}</strong></span>
+                            <span>
+                              Category: <strong>{currentAsset.category}</strong>
+                            </span>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
@@ -1801,7 +1964,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             Base: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}
                           </div>
                           <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                            {currentAsset.depositAmount === 0 ? '✨ ₹0 Zero Deposit Scheme' : `Security Deposit: ${formatINR(currentAsset.depositAmount)}`}
+                            {currentAsset.depositAmount === 0
+                              ? '✨ ₹0 Zero Deposit Scheme'
+                              : `Security Deposit: ${formatINR(currentAsset.depositAmount)}`}
                           </div>
                         </div>
                       </div>
@@ -1813,7 +1978,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <div className="mb-1 flex items-center justify-between gap-3">
                           <label className="block text-xs font-bold flex items-center gap-1.5">
                             <Tag className="h-3.5 w-3.5 text-amber-500" />
-                            <span>Tariff Plan / Billing Metric <span className="text-amber-500">*</span></span>
+                            <span>
+                              Tariff Plan / Billing Metric <span className="text-amber-500">*</span>
+                            </span>
                           </label>
                           <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
                             {availableTariffs.length > 0
@@ -1827,9 +1994,16 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             <SearchSelect
                               options={availableTariffs.map((t) => {
                                 const unit = t.unitLabel || getBillingUnitLabel(t.billingUnit);
-                                const depText = t.depositAmount === 0 ? 'Zero-Dep (₹0)' : `Dep: ${formatINR(t.depositAmount)}`;
-                                const opText = !t.operatorDailyRate || t.operatorDailyRate === 0 ? 'Operator: ₹0 (Optional)' : `Operator: ${formatINR(t.operatorDailyRate)}/day`;
-                                const deliveryText = t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0 ? 'Delivery: ₹0 (Per-Trip)' : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
+                                const depText =
+                                  t.depositAmount === 0 ? 'Zero-Dep (₹0)' : `Dep: ${formatINR(t.depositAmount)}`;
+                                const opText =
+                                  !t.operatorDailyRate || t.operatorDailyRate === 0
+                                    ? 'Operator: ₹0 (Optional)'
+                                    : `Operator: ${formatINR(t.operatorDailyRate)}/day`;
+                                const deliveryText =
+                                  t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0
+                                    ? 'Delivery: ₹0 (Per-Trip)'
+                                    : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
                                 const terms = t.shiftTerms || 'Standard operational terms';
                                 return {
                                   value: t.id,
@@ -1845,16 +2019,21 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             />
 
                             {currentTariff && (
-                              <div className={`p-2.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                                isDaylight ? 'bg-amber-50/70 border-amber-300/80 text-amber-950' : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
-                              }`}>
+                              <div
+                                className={`p-2.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                                  isDaylight
+                                    ? 'bg-amber-50/70 border-amber-300/80 text-amber-950'
+                                    : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                                }`}
+                              >
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500 text-slate-950">
                                       {currentTariff.billingUnit || 'ACTIVE'}
                                     </span>
                                     <span className="font-mono font-black text-xs">
-                                      {formatINR(currentTariff.baseDailyRate)} / {currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
+                                      {formatINR(currentTariff.baseDailyRate)} /{' '}
+                                      {currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
                                     </span>
                                   </div>
                                   <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
@@ -1862,22 +2041,39 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono">
-                                  <span className={currentTariff.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
-                                    {currentTariff.depositAmount === 0 ? '₹0 Zero-Dep' : `Dep: ${formatINR(currentTariff.depositAmount)}`}
+                                  <span
+                                    className={
+                                      currentTariff.depositAmount === 0
+                                        ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                                        : ''
+                                    }
+                                  >
+                                    {currentTariff.depositAmount === 0
+                                      ? '₹0 Zero-Dep'
+                                      : `Dep: ${formatINR(currentTariff.depositAmount)}`}
                                   </span>
                                   <span className="text-slate-400">•</span>
                                   <span>
-                                    {!currentTariff.operatorDailyRate || currentTariff.operatorDailyRate === 0 ? 'Operator: ₹0' : `Op: ${formatINR(currentTariff.operatorDailyRate)}/d`}
+                                    {!currentTariff.operatorDailyRate || currentTariff.operatorDailyRate === 0
+                                      ? 'Operator: ₹0'
+                                      : `Op: ${formatINR(currentTariff.operatorDailyRate)}/d`}
                                   </span>
                                 </div>
                               </div>
                             )}
                           </div>
                         ) : (
-                          <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
-                            isDaylight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900/50 border-slate-800 text-slate-300'
-                          }`}>
-                            <span>Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}</span>
+                          <div
+                            className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                              isDaylight
+                                ? 'bg-slate-50 border-slate-200 text-slate-700'
+                                : 'bg-slate-900/50 border-slate-800 text-slate-300'
+                            }`}
+                          >
+                            <span>
+                              Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/
+                              {getBillingUnitLabel(currentAsset.billingUnit)}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -1898,7 +2094,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         type="button"
                         onClick={() => {
                           if (!currentAsset) {
-                            setErrorModal({ isOpen: true, message: 'Please select an available machine before proceeding.' });
+                            setErrorModal({
+                              isOpen: true,
+                              message: 'Please select an available machine before proceeding.',
+                            });
                             return;
                           }
                           setReservationStep('CUSTOMER_LOGISTICS');
@@ -1925,9 +2124,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           <span className="text-base">🚜</span>
                           <div>
                             <span className="font-bold text-slate-900 dark:text-slate-100">{currentAsset.name}</span>
-                            <span className="text-slate-500 font-mono text-[11px] ml-1.5">({currentAsset.assetTag})</span>
+                            <span className="text-slate-500 font-mono text-[11px] ml-1.5">
+                              ({currentAsset.assetTag})
+                            </span>
                             <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-2">
-                              {formatINR(currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate)}/{getBillingUnitLabel(currentTariff?.billingUnit || currentAsset.billingUnit)}
+                              {formatINR(currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate)}/
+                              {getBillingUnitLabel(currentTariff?.billingUnit || currentAsset.billingUnit)}
                             </span>
                           </div>
                         </div>
@@ -1950,8 +2152,24 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <div className="flex items-center gap-2">
                           {bookingHubId && bookingHubId !== 'ALL' && selectedCustomerId ? (
                             <>
-                              <button type="button" onClick={() => openCustomerDialog('edit')} className="text-[11px] font-bold text-slate-400 hover:text-amber-400">Edit</button>
-                              <button type="button" onClick={() => setCustomerPendingDelete(customerList.find((customer) => customer.id === selectedCustomerId) || null)} className="text-[11px] font-bold text-rose-400 hover:text-rose-300">Delete</button>
+                              <button
+                                type="button"
+                                onClick={() => openCustomerDialog('edit')}
+                                className="text-[11px] font-bold text-slate-400 hover:text-amber-400"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCustomerPendingDelete(
+                                    customerList.find((customer) => customer.id === selectedCustomerId) || null,
+                                  )
+                                }
+                                className="text-[11px] font-bold text-rose-400 hover:text-rose-300"
+                              >
+                                Delete
+                              </button>
                             </>
                           ) : null}
                           <button
@@ -1965,11 +2183,18 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       </div>
 
                       {!bookingHubId || bookingHubId === 'ALL' ? (
-                        <div className={`rounded-xl border border-dashed p-3 text-xs flex items-center gap-2 ${
-                          isDaylight ? 'border-amber-300 bg-amber-50/70 text-amber-900 font-medium' : 'border-amber-500/30 bg-amber-950/20 text-amber-300'
-                        }`}>
+                        <div
+                          className={`rounded-xl border border-dashed p-3 text-xs flex items-center gap-2 ${
+                            isDaylight
+                              ? 'border-amber-300 bg-amber-50/70 text-amber-900 font-medium'
+                              : 'border-amber-500/30 bg-amber-950/20 text-amber-300'
+                          }`}
+                        >
                           <MapPin className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                          <span>Select <strong>State, City & Hub Yard</strong> in Step 1 first to view customers assigned to that yard.</span>
+                          <span>
+                            Select <strong>State, City & Hub Yard</strong> in Step 1 first to view customers assigned to
+                            that yard.
+                          </span>
                         </div>
                       ) : scopedCustomers.length ? (
                         <SearchSelect
@@ -1987,7 +2212,11 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       ) : (
                         <div className="rounded-xl border border-dashed border-amber-500/40 p-3.5 text-xs text-slate-400">
                           No customer is mapped to this Hub Yard yet.{' '}
-                          <button type="button" onClick={() => openCustomerDialog('add')} className="font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer">
+                          <button
+                            type="button"
+                            onClick={() => openCustomerDialog('add')}
+                            className="font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer"
+                          >
                             Add the first customer for this hub.
                           </button>
                         </div>
@@ -2035,7 +2264,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 label: location.localNameHindi
                                   ? `${location.localName} (${location.localNameHindi})`
                                   : location.localName,
-                                subLabel: [location.landmark || location.village, location.accessNotes].filter(Boolean).join(' • '),
+                                subLabel: [location.landmark || location.village, location.accessNotes]
+                                  .filter(Boolean)
+                                  .join(' • '),
                                 badge: location.isDefault ? 'DEFAULT' : location.locationType,
                               }))}
                               value={selectedFarmLocationId || ''}
@@ -2043,22 +2274,31 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                 const location = farmLocations.find((item) => item.id === Number(value));
                                 setSelectedFarmLocationId(Number(value) || 0);
                                 if (location) {
-                                  setDeliveryAddress([location.localName, location.landmark || location.village].filter(Boolean).join(' — '));
+                                  setDeliveryAddress(
+                                    [location.localName, location.landmark || location.village]
+                                      .filter(Boolean)
+                                      .join(' — '),
+                                  );
                                 }
                               }}
                               placeholder="Choose the farmer's locally named field..."
                               isClearable={false}
                             />
-                            {selectedFarmLocationId ? (() => {
-                              const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
-                              return location?.accessNotes ? (
-                                <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">Access note: {location.accessNotes}</p>
-                              ) : null;
-                            })() : null}
+                            {selectedFarmLocationId
+                              ? (() => {
+                                  const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
+                                  return location?.accessNotes ? (
+                                    <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                                      Access note: {location.accessNotes}
+                                    </p>
+                                  ) : null;
+                                })()
+                              : null}
                           </>
                         ) : (
                           <p className="rounded-lg border border-dashed border-slate-300 p-2.5 text-[11px] text-slate-500">
-                            No saved farm yet. Use the farmer’s WhatsApp location pin to save a locally named field, or enter a one-time delivery address below.
+                            No saved farm yet. Use the farmer’s WhatsApp location pin to save a locally named field, or
+                            enter a one-time delivery address below.
                           </p>
                         )}
                       </div>
@@ -2074,7 +2314,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Dispatch Start Date</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            Dispatch Start Date
+                          </label>
                           <input
                             type="date"
                             value={startDate}
@@ -2084,7 +2326,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Return End Date</label>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">
+                            Return End Date
+                          </label>
                           <input
                             type="date"
                             value={endDate}
@@ -2169,39 +2413,50 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   <div className="space-y-5">
                     {/* Review Overview Card */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className={`p-3 rounded-xl border text-xs ${
-                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                      }`}>
+                      <div
+                        className={`p-3 rounded-xl border text-xs ${
+                          isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                        }`}
+                      >
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
                           <Wrench className="h-3 w-3 text-amber-500" /> Machine & Plan
                         </div>
-                        <div className="font-bold text-slate-900 dark:text-slate-100 truncate">{currentAsset?.name}</div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                          {currentAsset?.name}
+                        </div>
                         <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
-                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset?.dailyRate)} / {getBillingUnitLabel(quote?.billingUnit || currentTariff?.billingUnit || currentAsset?.billingUnit)}
+                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset?.dailyRate)} /{' '}
+                          {getBillingUnitLabel(
+                            quote?.billingUnit || currentTariff?.billingUnit || currentAsset?.billingUnit,
+                          )}
                         </div>
                       </div>
 
-                      <div className={`p-3 rounded-xl border text-xs ${
-                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                      }`}>
+                      <div
+                        className={`p-3 rounded-xl border text-xs ${
+                          isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                        }`}
+                      >
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
                           <User className="h-3 w-3 text-amber-500" /> Farmer & Destination
                         </div>
                         <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
                           {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
                         </div>
-                        <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                          {deliveryAddress}
-                        </div>
+                        <div className="text-[11px] text-slate-500 truncate mt-0.5">{deliveryAddress}</div>
                       </div>
 
-                      <div className={`p-3 rounded-xl border text-xs ${
-                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
-                      }`}>
+                      <div
+                        className={`p-3 rounded-xl border text-xs ${
+                          isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                        }`}
+                      >
                         <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
                           <Calendar className="h-3 w-3 text-amber-500" /> Window & Distance
                         </div>
-                        <div className="font-bold text-slate-900 dark:text-slate-100">{quote?.durationDays || 1} Days</div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100">
+                          {quote?.durationDays || 1} Days
+                        </div>
                         <div className="text-[11px] text-slate-500 mt-0.5">
                           {startDate} to {endDate} ({distanceKm} km)
                         </div>
@@ -2217,7 +2472,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <div>
                           <span className="text-xs font-bold block">EquipGrid Machine Operator</span>
                           <span className="text-[10px] text-slate-500">
-                            {currentTariff?.operatorDailyRate ? `Rate: ${formatINR(currentTariff.operatorDailyRate)}/day` : 'Certified station driver & operator included'}
+                            {currentTariff?.operatorDailyRate
+                              ? `Rate: ${formatINR(currentTariff.operatorDailyRate)}/day`
+                              : 'Certified station driver & operator included'}
                           </span>
                         </div>
                       </div>
@@ -2250,7 +2507,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                               'py-2 px-1 rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
                               bookingSource === ch.value
                                 ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-black shadow-xs'
-                                : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800',
                             )}
                           >
                             <span className="text-base">{ch.icon}</span>
@@ -2268,7 +2525,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div>
                           <span className="text-xs font-bold block">Farmer Telephone Callback</span>
-                          <span className="text-[10px] text-slate-500">Require verbal telephone verification with farmer before driver dispatch</span>
+                          <span className="text-[10px] text-slate-500">
+                            Require verbal telephone verification with farmer before driver dispatch
+                          </span>
                         </div>
                       </div>
                       <input
@@ -2304,7 +2563,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                       <button
                         type="submit"
-                        disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
+                        disabled={
+                          isSubmitting ||
+                          !currentAsset ||
+                          availableMachines.length === 0 ||
+                          scopedCustomers.length === 0
+                        }
                         className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50 transition-all shadow-md"
                       >
                         <CheckCircle2 className="h-4 w-4" />
@@ -2316,7 +2580,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               </div>
 
               {/* Right Col: Instant Commercial Breakdown & Live Sidebar */}
-              <div className={`rounded-2xl border p-5 space-y-4 flex flex-col justify-between ${isDaylight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-500/25 bg-[#2c2c2c]'}`}>
+              <div
+                className={`rounded-2xl border p-5 space-y-4 flex flex-col justify-between ${isDaylight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-500/25 bg-[#2c2c2c]'}`}
+              >
                 <div>
                   <div className="flex items-center gap-2 border-b pb-2 border-slate-200 dark:border-slate-700">
                     <Calculator className="h-4 w-4 text-amber-500" />
@@ -2325,7 +2591,12 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                   <div className="mt-2.5 flex items-center gap-1.5 p-2 rounded-lg bg-amber-500/15 border border-amber-500/30 text-[11px] font-semibold text-amber-900 dark:text-amber-300">
                     <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="truncate">{quote?.shiftTerms || currentTariff?.shiftTerms || currentAsset?.shiftTerms || 'Standard Shift Terms'}</span>
+                    <span className="truncate">
+                      {quote?.shiftTerms ||
+                        currentTariff?.shiftTerms ||
+                        currentAsset?.shiftTerms ||
+                        'Standard Shift Terms'}
+                    </span>
                   </div>
 
                   {currentAsset && quote ? (
@@ -2336,13 +2607,22 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">
-                          Base Rent ({getBillingUnitLabel(quote.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit)})
+                          Base Rent (
+                          {getBillingUnitLabel(
+                            quote.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit,
+                          )}
+                          )
                         </span>
                         <span className="font-bold">{formatINR(quote.baseRent)}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-500">
-                          Transit {currentTariff?.freeDeliveryDistanceKm === 0 && currentTariff?.ratePerKmAfterFree === 0 ? '(Free / Per-Trip)' : (distanceKm <= (currentTariff?.freeDeliveryDistanceKm ?? 5) ? `(0–${currentTariff?.freeDeliveryDistanceKm ?? 5}km Free)` : `(>${currentTariff?.freeDeliveryDistanceKm ?? 5}km @ ₹${currentTariff?.ratePerKmAfterFree ?? 10}/km)`)}
+                          Transit{' '}
+                          {currentTariff?.freeDeliveryDistanceKm === 0 && currentTariff?.ratePerKmAfterFree === 0
+                            ? '(Free / Per-Trip)'
+                            : distanceKm <= (currentTariff?.freeDeliveryDistanceKm ?? 5)
+                              ? `(0–${currentTariff?.freeDeliveryDistanceKm ?? 5}km Free)`
+                              : `(>${currentTariff?.freeDeliveryDistanceKm ?? 5}km @ ₹${currentTariff?.ratePerKmAfterFree ?? 10}/km)`}
                         </span>
                         <span className="font-bold">
                           {(quote?.deliveryFee ?? 0) === 0 ? 'FREE (₹0)' : formatINR(quote?.deliveryFee)}
@@ -2352,17 +2632,27 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         <span className="text-slate-500">Operator Fee</span>
                         <span className="font-bold">{formatINR(quote.operatorFee)}</span>
                       </div>
-                      <div className={`flex justify-between pt-1 border-t font-medium ${
-                        isDaylight ? 'border-slate-200 text-amber-800' : 'border-slate-700/40 text-slate-300'
-                      }`}>
-                        <span>{quote.depositAmount === 0 ? 'Security Deposit (Zero Scheme)' : 'Refundable Deposit'}</span>
-                        <span className={quote.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
+                      <div
+                        className={`flex justify-between pt-1 border-t font-medium ${
+                          isDaylight ? 'border-slate-200 text-amber-800' : 'border-slate-700/40 text-slate-300'
+                        }`}
+                      >
+                        <span>
+                          {quote.depositAmount === 0 ? 'Security Deposit (Zero Scheme)' : 'Refundable Deposit'}
+                        </span>
+                        <span
+                          className={
+                            quote.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''
+                          }
+                        >
                           {quote.depositAmount === 0 ? '✨ ₹0 (Zero Deposit)' : formatINR(quote.depositAmount)}
                         </span>
                       </div>
-                      <div className={`flex justify-between pt-2 border-t text-sm font-bold ${
-                        isDaylight ? 'border-slate-200' : 'border-slate-700/60'
-                      }`}>
+                      <div
+                        className={`flex justify-between pt-2 border-t text-sm font-bold ${
+                          isDaylight ? 'border-slate-200' : 'border-slate-700/60'
+                        }`}
+                      >
                         <span>Total Value</span>
                         <span className={isDaylight ? 'text-amber-800' : 'text-slate-100'}>
                           {formatINR(quote.totalAmount)}
@@ -2381,11 +2671,14 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 space-y-1.5 text-[11px] mt-3">
                       <div className="font-bold flex items-center justify-between text-amber-900 dark:text-amber-300">
                         <span>Farmer Summary / किसान पर्ची</span>
-                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-500/20">{bookingSource}</span>
+                        <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-amber-500/20">
+                          {bookingSource}
+                        </span>
                       </div>
                       <div className="text-slate-600 dark:text-slate-400 space-y-0.5">
                         <div>
-                          <strong>किसान:</strong> {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
+                          <strong>किसान:</strong>{' '}
+                          {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
                         </div>
                         <div>
                           <strong>खेत स्थल:</strong> {deliveryAddress || 'Standard Delivery'}
@@ -2394,7 +2687,11 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           <strong>मशीन:</strong> {currentAsset.name} ({currentAsset.assetTag})
                         </div>
                         <div>
-                          <strong>दर / प्लान:</strong> {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset.dailyRate)} / {getBillingUnitLabel(quote?.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit)}
+                          <strong>दर / प्लान:</strong>{' '}
+                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset.dailyRate)} /{' '}
+                          {getBillingUnitLabel(
+                            quote?.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit,
+                          )}
                         </div>
                         {callbackRequested && (
                           <div className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 pt-0.5">
@@ -2413,7 +2710,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       type="button"
                       onClick={() => {
                         if (!currentAsset) {
-                          setErrorModal({ isOpen: true, message: 'Please select an available machine before continuing.' });
+                          setErrorModal({
+                            isOpen: true,
+                            message: 'Please select an available machine before continuing.',
+                          });
                           return;
                         }
                         setReservationStep('CUSTOMER_LOGISTICS');
@@ -2447,7 +2747,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   ) : (
                     <button
                       type="submit"
-                      disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
+                      disabled={
+                        isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0
+                      }
                       className="w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm flex items-center justify-center gap-2"
                     >
                       <CheckCircle2 className="h-4 w-4" />
@@ -2462,7 +2764,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       'w-full py-2.5 rounded-xl border text-xs font-bold transition-colors cursor-pointer',
                       isDaylight
                         ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                        : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+                        : 'border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100',
                     )}
                   >
                     Cancel
@@ -2476,13 +2778,19 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
       {customerDialog && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/55 p-2 sm:p-3 backdrop-blur-md">
-          <div className={`w-full max-w-xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 ${isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-slate-100'}`}>
-            <div className={`mb-4 flex items-center justify-between border-b pb-3 ${
-              isDaylight ? 'border-slate-200' : 'border-slate-700/30'
-            }`}>
+          <div
+            className={`w-full max-w-xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 ${isDaylight ? 'border-amber-300 bg-white text-slate-950' : 'border-amber-500/30 bg-[#242424] text-slate-100'}`}
+          >
+            <div
+              className={`mb-4 flex items-center justify-between border-b pb-3 ${
+                isDaylight ? 'border-slate-200' : 'border-slate-700/30'
+              }`}
+            >
               <div>
                 <h3 className="text-lg font-black">{customerDialog === 'add' ? 'Add customer' : 'Edit customer'}</h3>
-                <p className="mt-0.5 text-xs text-slate-400">This customer will be assigned to the selected booking territory.</p>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  This customer will be assigned to the selected booking territory.
+                </p>
               </div>
               <button
                 type="button"
@@ -2492,7 +2800,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   'rounded-lg border p-2 transition-colors cursor-pointer',
                   isDaylight
                     ? 'border-slate-300 text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                    : 'border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-100',
                 )}
               >
                 ✕
@@ -2501,18 +2809,46 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             <form onSubmit={saveCustomer} className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-bold">Customer / business name</label>
-                <input required value={customerForm.fullName} onChange={(event) => setCustomerForm({ ...customerForm, fullName: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="e.g. Sinha Infra Projects" />
+                <input
+                  required
+                  value={customerForm.fullName}
+                  onChange={(event) => setCustomerForm({ ...customerForm, fullName: event.target.value })}
+                  className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none"
+                  placeholder="e.g. Sinha Infra Projects"
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div><label className="mb-1 block text-xs font-bold">Mobile phone</label><input required value={customerForm.phone} onChange={(event) => setCustomerForm({ ...customerForm, phone: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="+91 98765 43210" /></div>
-                <div><label className="mb-1 block text-xs font-bold">Email (optional)</label><input type="email" value={customerForm.email} onChange={(event) => setCustomerForm({ ...customerForm, email: event.target.value })} className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none" placeholder="contact@example.com" /></div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold">Mobile phone</label>
+                  <input
+                    required
+                    value={customerForm.phone}
+                    onChange={(event) => setCustomerForm({ ...customerForm, phone: event.target.value })}
+                    className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-bold">Email (optional)</label>
+                  <input
+                    type="email"
+                    value={customerForm.email}
+                    onChange={(event) => setCustomerForm({ ...customerForm, email: event.target.value })}
+                    className="w-full rounded-xl border p-3 text-sm focus:border-amber-500 focus:outline-none"
+                    placeholder="contact@example.com"
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold">Verification tier</label>
                 <SearchSelect
                   options={[
                     { value: 'TIER_1_BASIC', label: 'Basic customer', subLabel: 'Standard KYC & deposit requirements' },
-                    { value: 'TIER_2_VERIFIED', label: 'Verified customer', subLabel: 'Priority dispatch & verified Aadhaar' },
+                    {
+                      value: 'TIER_2_VERIFIED',
+                      label: 'Verified customer',
+                      subLabel: 'Priority dispatch & verified Aadhaar',
+                    },
                   ]}
                   value={customerForm.tier}
                   onChange={(val) => {
@@ -2531,12 +2867,17 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     'rounded-xl border px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer',
                     isDaylight
                       ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                      : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                      : 'border-slate-700 text-slate-300 hover:bg-slate-800',
                   )}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-400">{customerDialog === 'add' ? 'Add customer' : 'Save customer'}</button>
+                <button
+                  type="submit"
+                  className="rounded-xl bg-amber-500 px-5 py-2.5 text-xs font-black text-slate-950 hover:bg-amber-400"
+                >
+                  {customerDialog === 'add' ? 'Add customer' : 'Save customer'}
+                </button>
               </div>
             </form>
           </div>

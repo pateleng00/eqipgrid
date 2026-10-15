@@ -14,33 +14,33 @@ import lombok.*;
 @Builder
 public class EquipmentType extends BaseEntity {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @Column(nullable = false, unique = true, length = 128)
-    private String name;
+  @Column(nullable = false, unique = true, length = 128)
+  private String name;
 
-    @Column(nullable = false, unique = true, length = 32)
-    private String code;
+  @Column(nullable = false, unique = true, length = 32)
+  private String code;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private AssetCategory category = AssetCategory.CONSTRUCTION;
+  @Builder.Default
+  @Column(nullable = false)
+  private AssetCategory category = AssetCategory.CONSTRUCTION;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
+  @Column(columnDefinition = "TEXT")
+  private String description;
 
-    @Column(name = "hindi_name", length = 128)
-    private String hindiName;
+  @Column(name = "hindi_name", length = 128)
+  private String hindiName;
 
-    @Column(name = "local_language_name", length = 128)
-    private String localLanguageName;
+  @Column(name = "local_language_name", length = 128)
+  private String localLanguageName;
 
-    @Column(name = "hindi_description", length = 512)
-    private String hindiDescription;
+  @Column(name = "hindi_description", length = 512)
+  private String hindiDescription;
 
-    @Builder.Default
-    @Column(nullable = false)
-    private Boolean active = true;
+  @Builder.Default
+  @Column(nullable = false)
+  private Boolean active = true;
 }

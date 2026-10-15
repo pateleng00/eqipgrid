@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UpdateUserRequest {
 
-    private String fullName;
-    private String email;
-    private String password;
-    private String phone;
-    private Role role;
-    private Long hubId;
-    private Boolean active;
+  private String fullName;
+  private String email;
+  private String password;
+  private String phone;
+  private Role role;
+  private Long hubId;
+  private Boolean active;
 }

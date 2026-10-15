@@ -55,19 +55,37 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div
       className={cn(
         'relative rounded-xl border p-3 sm:p-3.5 transition-all duration-200 shadow-sm',
-        isDaylight ? daylightAccentBorders[accentColor] : darkAccentBorders[accentColor]
+        isDaylight ? daylightAccentBorders[accentColor] : darkAccentBorders[accentColor],
       )}
     >
       <div className="flex items-start justify-between">
         <div>
-          <p className={cn("text-[10px] sm:text-xs font-black uppercase tracking-wider", isDaylight ? "text-slate-950" : "text-slate-400")}>{title}</p>
-          <div className={cn("mt-1 text-xl lg:text-2xl font-black tracking-tight", isDaylight ? "text-slate-950" : "text-white")}>{value}</div>
-          {subtitle && <p className={cn("mt-0.5 text-[11px] font-semibold", isDaylight ? "text-slate-800" : "text-slate-400")}>{subtitle}</p>}
+          <p
+            className={cn(
+              'text-[10px] sm:text-xs font-black uppercase tracking-wider',
+              isDaylight ? 'text-slate-950' : 'text-slate-400',
+            )}
+          >
+            {title}
+          </p>
+          <div
+            className={cn(
+              'mt-1 text-xl lg:text-2xl font-black tracking-tight',
+              isDaylight ? 'text-slate-950' : 'text-white',
+            )}
+          >
+            {value}
+          </div>
+          {subtitle && (
+            <p className={cn('mt-0.5 text-[11px] font-semibold', isDaylight ? 'text-slate-800' : 'text-slate-400')}>
+              {subtitle}
+            </p>
+          )}
         </div>
         <div
           className={cn(
             'p-2.5 rounded-xl border',
-            isDaylight ? daylightIconColors[accentColor] : darkIconColors[accentColor]
+            isDaylight ? daylightIconColors[accentColor] : darkIconColors[accentColor],
           )}
         >
           {icon}
@@ -75,7 +93,19 @@ export const StatCard: React.FC<StatCardProps> = ({
       </div>
       {trend && (
         <div className="mt-3 flex items-center gap-1.5 text-xs font-medium">
-          <span className={trendPositive ? (isDaylight ? 'text-emerald-800 font-black' : 'text-emerald-500 font-semibold') : (isDaylight ? 'text-rose-800 font-black' : 'text-rose-500 font-semibold')}>{trend}</span>
+          <span
+            className={
+              trendPositive
+                ? isDaylight
+                  ? 'text-emerald-800 font-black'
+                  : 'text-emerald-500 font-semibold'
+                : isDaylight
+                  ? 'text-rose-800 font-black'
+                  : 'text-rose-500 font-semibold'
+            }
+          >
+            {trend}
+          </span>
           <span className={isDaylight ? 'text-slate-700 font-medium' : 'text-slate-400'}>vs target baseline</span>
         </div>
       )}

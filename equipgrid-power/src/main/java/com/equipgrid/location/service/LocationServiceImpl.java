@@ -14,14 +14,13 @@ import com.equipgrid.location.repository.CityRepository;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.location.repository.LocationQueryRepository;
 import com.equipgrid.location.repository.StateRepository;
+import java.math.BigDecimal;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -29,167 +28,185 @@ import java.util.stream.Collectors;
 @Transactional
 public class LocationServiceImpl implements ILocationService {
 
-    private final StateRepository stateRepository;
-    private final CityRepository cityRepository;
-    private final HubRepository hubRepository;
-    private final LocationQueryRepository locationQueryRepository;
+  private final StateRepository stateRepository;
+  private final CityRepository cityRepository;
+  private final HubRepository hubRepository;
+  private final LocationQueryRepository locationQueryRepository;
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<State> getStates() {
-        return locationQueryRepository.findActiveStates();
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<State> getStates() {
+    return locationQueryRepository.findActiveStates();
+  }
 
-    @Override
-    public State createState(State state) {
-        return stateRepository.save(state);
-    }
+  @Override
+  public State createState(State state) {
+    return stateRepository.save(state);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<City> getCitiesByState(Long stateId) {
-        return locationQueryRepository.findActiveCitiesByStateId(stateId);
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<City> getCitiesByState(Long stateId) {
+    return locationQueryRepository.findActiveCitiesByStateId(stateId);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<City> getAllCities() {
-        return locationQueryRepository.findAllActiveCities();
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<City> getAllCities() {
+    return locationQueryRepository.findAllActiveCities();
+  }
 
-    @Override
-    public City createCity(CityRequest request) {
-        State state = stateRepository.findById(request.getStateId())
-                .orElseThrow(() -> new IllegalArgumentException("State not found: " + request.getStateId()));
-        City city = City.builder()
-                .state(state)
-                .name(request.getName())
-                .pinCode(request.getPinCode())
-                .active(true)
-                .build();
-        return cityRepository.save(city);
-    }
+  @Override
+  public City createCity(CityRequest request) {
+    State state =
+        stateRepository
+            .findById(request.getStateId())
+            .orElseThrow(
+                () -> new IllegalArgumentException("State not found: " + request.getStateId()));
+    City city =
+        City.builder()
+            .state(state)
+            .name(request.getName())
+            .pinCode(request.getPinCode())
+            .active(true)
+            .build();
+    return cityRepository.save(city);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Hub> getHubsByCity(Long cityId) {
-        return locationQueryRepository.findActiveHubsByCityId(cityId);
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<Hub> getHubsByCity(Long cityId) {
+    return locationQueryRepository.findActiveHubsByCityId(cityId);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<Hub> getAllHubs() {
-        return locationQueryRepository.findAllActiveHubs();
-    }
+  @Override
+  @Transactional(readOnly = true)
+  public List<Hub> getAllHubs() {
+    return locationQueryRepository.findAllActiveHubs();
+  }
 
-    @Override
-    public Hub createHub(HubRequest request) {
-        City city = cityRepository.findById(request.getCityId())
-                .orElseThrow(() -> new IllegalArgumentException("City not found: " + request.getCityId()));
-        Hub hub = Hub.builder()
-                .city(city)
-                .name(request.getName())
-                .code(request.getCode())
-                .address(request.getAddress())
-                .contactPhone(request.getContactPhone())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
-                .operatingRadiusKm(request.getOperatingRadiusKm() != null ? request.getOperatingRadiusKm() : new BigDecimal("25.00"))
-                .active(true)
-                .build();
-        return hubRepository.save(hub);
-    }
+  @Override
+  public Hub createHub(HubRequest request) {
+    City city =
+        cityRepository
+            .findById(request.getCityId())
+            .orElseThrow(
+                () -> new IllegalArgumentException("City not found: " + request.getCityId()));
+    Hub hub =
+        Hub.builder()
+            .city(city)
+            .name(request.getName())
+            .code(request.getCode())
+            .address(request.getAddress())
+            .contactPhone(request.getContactPhone())
+            .latitude(request.getLatitude())
+            .longitude(request.getLongitude())
+            .operatingRadiusKm(
+                request.getOperatingRadiusKm() != null
+                    ? request.getOperatingRadiusKm()
+                    : new BigDecimal("25.00"))
+            .active(true)
+            .build();
+    return hubRepository.save(hub);
+  }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<StateHierarchyResponse> getLocationHierarchy() {
-        List<Asset> activeAssets = locationQueryRepository.findActiveAssetsMappedToHubs();
+  @Override
+  @Transactional(readOnly = true)
+  public List<StateHierarchyResponse> getLocationHierarchy() {
+    List<Asset> activeAssets = locationQueryRepository.findActiveAssetsMappedToHubs();
 
-        Map<Long, List<Asset>> assetsByHubId = activeAssets.stream()
-                .filter(a -> a.getHub() != null && Boolean.TRUE.equals(a.getHub().getActive()))
-                .collect(Collectors.groupingBy(a -> a.getHub().getId()));
+    Map<Long, List<Asset>> assetsByHubId =
+        activeAssets.stream()
+            .filter(a -> a.getHub() != null && Boolean.TRUE.equals(a.getHub().getActive()))
+            .collect(Collectors.groupingBy(a -> a.getHub().getId()));
 
-        List<State> activeStates = locationQueryRepository.findActiveStates();
-        List<StateHierarchyResponse> result = new ArrayList<>();
+    List<State> activeStates = locationQueryRepository.findActiveStates();
+    List<StateHierarchyResponse> result = new ArrayList<>();
 
-        for (State state : activeStates) {
-            List<City> cities = locationQueryRepository.findActiveCitiesByStateId(state.getId());
-            List<CityHierarchyResponse> cityDtos = new ArrayList<>();
+    for (State state : activeStates) {
+      List<City> cities = locationQueryRepository.findActiveCitiesByStateId(state.getId());
+      List<CityHierarchyResponse> cityDtos = new ArrayList<>();
 
-            for (City city : cities) {
-                List<Hub> hubsInCity = locationQueryRepository.findActiveHubsByCityId(city.getId());
-                List<HubHierarchyResponse> hubDtos = new ArrayList<>();
+      for (City city : cities) {
+        List<Hub> hubsInCity = locationQueryRepository.findActiveHubsByCityId(city.getId());
+        List<HubHierarchyResponse> hubDtos = new ArrayList<>();
 
-                for (Hub hub : hubsInCity) {
-                    List<Asset> hubAssets = assetsByHubId.get(hub.getId());
-                    // CONDITION: At least 1 machine mapped with hub location address
-                    if (hubAssets != null && !hubAssets.isEmpty()) {
-                        Map<String, Integer> categoryCounts = new LinkedHashMap<>();
-                        categoryCounts.put("AGRICULTURE", 0);
-                        categoryCounts.put("CONSTRUCTION", 0);
-                        categoryCounts.put("MULTIPURPOSE_FLEET", 0);
+        for (Hub hub : hubsInCity) {
+          List<Asset> hubAssets = assetsByHubId.get(hub.getId());
+          // CONDITION: At least 1 machine mapped with hub location address
+          if (hubAssets != null && !hubAssets.isEmpty()) {
+            Map<String, Integer> categoryCounts = new LinkedHashMap<>();
+            categoryCounts.put("AGRICULTURE", 0);
+            categoryCounts.put("CONSTRUCTION", 0);
+            categoryCounts.put("MULTIPURPOSE_FLEET", 0);
 
-                        List<HubMachineResponse> machineDtos = new ArrayList<>();
+            List<HubMachineResponse> machineDtos = new ArrayList<>();
 
-                        for (Asset a : hubAssets) {
-                            String catName = a.getCategory() != null ? a.getCategory().name() : "AGRICULTURE";
-                            categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + 1);
+            for (Asset a : hubAssets) {
+              String catName = a.getCategory() != null ? a.getCategory().name() : "AGRICULTURE";
+              categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + 1);
 
-                            machineDtos.add(HubMachineResponse.builder()
-                                    .assetId(a.getId())
-                                    .assetTag(a.getAssetTag())
-                                    .name(a.getName())
-                                    .modelName(a.getModelName())
-                                    .category(catName)
-                                    .categoryDescription(a.getCategory() != null ? a.getCategory().getDescription() : "")
-                                    .dailyRate(a.getDailyRate())
-                                    .depositAmount(a.getDepositAmount())
-                                    .status(a.getStatus() != null ? a.getStatus().name() : "AVAILABLE")
-                                    .imageUrl(a.getImageUrl())
-                                    .conditionNotes(a.getConditionNotes())
-                                    .build());
-                        }
-
-                        hubDtos.add(HubHierarchyResponse.builder()
-                                .hubId(hub.getId())
-                                .hubName(hub.getName())
-                                .hubCode(hub.getCode())
-                                .address(hub.getAddress())
-                                .contactPhone(hub.getContactPhone() != null && !hub.getContactPhone().isBlank()
-                                        ? hub.getContactPhone()
-                                        : "+91 94674 79922")
-                                .operatingRadiusKm(hub.getOperatingRadiusKm())
-                                .latitude(hub.getLatitude())
-                                .longitude(hub.getLongitude())
-                                .totalMachineCount(hubAssets.size())
-                                .categoryCounts(categoryCounts)
-                                .machines(machineDtos)
-                                .build());
-                    }
-                }
-
-                // Only include city if at least one hub with active machine
-                if (!hubDtos.isEmpty()) {
-                    cityDtos.add(CityHierarchyResponse.builder()
-                            .cityId(city.getId())
-                            .cityName(city.getName())
-                            .pinCode(city.getPinCode())
-                            .hubs(hubDtos)
-                            .build());
-                }
+              machineDtos.add(
+                  HubMachineResponse.builder()
+                      .assetId(a.getId())
+                      .assetTag(a.getAssetTag())
+                      .name(a.getName())
+                      .modelName(a.getModelName())
+                      .category(catName)
+                      .categoryDescription(
+                          a.getCategory() != null ? a.getCategory().getDescription() : "")
+                      .dailyRate(a.getDailyRate())
+                      .depositAmount(a.getDepositAmount())
+                      .status(a.getStatus() != null ? a.getStatus().name() : "AVAILABLE")
+                      .imageUrl(a.getImageUrl())
+                      .conditionNotes(a.getConditionNotes())
+                      .build());
             }
 
-            // Only include state if at least one city with active hub
-            if (!cityDtos.isEmpty()) {
-                result.add(StateHierarchyResponse.builder()
-                        .stateId(state.getId())
-                        .stateName(state.getName())
-                        .stateCode(state.getCode())
-                        .cities(cityDtos)
-                        .build());
-            }
+            hubDtos.add(
+                HubHierarchyResponse.builder()
+                    .hubId(hub.getId())
+                    .hubName(hub.getName())
+                    .hubCode(hub.getCode())
+                    .address(hub.getAddress())
+                    .contactPhone(
+                        hub.getContactPhone() != null && !hub.getContactPhone().isBlank()
+                            ? hub.getContactPhone()
+                            : "+91 94674 79922")
+                    .operatingRadiusKm(hub.getOperatingRadiusKm())
+                    .latitude(hub.getLatitude())
+                    .longitude(hub.getLongitude())
+                    .totalMachineCount(hubAssets.size())
+                    .categoryCounts(categoryCounts)
+                    .machines(machineDtos)
+                    .build());
+          }
         }
 
-        return result;
+        // Only include city if at least one hub with active machine
+        if (!hubDtos.isEmpty()) {
+          cityDtos.add(
+              CityHierarchyResponse.builder()
+                  .cityId(city.getId())
+                  .cityName(city.getName())
+                  .pinCode(city.getPinCode())
+                  .hubs(hubDtos)
+                  .build());
+        }
+      }
+
+      // Only include state if at least one city with active hub
+      if (!cityDtos.isEmpty()) {
+        result.add(
+            StateHierarchyResponse.builder()
+                .stateId(state.getId())
+                .stateName(state.getName())
+                .stateCode(state.getCode())
+                .cities(cityDtos)
+                .build());
+      }
     }
+
+    return result;
+  }
 }

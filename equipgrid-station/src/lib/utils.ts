@@ -24,7 +24,10 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function getStatusColor(status: string, isDaylight = false): { bg: string; text: string; border: string; dot: string } {
+export function getStatusColor(
+  status: string,
+  isDaylight = false,
+): { bg: string; text: string; border: string; dot: string } {
   if (isDaylight) {
     switch (status) {
       case 'AVAILABLE':
@@ -141,4 +144,12 @@ export function getStatusColor(status: string, isDaylight = false): { bg: string
         dot: 'bg-slate-500',
       };
   }
+}
+
+export function debounce<T extends (...args: any[]) => void>(func: T, wait: number): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  return function (this: any, ...args: Parameters<T>) {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
 }

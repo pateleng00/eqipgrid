@@ -6,7 +6,16 @@
  * 3. Return Inspection & Security Deposit Settlement Receipt (Form F-004)
  */
 
-import { Booking, DispatchRecord, ReturnInspection, getFarmerFriendlyStatus, FarmLocation, getBillingUnitDisplayName, getBillingUnitShiftTerms, resolveBillingUnitCode } from '../types';
+import {
+  Booking,
+  DispatchRecord,
+  ReturnInspection,
+  getFarmerFriendlyStatus,
+  FarmLocation,
+  getBillingUnitDisplayName,
+  getBillingUnitShiftTerms,
+  resolveBillingUnitCode,
+} from '../types';
 
 export interface BookingVoucherData {
   booking: Booking;
@@ -52,11 +61,7 @@ function formatINR(val?: number): string {
 
 function escapeHtml(str?: string): string {
   if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function getLogoUrl(): string {
@@ -90,32 +95,42 @@ function getDynamicBookingTerms(booking: Booking): string {
 
   let shiftPolicy = `1. <strong>${escapeHtml(getBillingUnitDisplayName(billingUnitCode))} Policy:</strong> ${escapeHtml(booking.shiftTerms || booking.asset?.shiftTerms || getBillingUnitShiftTerms(billingUnitCode))}`;
   if (billingUnitCode === 'DAILY') {
-    shiftPolicy = '1. <strong>Standard Shift Policy (दैनिक कार्य समय):</strong> Machine rental duration is standard 8:00 hours (+ 1:00 hour complimentary grace buffer allowed at no extra cost). Beyond 9:00 hours total running time, pro-rata hourly rates apply.';
+    shiftPolicy =
+      '1. <strong>Standard Shift Policy (दैनिक कार्य समय):</strong> Machine rental duration is standard 8:00 hours (+ 1:00 hour complimentary grace buffer allowed at no extra cost). Beyond 9:00 hours total running time, pro-rata hourly rates apply.';
   } else if (billingUnitCode === 'HOURLY') {
-    shiftPolicy = '1. <strong>Metered Run-Time Policy (प्रति घंटा मीटर दर):</strong> Billed strictly on actual engine/machine operating run hours. Pay only for actual runtime with zero daily minimum boundation.';
+    shiftPolicy =
+      '1. <strong>Metered Run-Time Policy (प्रति घंटा मीटर दर):</strong> Billed strictly on actual engine/machine operating run hours. Pay only for actual runtime with zero daily minimum boundation.';
   } else if (billingUnitCode === 'PER_HOLE') {
-    shiftPolicy = '1. <strong>Per Hole Drilling Policy (प्रति गड्ढा दर):</strong> Billed per actual hole drilled on site with standard bits. Zero shift or time restriction applies.';
+    shiftPolicy =
+      '1. <strong>Per Hole Drilling Policy (प्रति गड्ढा दर):</strong> Billed per actual hole drilled on site with standard bits. Zero shift or time restriction applies.';
   } else if (billingUnitCode === 'PER_TRIP') {
-    shiftPolicy = '1. <strong>Per Trip Haulage Policy (प्रति चक्कर दर):</strong> Billed per completed transportation trip between designated dispatch yard and farm site.';
+    shiftPolicy =
+      '1. <strong>Per Trip Haulage Policy (प्रति चक्कर दर):</strong> Billed per completed transportation trip between designated dispatch yard and farm site.';
   } else if (billingUnitCode === 'PER_ACRE') {
-    shiftPolicy = '1. <strong>Per Acre Field Policy (प्रति एकड़ दर):</strong> Billed per actual worked acreage as verified on GPS field perimeter.';
+    shiftPolicy =
+      '1. <strong>Per Acre Field Policy (प्रति एकड़ दर):</strong> Billed per actual worked acreage as verified on GPS field perimeter.';
   } else if (billingUnitCode === 'PER_KM') {
-    shiftPolicy = '1. <strong>Per Kilometer Transit Policy (प्रति किलोमीटर दर):</strong> Billed per actual transit haulage distance recorded on vehicle odometer.';
+    shiftPolicy =
+      '1. <strong>Per Kilometer Transit Policy (प्रति किलोमीटर दर):</strong> Billed per actual transit haulage distance recorded on vehicle odometer.';
   } else if (billingUnitCode === 'PER_SHIFT') {
-    shiftPolicy = '1. <strong>Per Shift Work Policy (प्रति शिफ्ट दर):</strong> Billed per standard 8-hour operator shift window.';
+    shiftPolicy =
+      '1. <strong>Per Shift Work Policy (प्रति शिफ्ट दर):</strong> Billed per standard 8-hour operator shift window.';
   } else if (billingUnitCode === 'PER_TON') {
-    shiftPolicy = '1. <strong>Per Ton Material Handling Policy (प्रति टन दर):</strong> Billed per actual weighed tonnage loaded/handled.';
+    shiftPolicy =
+      '1. <strong>Per Ton Material Handling Policy (प्रति टन दर):</strong> Billed per actual weighed tonnage loaded/handled.';
   } else if (billingUnitCode === 'MONTHLY') {
-    shiftPolicy = '1. <strong>Monthly Lease Policy (मासिक पट्टा दर):</strong> Billed on 30-day scheduled rental cycles with dedicated maintenance coverage.';
+    shiftPolicy =
+      '1. <strong>Monthly Lease Policy (मासिक पट्टा दर):</strong> Billed on 30-day scheduled rental cycles with dedicated maintenance coverage.';
   }
 
-  const shiftTermsLine = (booking.shiftTerms || booking.asset?.shiftTerms) 
-    ? `2. <strong>Special Equipment Terms (विशेष उपकरण शर्तें):</strong> ${escapeHtml(booking.shiftTerms || booking.asset.shiftTerms)}<br>`
-    : '';
+  const shiftTermsLine =
+    booking.shiftTerms || booking.asset?.shiftTerms
+      ? `2. <strong>Special Equipment Terms (विशेष उपकरण शर्तें):</strong> ${escapeHtml(booking.shiftTerms || booking.asset.shiftTerms)}<br>`
+      : '';
 
   const transitLine = isFreeDelivery
     ? '3. <strong>Logistics & Transit (निःशुल्क परिवहन):</strong> Delivery is within the 0–5 km free hub radius with zero logistics surcharge.<br>'
-    : `3. <strong>Site Delivery & Transit:</strong> Delivery flatbed dispatched to farmer\'s saved location (${booking.distanceKm || 0} km). Clock starts upon on-site handover.<br>`;
+    : `3. <strong>Site Delivery & Transit:</strong> Delivery flatbed dispatched to farmer's saved location (${booking.distanceKm || 0} km). Clock starts upon on-site handover.<br>`;
 
   const depositLine = isZeroDeposit
     ? '4. <strong>Zero-Deposit Welfare Scheme (₹0 जमानत योजना):</strong> No security deposit is held in escrow. Overtime, fuel delta or repairs (if any) are settled directly via post-operation invoice.<br>'
@@ -170,19 +185,20 @@ function getDynamicDispatchPolicy(booking: Booking): string {
 function getDynamicSettlementSummary(booking: Booking): string {
   const isZeroDeposit = Number(booking.depositAmount || 0) === 0;
   const billingUnitCode = resolveBillingUnitCode(booking.asset?.billingUnit);
-  const shiftText = billingUnitCode === 'HOURLY'
-    ? 'Actual operating metered run hours were audited with no daily shift boundation.'
-    : billingUnitCode === 'PER_HOLE'
-    ? 'Total drilled hole count was verified with zero time restriction.'
-    : billingUnitCode === 'PER_TRIP'
-    ? 'Total haulage transport trips were verified.'
-    : billingUnitCode === 'PER_ACRE'
-    ? 'Total acreage field coverage was verified.'
-    : billingUnitCode === 'PER_KM'
-    ? 'Total transit odometer distance was verified.'
-    : billingUnitCode === 'PER_TON'
-    ? 'Total material payload tonnage was audited.'
-    : 'Standard 8-hr duty shift (+ 1 hr complimentary grace buffer) was audited.';
+  const shiftText =
+    billingUnitCode === 'HOURLY'
+      ? 'Actual operating metered run hours were audited with no daily shift boundation.'
+      : billingUnitCode === 'PER_HOLE'
+        ? 'Total drilled hole count was verified with zero time restriction.'
+        : billingUnitCode === 'PER_TRIP'
+          ? 'Total haulage transport trips were verified.'
+          : billingUnitCode === 'PER_ACRE'
+            ? 'Total acreage field coverage was verified.'
+            : billingUnitCode === 'PER_KM'
+              ? 'Total transit odometer distance was verified.'
+              : billingUnitCode === 'PER_TON'
+                ? 'Total material payload tonnage was audited.'
+                : 'Standard 8-hr duty shift (+ 1 hr complimentary grace buffer) was audited.';
 
   const depositText = isZeroDeposit
     ? 'Zero security deposit was required under the Farmer Welfare Scheme (₹0 जमानत योजना), hence no escrow refund was locked.'
@@ -461,9 +477,17 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
   const { booking } = data;
   const advancePaid = data.advancePaid ?? booking.advancePaid ?? (booking.baseRent || 0);
   const depositPaid = data.depositPaid ?? booking.depositPaid ?? (booking.depositAmount || 0);
-  const totalPaid = data.totalPaid ?? (advancePaid + depositPaid);
+  const totalPaid = data.totalPaid ?? advancePaid + depositPaid;
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
+  const stationName =
+    data.stationName ||
+    (booking.asset?.hubName
+      ? `${booking.asset.hubName} Hub`
+      : (booking.customer as any)?.hub?.name
+        ? `${(booking.customer as any).hub.name} Hub`
+        : (booking.customer as any)?.hubName
+          ? `${(booking.customer as any).hubName} Hub`
+          : '');
 
   const statusInfo = getFarmerFriendlyStatus(booking.status);
   const sourceMeta = getBookingSourceMeta(booking.bookingSource);
@@ -474,19 +498,23 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
 
   const billingUnitText = getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit || 'DAILY');
 
-  const categoryLabel = booking.asset.category === 'MULTIPURPOSE_FLEET'
-    ? 'Multipurpose Fleet (बहुउद्देशीय वाहन)'
-    : booking.asset.category === 'CONSTRUCTION'
-    ? 'Construction Equipment (निर्माण उपकरण)'
-    : 'Agricultural Machinery (कृषि उपकरण)';
+  const categoryLabel =
+    booking.asset.category === 'MULTIPURPOSE_FLEET'
+      ? 'Multipurpose Fleet (बहुउद्देशीय वाहन)'
+      : booking.asset.category === 'CONSTRUCTION'
+        ? 'Construction Equipment (निर्माण उपकरण)'
+        : 'Agricultural Machinery (कृषि उपकरण)';
 
-  const customerSiteTitle = booking.asset.category === 'CONSTRUCTION'
-    ? 'Customer & Site Details (ग्राहक व निर्माण स्थल)'
-    : booking.asset.category === 'MULTIPURPOSE_FLEET'
-    ? 'Customer & Destination Site (ग्राहक व कार्य स्थल विवरण)'
-    : 'Customer & Delivery Field (किसान व खेत विवरण)';
+  const customerSiteTitle =
+    booking.asset.category === 'CONSTRUCTION'
+      ? 'Customer & Site Details (ग्राहक व निर्माण स्थल)'
+      : booking.asset.category === 'MULTIPURPOSE_FLEET'
+        ? 'Customer & Destination Site (ग्राहक व कार्य स्थल विवरण)'
+        : 'Customer & Delivery Field (किसान व खेत विवरण)';
 
-  const modelDisplay = booking.asset.modelName ? `${booking.asset.name} (${booking.asset.modelName})` : booking.asset.name;
+  const modelDisplay = booking.asset.modelName
+    ? `${booking.asset.name} (${booking.asset.modelName})`
+    : booking.asset.name;
 
   const bodyHtml = `
     <div class="header">
@@ -507,10 +535,14 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
       </div>
     </div>
 
-    ${booking.callbackRequested ? `
+    ${
+      booking.callbackRequested
+        ? `
     <div class="highlight-box" style="background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-weight: 700;">
       📞 <strong>Callback Requested by Farmer (किसान को कॉल बैक सहायता आवश्यक):</strong> Our hub team has flagged this reservation for proactive telephone coordination before dispatch.
-    </div>` : ''}
+    </div>`
+        : ''
+    }
 
     <div class="grid-2">
       <div class="panel">
@@ -521,7 +553,9 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
         <div class="info-row"><span class="info-label">Customer Name:</span><span class="info-val">${escapeHtml(booking.customer.fullName)}</span></div>
         <div class="info-row"><span class="info-label">WhatsApp Mobile:</span><span class="info-val">+91 ${escapeHtml(booking.customer.phone)}</span></div>
         
-        ${farmLocation || booking.deliveryLocationName ? `
+        ${
+          farmLocation || booking.deliveryLocationName
+            ? `
         <div class="info-row">
           <span class="info-label">Saved Farm / Field:</span>
           <span class="info-val" style="color: #0369a1;">
@@ -529,19 +563,37 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
             ${farmLocation?.localNameHindi ? ` (${escapeHtml(farmLocation.localNameHindi)})` : ''}
           </span>
         </div>
-        ${farmLocation?.aliases ? `
-        <div class="info-row"><span class="info-label">Spoken Aliases:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.aliases)}</span></div>` : ''}
-        ${farmLocation?.landmark ? `
-        <div class="info-row"><span class="info-label">Landmark:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.landmark)}</span></div>` : ''}
-        ${farmLocation?.accessNotes ? `
+        ${
+          farmLocation?.aliases
+            ? `
+        <div class="info-row"><span class="info-label">Spoken Aliases:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.aliases)}</span></div>`
+            : ''
+        }
+        ${
+          farmLocation?.landmark
+            ? `
+        <div class="info-row"><span class="info-label">Landmark:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.landmark)}</span></div>`
+            : ''
+        }
+        ${
+          farmLocation?.accessNotes
+            ? `
         <div style="margin-top: 6px; padding: 6px 8px; background: #fefce8; border: 1px solid #fef08a; border-radius: 4px; font-size: 10.5px; color: #854d0e;">
           🚜 <strong>Field Access:</strong> ${escapeHtml(farmLocation.accessNotes)}
-        </div>` : ''}
-        ${farmLocation?.deliveryContactName ? `
-        <div class="info-row" style="margin-top: 4px;"><span class="info-label">Site Receiver:</span><span class="info-val">${escapeHtml(farmLocation.deliveryContactName)} (+91 ${escapeHtml(farmLocation.deliveryContactPhone || booking.customer.phone)})</span></div>` : ''}
-        ` : `
+        </div>`
+            : ''
+        }
+        ${
+          farmLocation?.deliveryContactName
+            ? `
+        <div class="info-row" style="margin-top: 4px;"><span class="info-label">Site Receiver:</span><span class="info-val">${escapeHtml(farmLocation.deliveryContactName)} (+91 ${escapeHtml(farmLocation.deliveryContactPhone || booking.customer.phone)})</span></div>`
+            : ''
+        }
+        `
+            : `
         <div class="info-row"><span class="info-label">Delivery Address:</span><span class="info-val" style="max-width: 200px;">${escapeHtml(booking.deliveryAddress)}</span></div>
-        `}
+        `
+        }
         
         <div class="info-row" style="margin-top: 4px;">
           <span class="info-label">Hub Distance:</span>
@@ -561,12 +613,20 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
         <div class="info-row"><span class="info-label">Category / Model:</span><span class="info-val">${escapeHtml(categoryLabel)} · ${escapeHtml(modelDisplay)}</span></div>
         <div class="info-row"><span class="info-label">Rental Duration:</span><span class="info-val">${escapeHtml(booking.startDate)} to ${escapeHtml(booking.endDate)}</span></div>
         <div class="info-row"><span class="info-label">Billing Metric:</span><span class="info-val" style="color: #0369a1;">${escapeHtml(billingUnitText)}</span></div>
-        ${(booking.shiftTerms || booking.asset.shiftTerms) ? `
+        ${
+          booking.shiftTerms || booking.asset.shiftTerms
+            ? `
         <div style="margin-top: 6px; padding: 6px 8px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; font-size: 10.5px; color: #1e40af;">
           ⏱️ <strong>Shift Terms:</strong> ${escapeHtml(booking.shiftTerms || booking.asset.shiftTerms)}
-        </div>` : ''}
-        ${booking.operatorRequired ? `
-        <div class="info-row" style="margin-top: 4px;"><span class="info-label">Certified Operator:</span><span class="info-val" style="color: #047857;">Included (ऑपरेटर सहित)</span></div>` : ''}
+        </div>`
+            : ''
+        }
+        ${
+          booking.operatorRequired
+            ? `
+        <div class="info-row" style="margin-top: 4px;"><span class="info-label">Certified Operator:</span><span class="info-val" style="color: #047857;">Included (ऑपरेटर सहित)</span></div>`
+            : ''
+        }
       </div>
     </div>
 
@@ -593,9 +653,11 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
           <td>
             <strong>Security Deposit (अमानत राशि)</strong>
             <div style="font-size: 10.5px; color: ${isZeroDeposit ? '#047857' : '#64748b'};">
-              ${isZeroDeposit 
-                ? '✨ Zero-Deposit Scheme (किसान सहायता योजना — ₹0 जमानत राशि)' 
-                : '100% Refundable Escrow (वापसी पर 15 मिनट में तुरंत रिफंड)'}
+              ${
+                isZeroDeposit
+                  ? '✨ Zero-Deposit Scheme (किसान सहायता योजना — ₹0 जमानत राशि)'
+                  : '100% Refundable Escrow (वापसी पर 15 मिनट में तुरंत रिफंड)'
+              }
             </div>
           </td>
           <td style="text-align: center;">${isZeroDeposit ? 'Waiver' : 'Escrow Deposit'}</td>
@@ -608,9 +670,11 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
           <td>
             <strong>Logistics & Flatbed Delivery (खेत तक परिवहन)</strong>
             <div style="font-size: 10.5px; color: ${isFreeDelivery ? '#047857' : '#64748b'};">
-              ${isFreeDelivery 
-                ? '🟢 FREE 0–5 km Base Radius Delivery (नि:शुल्क डिलीवरी)' 
-                : `Flatbed transit to site (${booking.distanceKm || 0} km)`}
+              ${
+                isFreeDelivery
+                  ? '🟢 FREE 0–5 km Base Radius Delivery (नि:शुल्क डिलीवरी)'
+                  : `Flatbed transit to site (${booking.distanceKm || 0} km)`
+              }
             </div>
           </td>
           <td style="text-align: center;">${booking.distanceKm || 0} km</td>
@@ -619,7 +683,9 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
             ${formatINR(booking.deliveryFee)}
           </td>
         </tr>
-        ${booking.operatorFee ? `
+        ${
+          booking.operatorFee
+            ? `
         <tr>
           <td>
             <strong>Certified Machinery Operator Allowance (कुशल ऑपरेटर)</strong>
@@ -628,7 +694,9 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
           <td style="text-align: center;">Full Duty</td>
           <td style="text-align: right;">—</td>
           <td style="text-align: right;">${formatINR(booking.operatorFee)}</td>
-        </tr>` : ''}
+        </tr>`
+            : ''
+        }
         <tr class="total-row">
           <td colspan="3"><strong>Total Commercial Obligation (कुल देय राशि)</strong></td>
           <td style="text-align: right;"><strong>${formatINR(booking.totalAmount)}</strong></td>
@@ -677,23 +745,33 @@ export function printBookingConfirmationPdf(data: BookingVoucherData) {
 export function printDispatchChallanPdf(data: DispatchVoucherData) {
   const { booking, challan } = data;
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
+  const stationName =
+    data.stationName ||
+    (booking.asset?.hubName
+      ? `${booking.asset.hubName} Hub`
+      : (booking.customer as any)?.hub?.name
+        ? `${(booking.customer as any).hub.name} Hub`
+        : (booking.customer as any)?.hubName
+          ? `${(booking.customer as any).hubName} Hub`
+          : '');
 
   const farmLocation = booking.farmLocation;
   const driverPhone = data.driverPhone || challan.driverPhone || '';
   const vehicleNumber = data.vehicleNumber || challan.vehicleNumber || '';
 
-  const dispatchDestTitle = booking.asset?.category === 'CONSTRUCTION'
-    ? 'Customer & Construction Site (ग्राहक व निर्माण स्थल)'
-    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
-    ? 'Customer & Destination Site (ग्राहक व कार्य स्थल)'
-    : 'Customer & Destination Farm (किसान व गंतव्य खेत)';
+  const dispatchDestTitle =
+    booking.asset?.category === 'CONSTRUCTION'
+      ? 'Customer & Construction Site (ग्राहक व निर्माण स्थल)'
+      : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+        ? 'Customer & Destination Site (ग्राहक व कार्य स्थल)'
+        : 'Customer & Destination Farm (किसान व गंतव्य खेत)';
 
-  const destLabel = booking.asset?.category === 'CONSTRUCTION'
-    ? 'Site Destination:'
-    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
-    ? 'Worksite Destination:'
-    : 'Field Destination:';
+  const destLabel =
+    booking.asset?.category === 'CONSTRUCTION'
+      ? 'Site Destination:'
+      : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+        ? 'Worksite Destination:'
+        : 'Field Destination:';
 
   const bodyHtml = `
     <div class="header">
@@ -721,10 +799,18 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
             ${farmLocation?.localNameHindi ? ` (${escapeHtml(farmLocation.localNameHindi)})` : ''}
           </span>
         </div>
-        ${farmLocation?.landmark ? `
-        <div class="info-row"><span class="info-label">Landmark:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.landmark)}</span></div>` : ''}
-        ${farmLocation?.village ? `
-        <div class="info-row"><span class="info-label">Village / Tehsil:</span><span class="info-val">${escapeHtml(farmLocation.village)}${farmLocation.tehsil ? `, ${escapeHtml(farmLocation.tehsil)}` : ''}</span></div>` : ''}
+        ${
+          farmLocation?.landmark
+            ? `
+        <div class="info-row"><span class="info-label">Landmark:</span><span class="info-val" style="font-size: 11px;">${escapeHtml(farmLocation.landmark)}</span></div>`
+            : ''
+        }
+        ${
+          farmLocation?.village
+            ? `
+        <div class="info-row"><span class="info-label">Village / Tehsil:</span><span class="info-val">${escapeHtml(farmLocation.village)}${farmLocation.tehsil ? `, ${escapeHtml(farmLocation.tehsil)}` : ''}</span></div>`
+            : ''
+        }
         <div class="info-row"><span class="info-label">Site Receiver:</span><span class="info-val">${escapeHtml(farmLocation?.deliveryContactName || booking.customer.fullName)} (+91 ${escapeHtml(farmLocation?.deliveryContactPhone || booking.customer.phone)})</span></div>
         <div class="info-row"><span class="info-label">Booking Ref:</span><span class="info-val" style="font-family: monospace;">${escapeHtml(booking.bookingNumber)}</span></div>
       </div>
@@ -740,11 +826,15 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
       </div>
     </div>
 
-    ${farmLocation?.accessNotes ? `
+    ${
+      farmLocation?.accessNotes
+        ? `
     <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; font-size: 11px; color: #78350f;">
       <strong>🚜 Route & Road Access Instructions for Transporter (चालक के लिए रास्ता निर्देश):</strong><br/>
       ${escapeHtml(farmLocation.accessNotes)}
-    </div>` : ''}
+    </div>`
+        : ''
+    }
 
     <div class="panel" style="margin-bottom: 16px;">
       <div class="panel-title">28-Point Pre-Dispatch Mechanical & Safety Yard Audit (सुरक्षा जांच)</div>
@@ -756,10 +846,14 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
         <div>✅ Standard Tool Kit & Safety Accessories Complete</div>
         <div>✅ Site Delivery Protocol & Safe Unloading Briefed</div>
       </div>
-      ${challan.conditionNotes ? `
+      ${
+        challan.conditionNotes
+          ? `
       <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #cbd5e1; font-size: 10.5px; color: #475569;">
         <strong>Yard Handover Notes:</strong> ${escapeHtml(challan.conditionNotes)}
-      </div>` : ''}
+      </div>`
+          : ''
+      }
     </div>
 
     <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 8px 12px; margin-bottom: 16px; font-size: 10.5px; line-height: 1.45; color: #92400e;">
@@ -793,23 +887,33 @@ export function printDispatchChallanPdf(data: DispatchVoucherData) {
 export function printReturnSettlementPdf(data: SettlementVoucherData) {
   const { booking, inspection } = data;
   const nowStr = data.issuedAt || new Date().toLocaleString('en-IN');
-  const stationName = data.stationName || (booking.asset?.hubName ? `${booking.asset.hubName} Hub` : ((booking.customer as any)?.hub?.name ? `${(booking.customer as any).hub.name} Hub` : ((booking.customer as any)?.hubName ? `${(booking.customer as any).hubName} Hub` : '')));
+  const stationName =
+    data.stationName ||
+    (booking.asset?.hubName
+      ? `${booking.asset.hubName} Hub`
+      : (booking.customer as any)?.hub?.name
+        ? `${(booking.customer as any).hub.name} Hub`
+        : (booking.customer as any)?.hubName
+          ? `${(booking.customer as any).hubName} Hub`
+          : '');
 
   const farmLocation = booking.farmLocation;
   const refundUtr = data.refundTransactionRef || 'Pending Settlement Transfer';
   const refundStatus = data.refundStatus || (data.refundTransactionRef ? 'COMPLETED' : 'PENDING');
 
-  const custTitle = booking.asset?.category === 'CONSTRUCTION'
-    ? 'Customer & Project Details (ग्राहक व परियोजना विवरण)'
-    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
-    ? 'Customer & Operation Details (ग्राहक व परिचालन विवरण)'
-    : 'Customer & Booking Details (किसान विवरण)';
+  const custTitle =
+    booking.asset?.category === 'CONSTRUCTION'
+      ? 'Customer & Project Details (ग्राहक व परियोजना विवरण)'
+      : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+        ? 'Customer & Operation Details (ग्राहक व परिचालन विवरण)'
+        : 'Customer & Booking Details (किसान विवरण)';
 
-  const siteLabel = booking.asset?.category === 'CONSTRUCTION'
-    ? 'Site Location:'
-    : booking.asset?.category === 'MULTIPURPOSE_FLEET'
-    ? 'Worksite Location:'
-    : 'Farm Location:';
+  const siteLabel =
+    booking.asset?.category === 'CONSTRUCTION'
+      ? 'Site Location:'
+      : booking.asset?.category === 'MULTIPURPOSE_FLEET'
+        ? 'Worksite Location:'
+        : 'Farm Location:';
 
   const bodyHtml = `
     <div class="header">
@@ -831,8 +935,12 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
         <div class="info-row"><span class="info-label">Customer Name:</span><span class="info-val">${escapeHtml(booking.customer.fullName)}</span></div>
         <div class="info-row"><span class="info-label">UPI / Mobile Ref:</span><span class="info-val">+91 ${escapeHtml(data.refundDestination || booking.customer.phone)}</span></div>
         <div class="info-row"><span class="info-label">Booking Reference:</span><span class="info-val" style="font-family: monospace;">${escapeHtml(booking.bookingNumber)}</span></div>
-        ${farmLocation || booking.deliveryLocationName ? `
-        <div class="info-row"><span class="info-label">${siteLabel}</span><span class="info-val">${escapeHtml(farmLocation?.localName || booking.deliveryLocationName)}</span></div>` : ''}
+        ${
+          farmLocation || booking.deliveryLocationName
+            ? `
+        <div class="info-row"><span class="info-label">${siteLabel}</span><span class="info-val">${escapeHtml(farmLocation?.localName || booking.deliveryLocationName)}</span></div>`
+            : ''
+        }
         <div class="info-row"><span class="info-label">Rental Duration:</span><span class="info-val">${escapeHtml(booking.startDate)} → ${escapeHtml(booking.endDate)}</span></div>
       </div>
 

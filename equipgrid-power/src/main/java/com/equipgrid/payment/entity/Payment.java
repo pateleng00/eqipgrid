@@ -6,10 +6,9 @@ import com.equipgrid.payment.enums.PaymentMode;
 import com.equipgrid.payment.enums.PaymentType;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import lombok.*;
 
 @Entity
 @Table(name = "payments")
@@ -21,34 +20,34 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Payment {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "booking_id")
-    private Booking booking;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "booking_id")
+  private Booking booking;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "customer_id")
-    private Customer customer;
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "customer_id")
+  private Customer customer;
 
-    @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal amount;
+  @Column(nullable = false, precision = 10, scale = 2)
+  private BigDecimal amount;
 
-    @Column(name = "payment_type", nullable = false)
-    private PaymentType paymentType;
+  @Column(name = "payment_type", nullable = false)
+  private PaymentType paymentType;
 
-    @Column(name = "payment_mode", nullable = false)
-    private PaymentMode paymentMode;
+  @Column(name = "payment_mode", nullable = false)
+  private PaymentMode paymentMode;
 
-    @Column(name = "transaction_ref", length = 128)
-    private String transactionRef;
+  @Column(name = "transaction_ref", length = 128)
+  private String transactionRef;
 
-    @Column(columnDefinition = "TEXT")
-    private String notes;
+  @Column(columnDefinition = "TEXT")
+  private String notes;
 
-    @Column(name = "created_at")
-    @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+  @Column(name = "created_at")
+  @Builder.Default
+  private LocalDateTime createdAt = LocalDateTime.now();
 }
