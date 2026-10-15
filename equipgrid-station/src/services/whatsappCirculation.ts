@@ -30,7 +30,9 @@ export function getBookingWhatsAppMessage(booking: Booking, customRef?: string):
   const farm = booking.farmLocation;
   const destination = farm
     ? `${farm.localName}${farm.localNameHindi ? ` (${farm.localNameHindi})` : ''} — ${booking.deliveryAddress || farm.landmark || ''}`
-    : (booking.deliveryLocationName ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}` : (booking.deliveryAddress || booking.customer.address));
+    : booking.deliveryLocationName
+      ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}`
+      : booking.deliveryAddress || booking.customer.address;
 
   const unitName = getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit || 'DAILY');
   const rateVal = booking.dailyRate || booking.asset.dailyRate;
@@ -69,7 +71,9 @@ export function getDispatchWhatsAppMessage(booking: Booking, challan: DispatchRe
   const farm = booking.farmLocation;
   const destination = farm
     ? `${farm.localName}${farm.localNameHindi ? ` (${farm.localNameHindi})` : ''} — ${booking.deliveryAddress || farm.landmark || ''}`
-    : (booking.deliveryLocationName ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}` : (booking.deliveryAddress || booking.customer.address));
+    : booking.deliveryLocationName
+      ? `${booking.deliveryLocationName} — ${booking.deliveryAddress}`
+      : booking.deliveryAddress || booking.customer.address;
 
   return `🚚 *Machinery Dispatched from Yard!* 🚜
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -105,9 +109,10 @@ export function getReturnSettlementWhatsAppMessage(
     damageCost: number;
     netRefund: number;
     damageDescription?: string;
-  }
+  },
 ): string {
-  const notes = settlement.damageDescription || inspection.damageDescription || 'Machine in satisfactory working condition.';
+  const notes =
+    settlement.damageDescription || inspection.damageDescription || 'Machine in satisfactory working condition.';
 
   return `✅ *Return Inspection & Deposit Settlement Completed!* 🌾
 ━━━━━━━━━━━━━━━━━━━━━━

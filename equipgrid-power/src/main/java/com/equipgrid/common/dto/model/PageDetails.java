@@ -10,10 +10,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class PageDetails {
-    private int pageNumber;
-    private int pageSize;
-    private long totalElements;
-    private int totalPages;
-    private boolean hasPrevious;
-    private boolean hasNext;
+  private int pageNumber;
+  private int pageSize;
+  private long totalElements;
+  private int totalPages;
+  private boolean hasPrevious;
+  private boolean hasNext;
 }

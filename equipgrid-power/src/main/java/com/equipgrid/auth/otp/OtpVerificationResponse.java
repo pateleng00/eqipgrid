@@ -11,8 +11,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class OtpVerificationResponse {
 
-    private boolean verified;
-    private String phone;
-    private String otpProofToken;
-    private String message;
+  private boolean verified;
+  private String phone;
+  private String otpProofToken;
+  private String message;
 }

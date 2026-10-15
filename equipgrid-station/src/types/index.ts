@@ -177,15 +177,24 @@ export function resolveBillingUnitCode(val: BillingUnit | number | string | unde
 export function resolveBillingUnitInt(val: BillingUnit | number | string | undefined | null): BillingUnitEnum {
   const code = resolveBillingUnitCode(val);
   switch (code) {
-    case 'HOURLY': return BillingUnitEnum.HOURLY;
-    case 'PER_TRIP': return BillingUnitEnum.PER_TRIP;
-    case 'PER_HOLE': return BillingUnitEnum.PER_HOLE;
-    case 'PER_ACRE': return BillingUnitEnum.PER_ACRE;
-    case 'PER_KM': return BillingUnitEnum.PER_KM;
-    case 'PER_SHIFT': return BillingUnitEnum.PER_SHIFT;
-    case 'PER_TON': return BillingUnitEnum.PER_TON;
-    case 'MONTHLY': return BillingUnitEnum.MONTHLY;
-    default: return BillingUnitEnum.DAILY;
+    case 'HOURLY':
+      return BillingUnitEnum.HOURLY;
+    case 'PER_TRIP':
+      return BillingUnitEnum.PER_TRIP;
+    case 'PER_HOLE':
+      return BillingUnitEnum.PER_HOLE;
+    case 'PER_ACRE':
+      return BillingUnitEnum.PER_ACRE;
+    case 'PER_KM':
+      return BillingUnitEnum.PER_KM;
+    case 'PER_SHIFT':
+      return BillingUnitEnum.PER_SHIFT;
+    case 'PER_TON':
+      return BillingUnitEnum.PER_TON;
+    case 'MONTHLY':
+      return BillingUnitEnum.MONTHLY;
+    default:
+      return BillingUnitEnum.DAILY;
   }
 }
 
@@ -660,12 +669,7 @@ export interface RefundTransaction {
 }
 
 export type FulfillmentJobStatus =
-  | 'REQUESTED'
-  | 'SCHEDULED'
-  | 'OUT_FOR_DELIVERY'
-  | 'IN_TRANSIT'
-  | 'COMPLETED'
-  | 'CANCELLED';
+  'REQUESTED' | 'SCHEDULED' | 'OUT_FOR_DELIVERY' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED';
 
 export type JobStatus = FulfillmentJobStatus;
 
@@ -826,4 +830,3 @@ export function getFarmerFriendlyStatus(status: BookingStatus | string): FarmerF
       };
   }
 }
-

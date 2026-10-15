@@ -14,22 +14,21 @@ import lombok.NoArgsConstructor;
 @Builder
 public class EquipmentTypeRequest {
 
-    @NotBlank(message = "Equipment type name is required")
-    private String name;
+  @NotBlank(message = "Equipment type name is required")
+  private String name;
 
-    private String code;
+  private String code;
 
-    @NotNull(message = "Asset category is required (AGRICULTURE, CONSTRUCTION, DUAL_USE)")
-    private AssetCategory category;
+  @NotNull(message = "Asset category is required (AGRICULTURE, CONSTRUCTION, DUAL_USE)")
+  private AssetCategory category;
 
-    private String description;
+  private String description;
 
-    private String hindiName;
+  private String hindiName;
 
-    private String localLanguageName;
+  private String localLanguageName;
 
-    private String hindiDescription;
+  private String hindiDescription;
 
-    @Builder.Default
-    private Boolean active = true;
+  @Builder.Default private Boolean active = true;
 }

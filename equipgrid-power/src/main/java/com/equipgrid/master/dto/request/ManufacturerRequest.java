@@ -12,16 +12,15 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ManufacturerRequest {
 
-    @NotBlank(message = "Manufacturer name is required")
-    private String name;
+  @NotBlank(message = "Manufacturer name is required")
+  private String name;
 
-    @NotBlank(message = "Manufacturer code is required")
-    private String code;
+  @NotBlank(message = "Manufacturer code is required")
+  private String code;
 
-    @NotBlank(message = "Country is required")
-    @Builder.Default
-    private String country = "India";
+  @NotBlank(message = "Country is required")
+  @Builder.Default
+  private String country = "India";
 
-    @Builder.Default
-    private Boolean active = true;
+  @Builder.Default private Boolean active = true;
 }

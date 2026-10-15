@@ -12,13 +12,13 @@ import lombok.NoArgsConstructor;
 @Builder
 public class WhatsAppNotificationRequest {
 
-    @NotBlank(message = "Phone number is required")
-    private String phoneNumber;
+  @NotBlank(message = "Phone number is required")
+  private String phoneNumber;
 
-    private String bookingNumber;
+  private String bookingNumber;
 
-    @NotBlank(message = "Notification type is required")
-    private String notificationType;
+  @NotBlank(message = "Notification type is required")
+  private String notificationType;
 
-    private String customMessage;
+  private String customMessage;
 }

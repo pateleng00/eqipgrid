@@ -59,7 +59,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
         bookingId: booking.id,
         driverName: driverName.trim(),
         fuelLevel: fuelLevel.trim(),
-        engineHoursOut: typeof engineHoursOut === 'number' ? engineHoursOut : (parseFloat(String(engineHoursOut)) || 0),
+        engineHoursOut: typeof engineHoursOut === 'number' ? engineHoursOut : parseFloat(String(engineHoursOut)) || 0,
         conditionNotes: conditionNotes.trim(),
       });
 
@@ -84,14 +84,14 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
       <div
         className={cn(
           'w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl transition-all',
-          isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100'
+          isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100',
         )}
       >
         {/* Header */}
         <div
           className={cn(
             'flex items-center justify-between px-4 py-3 border-b',
-            isDaylight ? 'border-slate-100 bg-slate-50' : 'border-slate-800 bg-slate-900/40'
+            isDaylight ? 'border-slate-100 bg-slate-50' : 'border-slate-800 bg-slate-900/40',
           )}
         >
           <div className="flex items-center gap-3">
@@ -99,9 +99,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
               <Send className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base">
-                Yard Dispatch & Handover Formality
-              </h3>
+              <h3 className="font-black text-sm sm:text-base">Yard Dispatch & Handover Formality</h3>
               <p className="text-[11px] text-slate-500 font-mono">
                 Booking: <span className="text-amber-600 font-bold">{booking.bookingNumber}</span>
               </p>
@@ -113,7 +111,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
               'p-1.5 rounded-lg border transition-colors cursor-pointer',
               isDaylight
                 ? 'border-slate-200 text-slate-400 hover:bg-slate-100'
-                : 'border-slate-700 text-slate-400 hover:bg-slate-800'
+                : 'border-slate-700 text-slate-400 hover:bg-slate-800',
             )}
           >
             <X className="h-4 w-4" />
@@ -124,12 +122,20 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
         {issuedChallan ? (
           /* Success Challan State */
           <div className="p-4 sm:p-5 space-y-3.5">
-            <div className={cn('flex items-center gap-3 p-4 rounded-xl border', isDaylight ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400')}>
+            <div
+              className={cn(
+                'flex items-center gap-3 p-4 rounded-xl border',
+                isDaylight
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400',
+              )}
+            >
               <CheckCircle2 className="h-7 w-7 shrink-0 text-emerald-500" />
               <div>
                 <h4 className="font-black text-base">Outward Challan Issued Successfully!</h4>
                 <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-700' : 'opacity-90')}>
-                  Machine <strong className="text-amber-600 font-bold">{issuedChallan.assetTag}</strong> has been handed over and transitioned to <strong className="text-emerald-600 font-bold">ON_RENT</strong>.
+                  Machine <strong className="text-amber-600 font-bold">{issuedChallan.assetTag}</strong> has been handed
+                  over and transitioned to <strong className="text-emerald-600 font-bold">ON_RENT</strong>.
                 </p>
               </div>
             </div>
@@ -137,24 +143,62 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
             <div
               className={cn(
                 'rounded-xl border p-4 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3',
-                isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/50'
+                isDaylight ? 'border-slate-200 bg-slate-50' : 'border-slate-800 bg-slate-900/50',
               )}
             >
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Challan #</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Challan #
+                </span>
                 <span className="font-mono font-bold text-amber-600 block mt-0.5">{issuedChallan.challanNumber}</span>
               </div>
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Driver / Fleet</span>
-                <span className={cn('font-medium block mt-0.5', isDaylight ? 'text-slate-950 font-bold' : 'text-white')}>{issuedChallan.driverName}</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Driver / Fleet
+                </span>
+                <span
+                  className={cn('font-medium block mt-0.5', isDaylight ? 'text-slate-950 font-bold' : 'text-white')}
+                >
+                  {issuedChallan.driverName}
+                </span>
               </div>
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Fuel Out</span>
-                <span className={cn('font-medium block mt-0.5', isDaylight ? 'text-slate-950 font-bold' : 'text-white')}>{issuedChallan.fuelLevel}</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Fuel Out
+                </span>
+                <span
+                  className={cn('font-medium block mt-0.5', isDaylight ? 'text-slate-950 font-bold' : 'text-white')}
+                >
+                  {issuedChallan.fuelLevel}
+                </span>
               </div>
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Engine Hours Out</span>
-                <span className={cn('font-mono font-bold block mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}>{issuedChallan.engineHoursOut} hrs</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Engine Hours Out
+                </span>
+                <span className={cn('font-mono font-bold block mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}>
+                  {issuedChallan.engineHoursOut} hrs
+                </span>
               </div>
             </div>
 
@@ -175,7 +219,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer border',
                   isDaylight
                     ? 'border-amber-300 text-amber-900 bg-amber-50 hover:bg-amber-100'
-                    : 'border-amber-700/50 text-amber-400 hover:bg-amber-900/20'
+                    : 'border-amber-700/50 text-amber-400 hover:bg-amber-900/20',
                 )}
               >
                 <Printer className="h-4 w-4" />
@@ -186,7 +230,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                 onClick={handleClose}
                 className={cn(
                   'flex-1 py-2.5 rounded-lg text-xs font-black transition-colors cursor-pointer shadow-sm',
-                  isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950' : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                  isDaylight
+                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950',
                 )}
               >
                 Done
@@ -200,7 +246,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
             <div
               className={cn(
                 'p-3 rounded-xl border flex items-center justify-between text-xs',
-                isDaylight ? 'bg-emerald-50 border-emerald-200 text-emerald-950' : 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300'
+                isDaylight
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                  : 'bg-emerald-950/20 border-emerald-800/40 text-emerald-300',
               )}
             >
               <div className="flex items-center gap-2 font-bold">
@@ -216,25 +264,65 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
             <div
               className={cn(
                 'p-3.5 rounded-xl border grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs',
-                isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800'
+                isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800',
               )}
             >
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Equipment</span>
-                <span className={cn('font-bold block mt-0.5 text-sm', isDaylight ? 'text-slate-950 font-extrabold' : 'text-white')}>{booking.asset.name}</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Equipment
+                </span>
+                <span
+                  className={cn(
+                    'font-bold block mt-0.5 text-sm',
+                    isDaylight ? 'text-slate-950 font-extrabold' : 'text-white',
+                  )}
+                >
+                  {booking.asset.name}
+                </span>
                 <span className="font-mono text-[11px] text-amber-600 font-bold">{booking.asset.assetTag}</span>
               </div>
               <div>
-                <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Delivery To</span>
-                <span className={cn('font-bold block mt-0.5 text-sm', isDaylight ? 'text-slate-950 font-extrabold' : 'text-white')}>{booking.customer.fullName}</span>
-                <span className={cn('text-[11px] block truncate', isDaylight ? 'text-slate-700 font-medium' : 'text-slate-400')}>{booking.deliveryAddress}</span>
+                <span
+                  className={cn(
+                    'text-[10px] uppercase font-bold block',
+                    isDaylight ? 'text-slate-600' : 'text-slate-400',
+                  )}
+                >
+                  Delivery To
+                </span>
+                <span
+                  className={cn(
+                    'font-bold block mt-0.5 text-sm',
+                    isDaylight ? 'text-slate-950 font-extrabold' : 'text-white',
+                  )}
+                >
+                  {booking.customer.fullName}
+                </span>
+                <span
+                  className={cn(
+                    'text-[11px] block truncate',
+                    isDaylight ? 'text-slate-700 font-medium' : 'text-slate-400',
+                  )}
+                >
+                  {booking.deliveryAddress}
+                </span>
               </div>
             </div>
 
             {/* Inputs: Driver, Fuel, Engine Hours */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
+                <label
+                  className={cn(
+                    'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                    isDaylight ? 'text-slate-700' : 'text-slate-400',
+                  )}
+                >
                   Driver / Vehicle
                 </label>
                 <input
@@ -244,13 +332,20 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   placeholder="Driver / transporter name"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors',
-                    isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
+                    isDaylight
+                      ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
+                      : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
                   )}
                 />
               </div>
 
               <div>
-                <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
+                <label
+                  className={cn(
+                    'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                    isDaylight ? 'text-slate-700' : 'text-slate-400',
+                  )}
+                >
                   Fuel Level Out
                 </label>
                 <input
@@ -260,13 +355,20 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   placeholder="e.g. 100%, 75%"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors font-medium',
-                    isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
+                    isDaylight
+                      ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
+                      : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
                   )}
                 />
               </div>
 
               <div>
-                <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
+                <label
+                  className={cn(
+                    'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                    isDaylight ? 'text-slate-700' : 'text-slate-400',
+                  )}
+                >
                   Engine Hours Out
                 </label>
                 <input
@@ -278,7 +380,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   placeholder="Meter hours reading"
                   className={cn(
                     'w-full rounded-lg border px-3 py-2 text-xs font-mono font-medium focus:outline-none transition-colors',
-                    isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
+                    isDaylight
+                      ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
+                      : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
                   )}
                 />
               </div>
@@ -286,7 +390,12 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
 
             {/* Condition Notes */}
             <div>
-              <label className={cn('block text-[11px] font-bold uppercase tracking-wide mb-1', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
+              <label
+                className={cn(
+                  'block text-[11px] font-bold uppercase tracking-wide mb-1',
+                  isDaylight ? 'text-slate-700' : 'text-slate-400',
+                )}
+              >
                 Handover Inspection & Condition Notes
               </label>
               <input
@@ -296,14 +405,21 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                 placeholder="e.g. Clean machine, fresh oil, air filter blown clean"
                 className={cn(
                   'w-full rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors font-medium',
-                  isDaylight ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500' : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
+                  isDaylight
+                    ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
+                    : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
                 )}
               />
             </div>
 
             {/* Mandatory Checklists */}
             <div className="space-y-2 pt-1">
-              <span className={cn('block text-[11px] font-bold uppercase tracking-wide', isDaylight ? 'text-slate-800' : 'text-slate-400')}>
+              <span
+                className={cn(
+                  'block text-[11px] font-bold uppercase tracking-wide',
+                  isDaylight ? 'text-slate-800' : 'text-slate-400',
+                )}
+              >
                 Mandatory Outward Checks (SOP-005)
               </span>
 
@@ -314,7 +430,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   onChange={(e) => setCheckEngine(e.target.checked)}
                   className="rounded text-amber-500 focus:ring-amber-500 h-4 w-4"
                 />
-                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>Engine run test & safety guard verified</span>
+                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                  Engine run test & safety guard verified
+                </span>
               </label>
 
               <label className="flex items-center gap-2.5 text-xs cursor-pointer select-none">
@@ -324,7 +442,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   onChange={(e) => setCheckAccessories(e.target.checked)}
                   className="rounded text-amber-500 focus:ring-amber-500 h-4 w-4"
                 />
-                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>Accessories & tool kit packed with machine</span>
+                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                  Accessories & tool kit packed with machine
+                </span>
               </label>
 
               <label className="flex items-center gap-2.5 text-xs cursor-pointer select-none">
@@ -334,7 +454,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   onChange={(e) => setCheckSignature(e.target.checked)}
                   className="rounded text-amber-500 focus:ring-amber-500 h-4 w-4"
                 />
-                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>Customer/Driver outward challan acknowledgment verified</span>
+                <span className={cn('font-semibold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                  Customer/Driver outward challan acknowledgment verified
+                </span>
               </label>
             </div>
 
@@ -352,7 +474,9 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                 disabled={isSubmitting}
                 className={cn(
                   'px-4 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer',
-                  isDaylight ? 'border border-slate-300 text-slate-600 hover:bg-slate-100' : 'border border-slate-700 text-slate-300 hover:bg-slate-800'
+                  isDaylight
+                    ? 'border border-slate-300 text-slate-600 hover:bg-slate-100'
+                    : 'border border-slate-700 text-slate-300 hover:bg-slate-800',
                 )}
               >
                 Cancel
@@ -365,7 +489,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
                   'px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md',
                   isDaylight
                     ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black',
                 )}
               >
                 {isSubmitting ? (

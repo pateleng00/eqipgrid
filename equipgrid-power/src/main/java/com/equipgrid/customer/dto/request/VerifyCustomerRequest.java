@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class VerifyCustomerRequest {
-    private CustomerTier tier;
-    private Boolean verified;
-    private String notes;
+  private CustomerTier tier;
+  private Boolean verified;
+  private String notes;
 }

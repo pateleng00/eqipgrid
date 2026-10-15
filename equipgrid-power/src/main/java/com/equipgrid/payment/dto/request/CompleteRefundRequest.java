@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class CompleteRefundRequest {
-    @NotBlank(message = "Payment reference is required")
-    private String paymentReference;
+  @NotBlank(message = "Payment reference is required")
+  private String paymentReference;
 }

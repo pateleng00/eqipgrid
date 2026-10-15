@@ -69,10 +69,10 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
       const generatedRef = transactionRef.trim()
         ? transactionRef.trim()
         : paymentMode === 'UPI'
-        ? `UPI/${Date.now().toString().slice(-8)}`
-        : paymentMode === 'CASH'
-        ? `CASH/REC-${Date.now().toString().slice(-6)}`
-        : `NEFT/${Date.now().toString().slice(-8)}`;
+          ? `UPI/${Date.now().toString().slice(-8)}`
+          : paymentMode === 'CASH'
+            ? `CASH/REC-${Date.now().toString().slice(-6)}`
+            : `NEFT/${Date.now().toString().slice(-8)}`;
 
       // 1. Record Advance Rent if any due
       if (advanceDue > 0) {
@@ -132,7 +132,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
         <div
           className={cn(
             'w-full max-w-lg rounded-2xl border shadow-2xl p-3.5 sm:p-4 space-y-3',
-            isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100'
+            isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100',
           )}
         >
           <div className="flex items-center gap-3">
@@ -153,19 +153,26 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
           <div
             className={cn(
               'rounded-xl border p-3.5 space-y-2 text-xs',
-              isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800'
+              isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-950 border-slate-800',
             )}
           >
             <div className="flex justify-between">
               <span className="text-slate-500">Customer:</span>
-              <span className="font-bold">{successBooking.customer.fullName} (+91 {successBooking.customer.phone})</span>
+              <span className="font-bold">
+                {successBooking.customer.fullName} (+91 {successBooking.customer.phone})
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">Machinery:</span>
-              <span className="font-bold">{successBooking.asset.name} ({successBooking.asset.assetTag})</span>
+              <span className="font-bold">
+                {successBooking.asset.name} ({successBooking.asset.assetTag})
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Advance Rent Paid ({getBillingUnitDisplayName(successBooking.billingUnit || successBooking.asset?.billingUnit)}):</span>
+              <span className="text-slate-500">
+                Advance Rent Paid (
+                {getBillingUnitDisplayName(successBooking.billingUnit || successBooking.asset?.billingUnit)}):
+              </span>
               <span className="font-bold font-mono">{formatINR(successBooking.advancePaid)}</span>
             </div>
             <div className="flex justify-between">
@@ -188,7 +195,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               'rounded-xl border p-3 flex items-start gap-2.5 text-xs',
               isDaylight
                 ? 'bg-emerald-50/70 border-emerald-200 text-emerald-950'
-                : 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300'
+                : 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300',
             )}
           >
             <MessageSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
@@ -231,7 +238,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   'flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border font-bold text-xs transition-colors cursor-pointer',
                   isDaylight
                     ? 'border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100'
-                    : 'border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/30'
+                    : 'border-amber-700/50 bg-amber-900/20 text-amber-300 hover:bg-amber-900/30',
                 )}
               >
                 <Printer className="h-3.5 w-3.5" />
@@ -250,7 +257,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                 'w-full py-2.5 rounded-xl font-black text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm',
                 isDaylight
                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black',
               )}
             >
               <span>Done & Proceed to Handover</span>
@@ -267,14 +274,14 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
       <div
         className={cn(
           'w-full max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl border shadow-2xl transition-all',
-          isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100'
+          isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#1e1e1e] border-slate-800 text-slate-100',
         )}
       >
         {/* Header */}
         <div
           className={cn(
             'flex items-center justify-between px-4 py-3 border-b',
-            isDaylight ? 'border-slate-100 bg-amber-50/60' : 'border-slate-800 bg-amber-950/20'
+            isDaylight ? 'border-slate-100 bg-amber-50/60' : 'border-slate-800 bg-amber-950/20',
           )}
         >
           <div className="flex items-center gap-3">
@@ -282,9 +289,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base">
-                Collect Payment Before Dispatch
-              </h3>
+              <h3 className="font-black text-sm sm:text-base">Collect Payment Before Dispatch</h3>
               <p className="text-[11px] text-slate-500 font-mono">
                 Booking Ref: <span className="text-amber-600 font-bold">{booking.bookingNumber}</span>
               </p>
@@ -296,7 +301,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               'p-1.5 rounded-lg border transition-colors cursor-pointer',
               isDaylight
                 ? 'border-slate-200 text-slate-400 hover:bg-slate-100'
-                : 'border-slate-700 text-slate-400 hover:bg-slate-800'
+                : 'border-slate-700 text-slate-400 hover:bg-slate-800',
             )}
           >
             <X className="h-4 w-4" />
@@ -311,7 +316,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               'p-3.5 rounded-xl border text-xs flex items-start gap-2.5',
               isDaylight
                 ? 'bg-amber-50/80 border-amber-200 text-amber-950'
-                : 'bg-amber-950/20 border-amber-800/40 text-amber-200'
+                : 'bg-amber-950/20 border-amber-800/40 text-amber-200',
             )}
           >
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
@@ -319,9 +324,19 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <strong className="font-bold">Zero-Open-Credit Policy Barrier (SOP-003):</strong>
               <p className="text-[11px] mt-0.5 opacity-90">
                 {depositRequired === 0 ? (
-                  <>Machinery cannot be released for yard handover until <strong>Advance Rent</strong> has been collected in full. <span className="text-emerald-600 dark:text-emerald-400 font-bold">Zero-Deposit Scheme Active (₹0 Deposit Required)</span>.</>
+                  <>
+                    Machinery cannot be released for yard handover until <strong>Advance Rent</strong> has been
+                    collected in full.{' '}
+                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                      Zero-Deposit Scheme Active (₹0 Deposit Required)
+                    </span>
+                    .
+                  </>
                 ) : (
-                  <>Machinery cannot be released for yard handover until both the <strong>Advance Rent</strong> and <strong>Security Deposit</strong> have been collected in full.</>
+                  <>
+                    Machinery cannot be released for yard handover until both the <strong>Advance Rent</strong> and{' '}
+                    <strong>Security Deposit</strong> have been collected in full.
+                  </>
                 )}
               </p>
             </div>
@@ -331,12 +346,26 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
           <div
             className={cn(
               'p-3.5 rounded-xl border grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs',
-              isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800'
+              isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/50 border-slate-800',
             )}
           >
             <div>
-              <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Machine & Tag</span>
-              <span className={cn('font-bold block mt-0.5 text-sm', isDaylight ? 'text-slate-950 font-extrabold' : 'text-white')}>{booking.asset.name}</span>
+              <span
+                className={cn(
+                  'text-[10px] uppercase font-bold block',
+                  isDaylight ? 'text-slate-600' : 'text-slate-400',
+                )}
+              >
+                Machine & Tag
+              </span>
+              <span
+                className={cn(
+                  'font-bold block mt-0.5 text-sm',
+                  isDaylight ? 'text-slate-950 font-extrabold' : 'text-white',
+                )}
+              >
+                {booking.asset.name}
+              </span>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="font-mono text-[11px] text-amber-600 font-bold">{booking.asset.assetTag}</span>
                 <span className="text-[10px] px-1.5 py-0.2 rounded font-semibold bg-slate-200/60 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
@@ -345,9 +374,27 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               </div>
             </div>
             <div>
-              <span className={cn('text-[10px] uppercase font-bold block', isDaylight ? 'text-slate-600' : 'text-slate-400')}>Customer</span>
-              <span className={cn('font-bold block mt-0.5 text-sm', isDaylight ? 'text-slate-950 font-extrabold' : 'text-white')}>{booking.customer.fullName}</span>
-              <span className={cn('font-mono text-[11px]', isDaylight ? 'text-slate-600 font-medium' : 'text-slate-500')}>{booking.customer.phone}</span>
+              <span
+                className={cn(
+                  'text-[10px] uppercase font-bold block',
+                  isDaylight ? 'text-slate-600' : 'text-slate-400',
+                )}
+              >
+                Customer
+              </span>
+              <span
+                className={cn(
+                  'font-bold block mt-0.5 text-sm',
+                  isDaylight ? 'text-slate-950 font-extrabold' : 'text-white',
+                )}
+              >
+                {booking.customer.fullName}
+              </span>
+              <span
+                className={cn('font-mono text-[11px]', isDaylight ? 'text-slate-600 font-medium' : 'text-slate-500')}
+              >
+                {booking.customer.phone}
+              </span>
             </div>
           </div>
 
@@ -355,13 +402,13 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
           <div
             className={cn(
               'rounded-xl border overflow-hidden text-xs',
-              isDaylight ? 'border-slate-200' : 'border-slate-800'
+              isDaylight ? 'border-slate-200' : 'border-slate-800',
             )}
           >
             <div
               className={cn(
                 'px-4 py-2 border-b font-bold text-[11px] uppercase tracking-wider',
-                isDaylight ? 'bg-slate-100 text-slate-700' : 'bg-slate-900 text-slate-400'
+                isDaylight ? 'bg-slate-100 text-slate-700' : 'bg-slate-900 text-slate-400',
               )}
             >
               Collection Breakdown
@@ -372,17 +419,19 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   <span className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
                     1. Advance Rental ({getBillingUnitDisplayName(booking.billingUnit || booking.asset?.billingUnit)})
                   </span>
-                  <div className={cn('text-[10px]', isDaylight ? 'text-slate-600 font-medium' : 'text-slate-500')}>Paid: {formatINR(advancePaid)}</div>
+                  <div className={cn('text-[10px]', isDaylight ? 'text-slate-600 font-medium' : 'text-slate-500')}>
+                    Paid: {formatINR(advancePaid)}
+                  </div>
                 </div>
-                <div className="text-right font-mono font-bold text-amber-600">
-                  {formatINR(advanceDue)}
-                </div>
+                <div className="text-right font-mono font-bold text-amber-600">{formatINR(advanceDue)}</div>
               </div>
 
               <div className="px-4 py-2.5 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <span className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>2. Security Deposit</span>
+                    <span className={cn('font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                      2. Security Deposit
+                    </span>
                     {depositRequired === 0 ? (
                       <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
                         ₹0 Zero-Deposit Scheme
@@ -403,7 +452,9 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
               <div
                 className={cn(
                   'px-4 py-3 flex items-center justify-between font-black text-sm',
-                  isDaylight ? 'bg-emerald-50 text-emerald-950 border-t border-emerald-200' : 'bg-emerald-950/20 text-emerald-300'
+                  isDaylight
+                    ? 'bg-emerald-50 text-emerald-950 border-t border-emerald-200'
+                    : 'bg-emerald-950/20 text-emerald-300',
                 )}
               >
                 <span>Total Amount to Collect Now</span>
@@ -414,7 +465,12 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
 
           {/* Payment Mode Selector */}
           <div className="space-y-2">
-            <label className={cn('block text-xs font-bold uppercase tracking-wide', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
+            <label
+              className={cn(
+                'block text-xs font-bold uppercase tracking-wide',
+                isDaylight ? 'text-slate-700' : 'text-slate-400',
+              )}
+            >
               Select Payment Method
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -426,8 +482,8 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   paymentMode === 'UPI'
                     ? 'border-amber-500 bg-amber-500/10 text-amber-600 shadow-sm'
                     : isDaylight
-                    ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                    : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800'
+                      ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800',
                 )}
               >
                 <Smartphone className="h-4 w-4" />
@@ -442,8 +498,8 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   paymentMode === 'CASH'
                     ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 shadow-sm'
                     : isDaylight
-                    ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                    : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800'
+                      ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800',
                 )}
               >
                 <Banknote className="h-4 w-4" />
@@ -458,8 +514,8 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                   paymentMode === 'BANK_TRANSFER'
                     ? 'border-blue-500 bg-blue-500/10 text-blue-600 shadow-sm'
                     : isDaylight
-                    ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
-                    : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800'
+                      ? 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
+                      : 'border-slate-800 bg-slate-900/50 text-slate-400 hover:bg-slate-800',
                 )}
               >
                 <Building2 className="h-4 w-4" />
@@ -473,38 +529,50 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
             <div
               className={cn(
                 'p-4 rounded-xl border flex flex-col sm:flex-row items-center gap-4 text-xs',
-                isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800',
               )}
             >
               <div className="p-2 bg-white rounded-lg border border-slate-200 shrink-0">
-                <img
-                  src={upiQrUrl}
-                  alt="UPI Payment QR Code"
-                  className="w-24 h-24 object-contain"
-                />
+                <img src={upiQrUrl} alt="UPI Payment QR Code" className="w-24 h-24 object-contain" />
               </div>
               <div className="space-y-1.5 flex-1">
-                <div className={cn('flex items-center gap-1.5 font-bold', isDaylight ? 'text-slate-900' : 'text-slate-200')}>
+                <div
+                  className={cn(
+                    'flex items-center gap-1.5 font-bold',
+                    isDaylight ? 'text-slate-900' : 'text-slate-200',
+                  )}
+                >
                   <QrCode className="h-4 w-4 text-amber-500" />
                   <span>Scan via PhonePe / GPay / Paytm / BHIM</span>
                 </div>
                 <div className={cn('text-[11px] font-mono', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
-                  VPA: <strong className={isDaylight ? 'text-slate-950 font-bold' : 'text-slate-300'}>Configured EquipGrid payment account</strong>
+                  VPA:{' '}
+                  <strong className={isDaylight ? 'text-slate-950 font-bold' : 'text-slate-300'}>
+                    Configured EquipGrid payment account
+                  </strong>
                 </div>
                 <div className={cn('text-[11px] font-mono', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
-                  Payee: <strong className={isDaylight ? 'text-slate-950 font-bold' : 'text-slate-200'}>Akash Kumar</strong>
+                  Payee:{' '}
+                  <strong className={isDaylight ? 'text-slate-950 font-bold' : 'text-slate-200'}>Akash Kumar</strong>
                 </div>
-                <div className="text-[11px] text-amber-600 font-bold">
-                  Amount: {formatINR(totalDue)}
-                </div>
+                <div className="text-[11px] text-amber-600 font-bold">Amount: {formatINR(totalDue)}</div>
               </div>
             </div>
           )}
 
           {/* Reference / UTR Input */}
           <div className="space-y-1">
-            <label className={cn('block text-xs font-bold uppercase tracking-wide', isDaylight ? 'text-slate-700' : 'text-slate-400')}>
-              {paymentMode === 'UPI' ? 'UPI UTR / Reference Number' : paymentMode === 'CASH' ? 'Receipt Voucher / Cash Note' : 'Bank Reference ID'}
+            <label
+              className={cn(
+                'block text-xs font-bold uppercase tracking-wide',
+                isDaylight ? 'text-slate-700' : 'text-slate-400',
+              )}
+            >
+              {paymentMode === 'UPI'
+                ? 'UPI UTR / Reference Number'
+                : paymentMode === 'CASH'
+                  ? 'Receipt Voucher / Cash Note'
+                  : 'Bank Reference ID'}
             </label>
             <input
               type="text"
@@ -514,14 +582,14 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                 paymentMode === 'UPI'
                   ? 'e.g. 12-digit UTR 328409182390 (or leave blank to auto-generate)'
                   : paymentMode === 'CASH'
-                  ? 'e.g. Cash collected by Yard Manager'
-                  : 'e.g. IMPS/NEFT transaction ref'
+                    ? 'e.g. Cash collected by Yard Manager'
+                    : 'e.g. IMPS/NEFT transaction ref'
               }
               className={cn(
                 'w-full rounded-lg border px-3.5 py-2 text-xs focus:outline-none transition-colors font-mono',
                 isDaylight
                   ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
-                  : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500'
+                  : 'border-slate-700 bg-slate-950 text-white focus:border-amber-500',
               )}
             />
           </div>
@@ -542,7 +610,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                 'px-4 py-2.5 rounded-lg text-xs font-bold transition-colors cursor-pointer',
                 isDaylight
                   ? 'border border-slate-300 text-slate-600 hover:bg-slate-100'
-                  : 'border border-slate-700 text-slate-300 hover:bg-slate-800'
+                  : 'border border-slate-700 text-slate-300 hover:bg-slate-800',
               )}
             >
               Cancel
@@ -555,7 +623,7 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
                 'px-5 py-2.5 rounded-lg text-xs font-black flex items-center gap-2 transition-all cursor-pointer shadow-md',
                 isDaylight
                   ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
+                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black',
               )}
             >
               {isSubmitting ? (

@@ -78,18 +78,23 @@ export const App: React.FC = () => {
   };
 
   const handleNewDeployment = () => {
-    if (isGuest) { setGuestBlockModal(true); return; }
+    if (isGuest) {
+      setGuestBlockModal(true);
+      return;
+    }
     handleTabChange('booking');
     // Small delay so the BookingDeskView mounts before the effect fires
     setTimeout(() => setTriggerNewDeployment(true), 50);
   };
 
   return (
-    <Layout activeTab={isGuest ? 'catalog' : activeTab} onTabChange={handleTabChange} onNewDeployment={handleNewDeployment}>
+    <Layout
+      activeTab={isGuest ? 'catalog' : activeTab}
+      onTabChange={handleTabChange}
+      onNewDeployment={handleNewDeployment}
+    >
       {activeTab === 'dashboard' && <DashboardView onNavigate={handleTabChange} />}
-      {activeTab === 'catalog' && (
-        <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />
-      )}
+      {activeTab === 'catalog' && <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />}
       {activeTab === 'booking' && (
         <BookingDeskView
           preselectedAsset={preselectedAsset}
@@ -99,9 +104,7 @@ export const App: React.FC = () => {
           onCreateModalOpened={() => setTriggerNewDeployment(false)}
         />
       )}
-      {activeTab === 'dispatch' && (
-        <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />
-      )}
+      {activeTab === 'dispatch' && <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />}
       {activeTab === 'rental-configs' && <RentalConfigView />}
       {activeTab === 'locations' && <LocationMasterView />}
       {activeTab === 'return' && <ReturnAuditView />}

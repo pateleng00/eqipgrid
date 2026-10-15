@@ -13,11 +13,11 @@ import lombok.NoArgsConstructor;
 @Builder
 public class CityRequest {
 
-    @NotNull(message = "State ID is required")
-    private Long stateId;
+  @NotNull(message = "State ID is required")
+  private Long stateId;
 
-    @NotBlank(message = "City name is required")
-    private String name;
+  @NotBlank(message = "City name is required")
+  private String name;
 
-    private String pinCode;
+  private String pinCode;
 }

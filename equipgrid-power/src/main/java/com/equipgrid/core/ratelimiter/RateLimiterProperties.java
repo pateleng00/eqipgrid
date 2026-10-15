@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "equipgrid.ratelimiter")
 public class RateLimiterProperties {
-    private boolean enabled = true;
-    private int defaultLimit = 5;
-    private long defaultDurationSeconds = 60;
+  private boolean enabled = true;
+  private int defaultLimit = 5;
+  private long defaultDurationSeconds = 60;
 }

@@ -53,18 +53,19 @@ export const Pagination: React.FC<PaginationProps> = ({
     <div
       className={cn(
         'px-4 py-3 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs select-none transition-colors',
-        isDaylight
-          ? 'border-slate-200 bg-white text-slate-800'
-          : 'border-slate-800/80 bg-slate-950/70 text-slate-300',
-        className
+        isDaylight ? 'border-slate-200 bg-white text-slate-800' : 'border-slate-800/80 bg-slate-950/70 text-slate-300',
+        className,
       )}
     >
       {/* Range and total counter */}
       <div className="flex items-center gap-3">
         <span className={cn('text-xs', isDaylight ? 'text-slate-600' : 'text-slate-400')}>
-          Showing <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{startItem}</span> to{' '}
-          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{endItem}</span> of{' '}
-          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{totalItems}</span> {itemName}
+          Showing{' '}
+          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{startItem}</span>{' '}
+          to <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{endItem}</span>{' '}
+          of{' '}
+          <span className={cn('font-bold font-mono', isDaylight ? 'text-slate-950' : 'text-white')}>{totalItems}</span>{' '}
+          {itemName}
         </span>
 
         {/* Page size picker if handler provided */}
@@ -78,7 +79,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 'rounded-lg border px-2 py-1 text-xs font-semibold focus:outline-none transition-colors cursor-pointer',
                 isDaylight
                   ? 'border-slate-300 bg-white text-slate-950 hover:border-slate-400'
-                  : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600'
+                  : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600',
               )}
             >
               {pageSizeOptions.map((opt) => (
@@ -103,7 +104,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed',
             isDaylight
               ? 'border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950'
-              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white',
           )}
         >
           <ChevronsLeft className="h-3.5 w-3.5" />
@@ -119,7 +120,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 px-2.5',
             isDaylight
               ? 'border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold'
-              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white font-medium'
+              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white font-medium',
           )}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -131,10 +132,7 @@ export const Pagination: React.FC<PaginationProps> = ({
           {getPageNumbers().map((p, idx) => {
             if (p === '...') {
               return (
-                <span
-                  key={`ellipsis-${idx}`}
-                  className={cn('px-1 text-slate-400 font-bold select-none')}
-                >
+                <span key={`ellipsis-${idx}`} className={cn('px-1 text-slate-400 font-bold select-none')}>
                   …
                 </span>
               );
@@ -161,8 +159,8 @@ export const Pagination: React.FC<PaginationProps> = ({
                   isActive
                     ? 'bg-indigo-600 !text-white shadow-xs'
                     : isDaylight
-                    ? 'border border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold'
-                    : 'border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+                      ? 'border border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold'
+                      : 'border border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white',
                 )}
               >
                 {pageNum}
@@ -181,7 +179,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed flex items-center gap-1 px-2.5',
             isDaylight
               ? 'border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950 font-semibold'
-              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white font-medium'
+              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white font-medium',
           )}
         >
           <span className="hidden md:inline text-[11px]">Next</span>
@@ -198,7 +196,7 @@ export const Pagination: React.FC<PaginationProps> = ({
             'p-1.5 rounded-lg border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed',
             isDaylight
               ? 'border-slate-300 text-slate-800 hover:bg-slate-100 hover:text-slate-950'
-              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white'
+              : 'border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-white',
           )}
         >
           <ChevronsRight className="h-3.5 w-3.5" />

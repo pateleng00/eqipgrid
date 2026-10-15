@@ -1,6 +1,6 @@
 /**
  * Navigation state persistence service for EquipGrid Station
- * 
+ *
  * Rules:
  * 1. Fresh login lands directly on 'dashboard' and cleans up previous query states.
  * 2. If session is valid and browser refreshes, preserves the exact sidebar tab,
@@ -22,7 +22,7 @@ export const VALID_TABS = [
   'users',
 ] as const;
 
-export type StationTab = typeof VALID_TABS[number];
+export type StationTab = (typeof VALID_TABS)[number];
 
 const ACTIVE_TAB_STORAGE_KEY = 'equipgrid_station_active_tab';
 const FRESH_LOGIN_STORAGE_KEY = 'equipgrid_station_just_logged_in';

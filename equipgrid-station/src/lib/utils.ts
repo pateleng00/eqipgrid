@@ -24,7 +24,10 @@ export function formatDate(dateStr: string): string {
   });
 }
 
-export function getStatusColor(status: string, isDaylight = false): { bg: string; text: string; border: string; dot: string } {
+export function getStatusColor(
+  status: string,
+  isDaylight = false,
+): { bg: string; text: string; border: string; dot: string } {
   if (isDaylight) {
     switch (status) {
       case 'AVAILABLE':

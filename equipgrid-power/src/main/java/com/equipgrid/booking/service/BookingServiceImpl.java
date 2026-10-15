@@ -6,6 +6,7 @@ import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.asset.service.IAssetService;
 import com.equipgrid.audit.service.IAuditService;
+import com.equipgrid.auth.otp.OtpVerificationService;
 import com.equipgrid.booking.dto.request.CreateBookingRequest;
 import com.equipgrid.booking.dto.request.QuoteRequest;
 import com.equipgrid.booking.dto.response.QuoteResponse;
@@ -18,368 +19,474 @@ import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.repository.CustomerRepository;
 import com.equipgrid.customer.service.ICustomerService;
-import com.equipgrid.auth.otp.OtpVerificationService;
 import com.equipgrid.farmlocation.entity.FarmLocation;
 import com.equipgrid.farmlocation.service.IFarmLocationService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
-import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @AllArgsConstructor
 public class BookingServiceImpl implements IBookingService {
 
-    private static final AtomicLong SEQUENCE = new AtomicLong(100);
-    private final BookingRepository bookingRepository;
-    private final BookingQueryRepository bookingQueryRepository;
-    private final AssetRepository assetRepository;
-    private final AssetQueryRepository assetQueryRepository;
-    private final IAssetService assetService;
-    private final ICustomerService customerService;
-    private final CustomerRepository customerRepository;
-    private final IFarmLocationService farmLocationService;
-    private final PricingEngine pricingEngine;
-    private final DistanceCalculator distanceCalculator;
-    private final IAuditService auditService;
-    private final IWhatsAppNotificationService whatsAppNotificationService;
-    private final OtpVerificationService otpVerificationService;
-    private final RentalConfigurationRepository rentalConfigurationRepository;
+  private static final AtomicLong SEQUENCE = new AtomicLong(100);
+  private final BookingRepository bookingRepository;
+  private final BookingQueryRepository bookingQueryRepository;
+  private final AssetRepository assetRepository;
+  private final AssetQueryRepository assetQueryRepository;
+  private final IAssetService assetService;
+  private final ICustomerService customerService;
+  private final CustomerRepository customerRepository;
+  private final IFarmLocationService farmLocationService;
+  private final PricingEngine pricingEngine;
+  private final DistanceCalculator distanceCalculator;
+  private final IAuditService auditService;
+  private final IWhatsAppNotificationService whatsAppNotificationService;
+  private final OtpVerificationService otpVerificationService;
+  private final RentalConfigurationRepository rentalConfigurationRepository;
 
-    @Override
-    public List<Booking> getAllBookings(BookingStatus status) {
-        return bookingQueryRepository.fetchAll(status);
+  @Override
+  public List<Booking> getAllBookings(BookingStatus status) {
+    return bookingQueryRepository.fetchAll(status);
+  }
+
+  @Override
+  public Booking getBookingById(Long id) {
+    return bookingQueryRepository
+        .fetchById(id)
+        .orElseThrow(
+            () -> new Exceptions.ResourceNotFoundException("Booking not found with ID: " + id));
+  }
+
+  @Override
+  public Booking getBookingByNumber(String bookingNumber) {
+    return bookingQueryRepository
+        .fetchByBookingNumber(bookingNumber)
+        .orElseThrow(
+            () ->
+                new Exceptions.ResourceNotFoundException(
+                    "Booking not found with number: " + bookingNumber));
+  }
+
+  @Override
+  public QuoteResponse calculateQuote(QuoteRequest request) {
+    Asset asset = assetService.getAssetById(request.getAssetId());
+
+    boolean opRequired =
+        Boolean.TRUE.equals(asset.getOperatorRequired())
+            || Boolean.TRUE.equals(request.getOperatorRequired());
+
+    RentalConfiguration rentalConfig = null;
+    if (request.getRentalConfigId() != null) {
+      rentalConfig =
+          rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
+    } else {
+      Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
+      List<RentalConfiguration> configs =
+          rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+      if (!configs.isEmpty()) {
+        rentalConfig = configs.get(0);
+      } else if (asset.getType() != null && asset.getHub() != null) {
+        configs =
+            rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+                asset.getType().getId(), asset.getHub().getId());
+        if (!configs.isEmpty()) {
+          rentalConfig = configs.get(0);
+        }
+      }
     }
 
-    @Override
-    public Booking getBookingById(Long id) {
-        return bookingQueryRepository.fetchById(id)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Booking not found with ID: " + id));
+    BigDecimal dailyRate =
+        rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+    BigDecimal depositAmount =
+        rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+    BigDecimal opRate =
+        rentalConfig != null
+            ? rentalConfig.getOperatorDailyRate()
+            : PricingEngine.OPERATOR_DAILY_RATE;
+    BigDecimal freeKm =
+        rentalConfig != null
+            ? rentalConfig.getFreeDeliveryDistanceKm()
+            : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
+    BigDecimal ratePerKm =
+        rentalConfig != null
+            ? rentalConfig.getRatePerKmAfterFree()
+            : PricingEngine.DEFAULT_RATE_PER_KM;
+
+    PricingEngine.CommercialQuote quote =
+        pricingEngine.calculate(
+            dailyRate,
+            depositAmount,
+            opRate,
+            freeKm,
+            ratePerKm,
+            request.getStartDate(),
+            request.getEndDate(),
+            request.getDistanceKm(),
+            opRequired);
+
+    return QuoteResponse.builder()
+        .assetId(asset.getId())
+        .assetName(asset.getName())
+        .assetTag(asset.getAssetTag())
+        .durationDays(quote.durationDays)
+        .dailyRate(dailyRate)
+        .baseRent(quote.baseRent)
+        .deliveryFee(quote.deliveryFee)
+        .operatorFee(quote.operatorFee)
+        .depositAmount(quote.depositAmount)
+        .totalAmount(quote.totalAmount)
+        .requiredInitialPayment(quote.requiredInitialAmount)
+        .rentalConfigId(rentalConfig != null ? rentalConfig.getId() : null)
+        .billingUnit(
+            rentalConfig != null && rentalConfig.getBillingUnit() != null
+                ? rentalConfig.getBillingUnit().name()
+                : null)
+        .shiftTerms(rentalConfig != null ? rentalConfig.getShiftTerms() : null)
+        .build();
+  }
+
+  @Override
+  @Transactional
+  public Booking createBooking(CreateBookingRequest request, String performedBy) {
+    if (request.getEndDate().isBefore(request.getStartDate())) {
+      throw new Exceptions.BusinessRuleViolationException(
+          "End date cannot be earlier than start date");
     }
 
-    @Override
-    public Booking getBookingByNumber(String bookingNumber) {
-        return bookingQueryRepository.fetchByBookingNumber(bookingNumber)
-                .orElseThrow(() -> new Exceptions.ResourceNotFoundException("Booking not found with number: " + bookingNumber));
+    Customer customer = customerService.getCustomerById(request.getCustomerId());
+
+    // Mobile OTP pre-validation barrier for website bookings
+    if (request.getBookingSource() == BookingSource.WEBSITE
+        || "WEBSITE".equalsIgnoreCase(performedBy)) {
+      boolean isVerified =
+          otpVerificationService.isPhoneVerified(customer.getPhone(), request.getOtpProofToken());
+      if (!isVerified) {
+        throw new Exceptions.BusinessRuleViolationException(
+            "MOBILE OTP VERIFICATION REQUIRED: Please verify mobile phone (+91 "
+                + customer.getPhone()
+                + ") via OTP before committing an online booking reservation.");
+      }
     }
 
-    @Override
-    public QuoteResponse calculateQuote(QuoteRequest request) {
-        Asset asset = assetService.getAssetById(request.getAssetId());
+    Asset asset = assetService.getAssetById(request.getAssetId());
+    FarmLocation farmLocation =
+        request.getFarmLocationId() == null
+            ? null
+            : farmLocationService.getCustomerLocation(
+                customer.getId(), request.getFarmLocationId());
 
-        boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
+    // Automatically map dispatch Hub yard to customer when booking is created
+    autoMapCustomerHub(customer, asset);
 
-        RentalConfiguration rentalConfig = null;
-        if (request.getRentalConfigId() != null) {
-            rentalConfig = rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
-        } else {
-            Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
-            List<RentalConfiguration> configs = rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
-            if (!configs.isEmpty()) {
-                rentalConfig = configs.get(0);
-            } else if (asset.getType() != null && asset.getHub() != null) {
-                configs = rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(asset.getType().getId(), asset.getHub().getId());
-                if (!configs.isEmpty()) {
-                    rentalConfig = configs.get(0);
-                }
-            }
-        }
+    Long typeId = asset.getType() != null ? asset.getType().getId() : null;
+    Long hubId = asset.getHub() != null ? asset.getHub().getId() : null;
+    String assetName = asset.getName();
 
-        BigDecimal dailyRate = rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
-        BigDecimal depositAmount = rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
-        BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : PricingEngine.OPERATOR_DAILY_RATE;
-        BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
-        BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : PricingEngine.DEFAULT_RATE_PER_KM;
-
-        PricingEngine.CommercialQuote quote = pricingEngine.calculate(
-                dailyRate,
-                depositAmount,
-                opRate,
-                freeKm,
-                ratePerKm,
-                request.getStartDate(),
-                request.getEndDate(),
-                request.getDistanceKm(),
-                opRequired
-        );
-
-        return QuoteResponse.builder()
-                .assetId(asset.getId())
-                .assetName(asset.getName())
-                .assetTag(asset.getAssetTag())
-                .durationDays(quote.durationDays)
-                .dailyRate(dailyRate)
-                .baseRent(quote.baseRent)
-                .deliveryFee(quote.deliveryFee)
-                .operatorFee(quote.operatorFee)
-                .depositAmount(quote.depositAmount)
-                .totalAmount(quote.totalAmount)
-                .requiredInitialPayment(quote.requiredInitialAmount)
-                .rentalConfigId(rentalConfig != null ? rentalConfig.getId() : null)
-                .billingUnit(rentalConfig != null && rentalConfig.getBillingUnit() != null ? rentalConfig.getBillingUnit().name() : null)
-                .shiftTerms(rentalConfig != null ? rentalConfig.getShiftTerms() : null)
-                .build();
+    // 1. Fetch all operational machines of this type/model in the fleet
+    List<Asset> fleetUnits =
+        assetQueryRepository.fetchOperationalMachinesByType(typeId, assetName, hubId);
+    if (fleetUnits.isEmpty()) {
+      fleetUnits = List.of(asset);
     }
 
-    @Override
-    @Transactional
-    public Booking createBooking(CreateBookingRequest request, String performedBy) {
-        if (request.getEndDate().isBefore(request.getStartDate())) {
-            throw new Exceptions.BusinessRuleViolationException("End date cannot be earlier than start date");
-        }
+    // 2. Fetch distinct unit IDs of this type already booked/locked during the requested date
+    // window
+    List<Long> lockedAssetIds =
+        bookingQueryRepository.fetchConflictingAssetIdsForType(
+            typeId, assetName, hubId, request.getStartDate(), request.getEndDate());
 
-        Customer customer = customerService.getCustomerById(request.getCustomerId());
+    long totalCapacity = fleetUnits.size();
+    long bookedUnitsCount = lockedAssetIds.size();
 
-        // Mobile OTP pre-validation barrier for website bookings
-        if (request.getBookingSource() == BookingSource.WEBSITE || "WEBSITE".equalsIgnoreCase(performedBy)) {
-            boolean isVerified = otpVerificationService.isPhoneVerified(customer.getPhone(), request.getOtpProofToken());
-            if (!isVerified) {
-                throw new Exceptions.BusinessRuleViolationException(
-                        "MOBILE OTP VERIFICATION REQUIRED: Please verify mobile phone (+91 " + customer.getPhone() +
-                        ") via OTP before committing an online booking reservation."
-                );
-            }
-        }
-
-        Asset asset = assetService.getAssetById(request.getAssetId());
-        FarmLocation farmLocation = request.getFarmLocationId() == null ? null
-                : farmLocationService.getCustomerLocation(customer.getId(), request.getFarmLocationId());
-
-        // Automatically map dispatch Hub yard to customer when booking is created
-        autoMapCustomerHub(customer, asset);
-
-        Long typeId = asset.getType() != null ? asset.getType().getId() : null;
-        Long hubId = asset.getHub() != null ? asset.getHub().getId() : null;
-        String assetName = asset.getName();
-
-        // 1. Fetch all operational machines of this type/model in the fleet
-        List<Asset> fleetUnits = assetQueryRepository.fetchOperationalMachinesByType(typeId, assetName, hubId);
-        if (fleetUnits.isEmpty()) {
-            fleetUnits = List.of(asset);
-        }
-
-        // 2. Fetch distinct unit IDs of this type already booked/locked during the requested date window
-        List<Long> lockedAssetIds = bookingQueryRepository.fetchConflictingAssetIdsForType(
-                typeId, assetName, hubId, request.getStartDate(), request.getEndDate()
-        );
-
-        long totalCapacity = fleetUnits.size();
-        long bookedUnitsCount = lockedAssetIds.size();
-
-        // Strict capacity limit: Cannot accept bookings more than actual count of that type of machines!
-        if (totalCapacity > 0 && bookedUnitsCount >= totalCapacity) {
-            String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
-            String yardName = asset.getHub() != null ? asset.getHub().getName() : "Central Yard";
-            throw new Exceptions.BusinessRuleViolationException(
-                    "FLEET INVENTORY CAPACITY EXCEEDED: All " + totalCapacity + " units of " + typeName +
-                            " at " + yardName + " are already booked and locked for dates " +
-                            request.getStartDate() + " to " + request.getEndDate() + ". " +
-                            "Cannot accept booking beyond actual fleet count of " + totalCapacity + " machines."
-            );
-        }
-
-        // 3. If requested specific unit is locked or unavailable, auto-allocate an available sister unit of the same type
-        if (lockedAssetIds.contains(asset.getId()) || asset.getStatus() == AssetStatus.MAINTENANCE ||
-                asset.getStatus() == AssetStatus.RETIRED || asset.getStatus() == AssetStatus.DAMAGED) {
-
-            Asset availableSister = fleetUnits.stream()
-                    .filter(u -> !lockedAssetIds.contains(u.getId()))
-                    .filter(u -> u.getStatus() != AssetStatus.MAINTENANCE && u.getStatus() != AssetStatus.RETIRED && u.getStatus() != AssetStatus.DAMAGED)
-                    .findFirst()
-                    .orElse(null);
-
-            if (availableSister == null) {
-                String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
-                throw new Exceptions.BusinessRuleViolationException(
-                        "All available units of " + typeName + " are booked or locked for these dates."
-                );
-            }
-
-            log.info("Requested machine {} was busy; allocating available sister unit {} (type: {})",
-                    asset.getAssetTag(), availableSister.getAssetTag(), availableSister.getName());
-            asset = availableSister;
-        }
-
-        boolean opRequired = Boolean.TRUE.equals(asset.getOperatorRequired()) || Boolean.TRUE.equals(request.getOperatorRequired());
-
-        RentalConfiguration rentalConfig = null;
-        if (request.getRentalConfigId() != null) {
-            rentalConfig = rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
-        } else {
-            Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
-            List<RentalConfiguration> configs = rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
-            if (!configs.isEmpty()) {
-                rentalConfig = configs.get(0);
-            } else if (asset.getType() != null && asset.getHub() != null) {
-                configs = rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(asset.getType().getId(), asset.getHub().getId());
-                if (!configs.isEmpty()) {
-                    rentalConfig = configs.get(0);
-                }
-            }
-        }
-
-        BigDecimal dailyRate = rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
-        BigDecimal depositAmount = rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
-        BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : PricingEngine.OPERATOR_DAILY_RATE;
-        BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
-        BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : PricingEngine.DEFAULT_RATE_PER_KM;
-
-        BigDecimal calculatedDistance = resolveDistance(request.getDistanceKm(), asset, farmLocation);
-        PricingEngine.CommercialQuote quote = pricingEngine.calculate(
-                dailyRate,
-                depositAmount,
-                opRate,
-                freeKm,
-                ratePerKm,
-                request.getStartDate(),
-                request.getEndDate(),
-                calculatedDistance,
-                opRequired
-        );
-
-        String bNumber = generateUniqueBookingNumber();
-
-        Booking booking = Booking.builder()
-                .bookingNumber(bNumber)
-                .customer(customer)
-                .asset(asset)
-                .dealerId(request.getDealerId())
-                .status(BookingStatus.CONFIRMED)
-                .startDate(request.getStartDate())
-                .endDate(request.getEndDate())
-                .dailyRate(dailyRate)
-                .baseRent(quote.baseRent)
-                .deliveryFee(quote.deliveryFee)
-                .operatorFee(quote.operatorFee)
-                .depositAmount(quote.depositAmount)
-                .totalAmount(quote.totalAmount)
-                .deliveryAddress(resolveDeliveryAddress(request.getDeliveryAddress(), farmLocation))
-                .farmLocation(farmLocation)
-                .deliveryLocationName(farmLocation != null ? farmLocation.getLocalName() : null)
-                .deliveryLocationSnapshot(buildLocationSnapshot(farmLocation))
-                .deliveryLatitude(farmLocation != null ? farmLocation.getLatitude() : null)
-                .deliveryLongitude(farmLocation != null ? farmLocation.getLongitude() : null)
-                .distanceKm(calculatedDistance)
-                .operatorRequired(opRequired)
-                .bookingSource(request.getBookingSource() != null ? request.getBookingSource() : BookingSource.STATION)
-                .callbackRequested(Boolean.TRUE.equals(request.getCallbackRequested()))
-                .rentalConfig(rentalConfig)
-                .billingUnit(rentalConfig != null && rentalConfig.getBillingUnit() != null ? rentalConfig.getBillingUnit().name() : request.getBillingUnit())
-                .shiftTerms(rentalConfig != null ? rentalConfig.getShiftTerms() : request.getShiftTerms())
-                .notes(request.getNotes())
-                .build();
-
-        Booking saved = bookingRepository.save(booking);
-        if (farmLocation != null) {
-            farmLocation.setLastUsedAt(java.time.LocalDateTime.now());
-        }
-        auditService.log("BOOKING", saved.getBookingNumber(), "CREATE_BOOKING",
-                performedBy != null ? performedBy : "RENTAL_DESK",
-                "Booking created for " + customer.getFullName() + ", asset " + asset.getAssetTag());
-
-        try {
-            whatsAppNotificationService.notifyBookingCreated(saved.getId());
-        } catch (Exception e) {
-            log.warn("Could not dispatch WhatsApp notification for booking {}: {}", saved.getBookingNumber(), e.getMessage());
-        }
-
-        return saved;
+    // Strict capacity limit: Cannot accept bookings more than actual count of that type of
+    // machines!
+    if (totalCapacity > 0 && bookedUnitsCount >= totalCapacity) {
+      String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
+      String yardName = asset.getHub() != null ? asset.getHub().getName() : "Central Yard";
+      throw new Exceptions.BusinessRuleViolationException(
+          "FLEET INVENTORY CAPACITY EXCEEDED: All "
+              + totalCapacity
+              + " units of "
+              + typeName
+              + " at "
+              + yardName
+              + " are already booked and locked for dates "
+              + request.getStartDate()
+              + " to "
+              + request.getEndDate()
+              + ". "
+              + "Cannot accept booking beyond actual fleet count of "
+              + totalCapacity
+              + " machines.");
     }
 
-    @Override
-    @Transactional
-    public Booking updateStatus(Long id, BookingStatus newStatus, String notes, String performedBy) {
-        Booking booking = getBookingById(id);
-        BookingStatus oldStatus = booking.getStatus();
+    // 3. If requested specific unit is locked or unavailable, auto-allocate an available sister
+    // unit of the same type
+    if (lockedAssetIds.contains(asset.getId())
+        || asset.getStatus() == AssetStatus.MAINTENANCE
+        || asset.getStatus() == AssetStatus.RETIRED
+        || asset.getStatus() == AssetStatus.DAMAGED) {
 
-        booking.setStatus(newStatus);
-        if (notes != null) {
-            booking.setNotes((booking.getNotes() != null ? booking.getNotes() + " | " : "") + notes);
-        }
+      Asset availableSister =
+          fleetUnits.stream()
+              .filter(u -> !lockedAssetIds.contains(u.getId()))
+              .filter(
+                  u ->
+                      u.getStatus() != AssetStatus.MAINTENANCE
+                          && u.getStatus() != AssetStatus.RETIRED
+                          && u.getStatus() != AssetStatus.DAMAGED)
+              .findFirst()
+              .orElse(null);
 
-        Booking updated = bookingRepository.save(booking);
+      if (availableSister == null) {
+        String typeName = asset.getType() != null ? asset.getType().getName() : asset.getName();
+        throw new Exceptions.BusinessRuleViolationException(
+            "All available units of " + typeName + " are booked or locked for these dates.");
+      }
 
-        if (newStatus == BookingStatus.CONFIRMED || newStatus == BookingStatus.ALLOCATED ||
-                newStatus == BookingStatus.DISPATCH_READY || newStatus == BookingStatus.DISPATCHED) {
-            autoMapCustomerHub(booking.getCustomer(), booking.getAsset());
-        }
-
-        if (newStatus == BookingStatus.CANCELLED) {
-            Asset bookedAsset = booking.getAsset();
-            if (bookedAsset != null && (bookedAsset.getStatus() == AssetStatus.RESERVED || bookedAsset.getStatus() == AssetStatus.DISPATCH_READY)) {
-                bookedAsset.setStatus(AssetStatus.AVAILABLE);
-                assetRepository.save(bookedAsset);
-                log.info("Asset {} unlocked to AVAILABLE due to cancellation of booking {}",
-                        bookedAsset.getAssetTag(), booking.getBookingNumber());
-            }
-        }
-
-        auditService.log("BOOKING", updated.getBookingNumber(), "STATUS_CHANGE",
-                performedBy != null ? performedBy : "STAFF",
-                "Status transitioned from " + oldStatus + " to " + newStatus);
-        return updated;
+      log.info(
+          "Requested machine {} was busy; allocating available sister unit {} (type: {})",
+          asset.getAssetTag(),
+          availableSister.getAssetTag(),
+          availableSister.getName());
+      asset = availableSister;
     }
 
-    private void autoMapCustomerHub(Customer customer, Asset asset) {
-        if (customer != null && asset != null && asset.getHub() != null) {
-            Hub dispatchHub = asset.getHub();
-            if (customer.getHub() == null || !customer.getHub().getId().equals(dispatchHub.getId())) {
-                log.info("[Booking Service] Auto-mapping customer ID={} ('{}') to dispatch Hub ID={} ('{}')",
-                        customer.getId(), customer.getFullName(), dispatchHub.getId(), dispatchHub.getName());
-                customer.setHub(dispatchHub);
-                customerRepository.save(customer);
-            }
+    boolean opRequired =
+        Boolean.TRUE.equals(asset.getOperatorRequired())
+            || Boolean.TRUE.equals(request.getOperatorRequired());
+
+    RentalConfiguration rentalConfig = null;
+    if (request.getRentalConfigId() != null) {
+      rentalConfig =
+          rentalConfigurationRepository.findById(request.getRentalConfigId()).orElse(null);
+    } else {
+      Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
+      List<RentalConfiguration> configs =
+          rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+      if (!configs.isEmpty()) {
+        rentalConfig = configs.get(0);
+      } else if (asset.getType() != null && asset.getHub() != null) {
+        configs =
+            rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+                asset.getType().getId(), asset.getHub().getId());
+        if (!configs.isEmpty()) {
+          rentalConfig = configs.get(0);
         }
+      }
     }
 
-    private String generateUniqueBookingNumber() {
-        int year = LocalDate.now().getYear();
-        for (int i = 0; i < 10; i++) {
-            long seq = (System.currentTimeMillis() % 900000L) + 100000L + SEQUENCE.incrementAndGet();
-            String candidate = "BK-" + year + "-" + seq;
-            if (bookingQueryRepository.fetchByBookingNumber(candidate).isEmpty()) {
-                return candidate;
-            }
-        }
-        return "BK-" + year + "-" + System.currentTimeMillis();
+    BigDecimal dailyRate =
+        rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+    BigDecimal depositAmount =
+        rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+    BigDecimal opRate =
+        rentalConfig != null
+            ? rentalConfig.getOperatorDailyRate()
+            : PricingEngine.OPERATOR_DAILY_RATE;
+    BigDecimal freeKm =
+        rentalConfig != null
+            ? rentalConfig.getFreeDeliveryDistanceKm()
+            : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
+    BigDecimal ratePerKm =
+        rentalConfig != null
+            ? rentalConfig.getRatePerKmAfterFree()
+            : PricingEngine.DEFAULT_RATE_PER_KM;
+
+    BigDecimal calculatedDistance = resolveDistance(request.getDistanceKm(), asset, farmLocation);
+    PricingEngine.CommercialQuote quote =
+        pricingEngine.calculate(
+            dailyRate,
+            depositAmount,
+            opRate,
+            freeKm,
+            ratePerKm,
+            request.getStartDate(),
+            request.getEndDate(),
+            calculatedDistance,
+            opRequired);
+
+    String bNumber = generateUniqueBookingNumber();
+
+    Booking booking =
+        Booking.builder()
+            .bookingNumber(bNumber)
+            .customer(customer)
+            .asset(asset)
+            .dealerId(request.getDealerId())
+            .status(BookingStatus.CONFIRMED)
+            .startDate(request.getStartDate())
+            .endDate(request.getEndDate())
+            .dailyRate(dailyRate)
+            .baseRent(quote.baseRent)
+            .deliveryFee(quote.deliveryFee)
+            .operatorFee(quote.operatorFee)
+            .depositAmount(quote.depositAmount)
+            .totalAmount(quote.totalAmount)
+            .deliveryAddress(resolveDeliveryAddress(request.getDeliveryAddress(), farmLocation))
+            .farmLocation(farmLocation)
+            .deliveryLocationName(farmLocation != null ? farmLocation.getLocalName() : null)
+            .deliveryLocationSnapshot(buildLocationSnapshot(farmLocation))
+            .deliveryLatitude(farmLocation != null ? farmLocation.getLatitude() : null)
+            .deliveryLongitude(farmLocation != null ? farmLocation.getLongitude() : null)
+            .distanceKm(calculatedDistance)
+            .operatorRequired(opRequired)
+            .bookingSource(
+                request.getBookingSource() != null
+                    ? request.getBookingSource()
+                    : BookingSource.STATION)
+            .callbackRequested(Boolean.TRUE.equals(request.getCallbackRequested()))
+            .rentalConfig(rentalConfig)
+            .billingUnit(
+                rentalConfig != null && rentalConfig.getBillingUnit() != null
+                    ? rentalConfig.getBillingUnit().name()
+                    : request.getBillingUnit())
+            .shiftTerms(
+                rentalConfig != null ? rentalConfig.getShiftTerms() : request.getShiftTerms())
+            .notes(request.getNotes())
+            .build();
+
+    Booking saved = bookingRepository.save(booking);
+    if (farmLocation != null) {
+      farmLocation.setLastUsedAt(java.time.LocalDateTime.now());
+    }
+    auditService.log(
+        "BOOKING",
+        saved.getBookingNumber(),
+        "CREATE_BOOKING",
+        performedBy != null ? performedBy : "RENTAL_DESK",
+        "Booking created for " + customer.getFullName() + ", asset " + asset.getAssetTag());
+
+    try {
+      whatsAppNotificationService.notifyBookingCreated(saved.getId());
+    } catch (Exception e) {
+      log.warn(
+          "Could not dispatch WhatsApp notification for booking {}: {}",
+          saved.getBookingNumber(),
+          e.getMessage());
     }
 
-    private BigDecimal resolveDistance(BigDecimal suppliedDistance, Asset asset, FarmLocation farmLocation) {
-        if (farmLocation != null && asset.getHub() != null) {
-            BigDecimal calculated = distanceCalculator.kilometres(
-                    asset.getHub().getLatitude(), asset.getHub().getLongitude(),
-                    farmLocation.getLatitude(), farmLocation.getLongitude());
-            if (calculated != null) return calculated;
-        }
-        return suppliedDistance != null ? suppliedDistance : BigDecimal.ZERO;
+    return saved;
+  }
+
+  @Override
+  @Transactional
+  public Booking updateStatus(Long id, BookingStatus newStatus, String notes, String performedBy) {
+    Booking booking = getBookingById(id);
+    BookingStatus oldStatus = booking.getStatus();
+
+    booking.setStatus(newStatus);
+    if (notes != null) {
+      booking.setNotes((booking.getNotes() != null ? booking.getNotes() + " | " : "") + notes);
     }
 
-    private String resolveDeliveryAddress(String suppliedAddress, FarmLocation farmLocation) {
-        if (farmLocation == null) return suppliedAddress;
-        StringBuilder result = new StringBuilder(farmLocation.displayAddress());
-        if (farmLocation.getLatitude() != null && farmLocation.getLongitude() != null) {
-            result.append(" | https://www.google.com/maps?q=")
-                    .append(farmLocation.getLatitude()).append(',').append(farmLocation.getLongitude());
-        }
-        return result.toString();
+    Booking updated = bookingRepository.save(booking);
+
+    if (newStatus == BookingStatus.CONFIRMED
+        || newStatus == BookingStatus.ALLOCATED
+        || newStatus == BookingStatus.DISPATCH_READY
+        || newStatus == BookingStatus.DISPATCHED) {
+      autoMapCustomerHub(booking.getCustomer(), booking.getAsset());
     }
 
-    private String buildLocationSnapshot(FarmLocation farmLocation) {
-        if (farmLocation == null) return null;
-        return "Name: " + farmLocation.getLocalName()
-                + (farmLocation.getLocalNameHindi() != null ? " | Local: " + farmLocation.getLocalNameHindi() : "")
-                + (farmLocation.getVillage() != null ? " | Village: " + farmLocation.getVillage() : "")
-                + (farmLocation.getLandmark() != null ? " | Landmark: " + farmLocation.getLandmark() : "")
-                + (farmLocation.getAccessNotes() != null ? " | Access: " + farmLocation.getAccessNotes() : "");
+    if (newStatus == BookingStatus.CANCELLED) {
+      Asset bookedAsset = booking.getAsset();
+      if (bookedAsset != null
+          && (bookedAsset.getStatus() == AssetStatus.RESERVED
+              || bookedAsset.getStatus() == AssetStatus.DISPATCH_READY)) {
+        bookedAsset.setStatus(AssetStatus.AVAILABLE);
+        assetRepository.save(bookedAsset);
+        log.info(
+            "Asset {} unlocked to AVAILABLE due to cancellation of booking {}",
+            bookedAsset.getAssetTag(),
+            booking.getBookingNumber());
+      }
     }
+
+    auditService.log(
+        "BOOKING",
+        updated.getBookingNumber(),
+        "STATUS_CHANGE",
+        performedBy != null ? performedBy : "STAFF",
+        "Status transitioned from " + oldStatus + " to " + newStatus);
+    return updated;
+  }
+
+  private void autoMapCustomerHub(Customer customer, Asset asset) {
+    if (customer != null && asset != null && asset.getHub() != null) {
+      Hub dispatchHub = asset.getHub();
+      if (customer.getHub() == null || !customer.getHub().getId().equals(dispatchHub.getId())) {
+        log.info(
+            "[Booking Service] Auto-mapping customer ID={} ('{}') to dispatch Hub ID={} ('{}')",
+            customer.getId(),
+            customer.getFullName(),
+            dispatchHub.getId(),
+            dispatchHub.getName());
+        customer.setHub(dispatchHub);
+        customerRepository.save(customer);
+      }
+    }
+  }
+
+  private String generateUniqueBookingNumber() {
+    int year = LocalDate.now().getYear();
+    for (int i = 0; i < 10; i++) {
+      long seq = (System.currentTimeMillis() % 900000L) + 100000L + SEQUENCE.incrementAndGet();
+      String candidate = "BK-" + year + "-" + seq;
+      if (bookingQueryRepository.fetchByBookingNumber(candidate).isEmpty()) {
+        return candidate;
+      }
+    }
+    return "BK-" + year + "-" + System.currentTimeMillis();
+  }
+
+  private BigDecimal resolveDistance(
+      BigDecimal suppliedDistance, Asset asset, FarmLocation farmLocation) {
+    if (farmLocation != null && asset.getHub() != null) {
+      BigDecimal calculated =
+          distanceCalculator.kilometres(
+              asset.getHub().getLatitude(), asset.getHub().getLongitude(),
+              farmLocation.getLatitude(), farmLocation.getLongitude());
+      if (calculated != null) return calculated;
+    }
+    return suppliedDistance != null ? suppliedDistance : BigDecimal.ZERO;
+  }
+
+  private String resolveDeliveryAddress(String suppliedAddress, FarmLocation farmLocation) {
+    if (farmLocation == null) return suppliedAddress;
+    StringBuilder result = new StringBuilder(farmLocation.displayAddress());
+    if (farmLocation.getLatitude() != null && farmLocation.getLongitude() != null) {
+      result
+          .append(" | https://www.google.com/maps?q=")
+          .append(farmLocation.getLatitude())
+          .append(',')
+          .append(farmLocation.getLongitude());
+    }
+    return result.toString();
+  }
+
+  private String buildLocationSnapshot(FarmLocation farmLocation) {
+    if (farmLocation == null) return null;
+    return "Name: "
+        + farmLocation.getLocalName()
+        + (farmLocation.getLocalNameHindi() != null
+            ? " | Local: " + farmLocation.getLocalNameHindi()
+            : "")
+        + (farmLocation.getVillage() != null ? " | Village: " + farmLocation.getVillage() : "")
+        + (farmLocation.getLandmark() != null ? " | Landmark: " + farmLocation.getLandmark() : "")
+        + (farmLocation.getAccessNotes() != null
+            ? " | Access: " + farmLocation.getAccessNotes()
+            : "");
+  }
 }

@@ -196,7 +196,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const errData = await res.json();
         if (errData?.message?.text) errMsg = errData.message.text;
-        else if (errData?.message) errMsg = typeof errData.message === 'string' ? errData.message : JSON.stringify(errData.message);
+        else if (errData?.message)
+          errMsg = typeof errData.message === 'string' ? errData.message : JSON.stringify(errData.message);
       } catch {
         // ignore
       }
@@ -212,16 +213,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Map role strictly from DB enum
     const roleStr = String(data.role).toUpperCase();
     const role: UserRole =
-      (roleStr === 'ROOT' || roleStr === '8') ? 'root'
-      : (roleStr === 'ADMIN' || roleStr === '7' || roleStr === '1') ? 'admin'
-      : (roleStr === 'MANAGER' || roleStr === '6') ? 'manager'
-      : 'user';
+      roleStr === 'ROOT' || roleStr === '8'
+        ? 'root'
+        : roleStr === 'ADMIN' || roleStr === '7' || roleStr === '1'
+          ? 'admin'
+          : roleStr === 'MANAGER' || roleStr === '6'
+            ? 'manager'
+            : 'user';
 
     const roleTitle =
-      role === 'root' ? 'Root Super Admin'
-      : role === 'admin' ? 'Operations Admin'
-      : role === 'manager' ? 'Yard Manager'
-      : 'Station Desk Operator';
+      role === 'root'
+        ? 'Root Super Admin'
+        : role === 'admin'
+          ? 'Operations Admin'
+          : role === 'manager'
+            ? 'Yard Manager'
+            : 'Station Desk Operator';
 
     const authUser: AuthUser = {
       id: String(data.userId),

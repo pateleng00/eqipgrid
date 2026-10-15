@@ -10,8 +10,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class HandoverChecklistModel {
-    private String itemKey;
-    private String itemName;
-    private boolean checked;
-    private String remarks;
+  private String itemKey;
+  private String itemName;
+  private boolean checked;
+  private String remarks;
 }

@@ -1,8 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Cpu, Plus, Search, Edit2, Trash2, CheckCircle2,
-  XCircle, AlertTriangle, ShieldAlert, Layers, Building2,
-  RefreshCw, X, FileText, Hash
+  Cpu,
+  Plus,
+  Search,
+  Edit2,
+  Trash2,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ShieldAlert,
+  Layers,
+  Building2,
+  RefreshCw,
+  X,
+  FileText,
+  Hash,
 } from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
@@ -110,7 +122,7 @@ export const MachineModelManagementView: React.FC = () => {
           name.trim(),
           typeId ? Number(typeId) : undefined,
           manufacturerId ? Number(manufacturerId) : undefined,
-          editingModel?.id
+          editingModel?.id,
         );
         if (res.duplicate) {
           setFuzzyWarning(res);
@@ -213,7 +225,8 @@ export const MachineModelManagementView: React.FC = () => {
       closeModal();
       await loadData();
     } catch (err: any) {
-      const errMsg = err?.message || 'Failed to save asset model. Please verify name uniqueness and network connectivity.';
+      const errMsg =
+        err?.message || 'Failed to save asset model. Please verify name uniqueness and network connectivity.';
       setFormError(errMsg);
     } finally {
       setSubmitting(false);
@@ -248,7 +261,9 @@ export const MachineModelManagementView: React.FC = () => {
         isOpen: true,
         variant: 'error',
         title: 'Deletion Failed',
-        message: err?.message || 'Cannot delete model because active equipment units or telemetry configurations reference it.',
+        message:
+          err?.message ||
+          'Cannot delete model because active equipment units or telemetry configurations reference it.',
       });
       setModelToDelete(null);
     }
@@ -276,9 +291,7 @@ export const MachineModelManagementView: React.FC = () => {
       const matchesType = typeFilter === 'all' || String(m.typeId) === typeFilter;
       const matchesMfg = mfgFilter === 'all' || String(m.manufacturerId) === mfgFilter;
       const matchesStatus =
-        statusFilter === 'all' ||
-        (statusFilter === 'active' && m.active) ||
-        (statusFilter === 'inactive' && !m.active);
+        statusFilter === 'all' || (statusFilter === 'active' && m.active) || (statusFilter === 'inactive' && !m.active);
 
       return matchesSearch && matchesType && matchesMfg && matchesStatus;
     });
@@ -330,7 +343,9 @@ export const MachineModelManagementView: React.FC = () => {
             disabled={loading}
             title="Refresh models"
             className={`p-2 rounded-xl border transition-colors cursor-pointer ${
-              isDaylight ? 'border-slate-200 hover:bg-slate-100 text-slate-700' : 'border-slate-800 hover:bg-slate-800 text-slate-300'
+              isDaylight
+                ? 'border-slate-200 hover:bg-slate-100 text-slate-700'
+                : 'border-slate-800 hover:bg-slate-800 text-slate-300'
             }`}
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -347,9 +362,11 @@ export const MachineModelManagementView: React.FC = () => {
       </div>
 
       {/* Search & Filter Toolbar - Reduced search width, increased filter widths using SearchSelect */}
-      <div className={`p-3 rounded-2xl border flex flex-col lg:flex-row items-center justify-between gap-3 flex-shrink-0 ${
-        isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
-      }`}>
+      <div
+        className={`p-3 rounded-2xl border flex flex-col lg:flex-row items-center justify-between gap-3 flex-shrink-0 ${
+          isDaylight ? 'bg-white border-slate-200' : 'bg-slate-900/80 border-slate-800'
+        }`}
+      >
         <div className="relative w-full lg:w-72 shrink-0">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 z-10" />
           <input
@@ -425,9 +442,13 @@ export const MachineModelManagementView: React.FC = () => {
         }`}
       >
         <table className="w-full text-left border-collapse text-xs">
-          <thead className={`sticky top-0 z-10 border-b ${
-            isDaylight ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-slate-950/90 border-slate-800 text-slate-400'
-          }`}>
+          <thead
+            className={`sticky top-0 z-10 border-b ${
+              isDaylight
+                ? 'bg-slate-50 border-slate-200 text-slate-600'
+                : 'bg-slate-950/90 border-slate-800 text-slate-400'
+            }`}
+          >
             <tr>
               <th className="py-2.5 px-4 font-semibold">Model &amp; Designation</th>
               <th className="py-2.5 px-4 font-semibold">Equipment Type</th>
@@ -463,15 +484,15 @@ export const MachineModelManagementView: React.FC = () => {
                   >
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2.5">
-                        <div className={`p-1.5 rounded-lg ${
-                          isDaylight ? 'bg-amber-100/60 text-amber-800' : 'bg-amber-950/40 text-amber-400'
-                        }`}>
+                        <div
+                          className={`p-1.5 rounded-lg ${
+                            isDaylight ? 'bg-amber-100/60 text-amber-800' : 'bg-amber-950/40 text-amber-400'
+                          }`}
+                        >
                           <Cpu className="w-4 h-4" />
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900 dark:text-slate-100">
-                            {m.name}
-                          </div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{m.name}</div>
                           {m.modelNumber ? (
                             <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1 mt-0.5">
                               <Hash className="w-3 h-3 text-slate-400" />
@@ -487,17 +508,17 @@ export const MachineModelManagementView: React.FC = () => {
                     <td className="py-3 px-4">
                       {typeObj ? (
                         <div className="space-y-0.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            {typeObj.name}
-                          </span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{typeObj.name}</span>
                           <div className="text-xs">
-                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
-                              typeObj.category === 'AGRICULTURE'
-                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
-                                : typeObj.category === 'CONSTRUCTION'
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400'
-                                : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-400'
-                            }`}>
+                            <span
+                              className={`inline-block px-2 py-0.5 rounded text-[10px] font-semibold ${
+                                typeObj.category === 'AGRICULTURE'
+                                  ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
+                                  : typeObj.category === 'CONSTRUCTION'
+                                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400'
+                                    : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-400'
+                              }`}
+                            >
                               {formatCategoryName(typeObj.category)}
                             </span>
                           </div>
@@ -613,9 +634,11 @@ export const MachineModelManagementView: React.FC = () => {
       {/* Add / Edit Modal - Increased Width (max-w-3xl) with React-Select (SearchSelect) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-          <div className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
-            isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-100'
-          }`}>
+          <div
+            className={`relative w-full max-w-3xl rounded-2xl border p-6 shadow-2xl transition-all max-h-[90vh] overflow-y-auto ${
+              isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-slate-100'
+            }`}
+          >
             <button
               onClick={closeModal}
               className="absolute right-4 top-4 p-1.5 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
@@ -624,9 +647,11 @@ export const MachineModelManagementView: React.FC = () => {
             </button>
 
             <div className="flex items-center gap-3 mb-1">
-              <div className={`p-2.5 rounded-xl ${
-                isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'
-              }`}>
+              <div
+                className={`p-2.5 rounded-xl ${
+                  isDaylight ? 'bg-amber-100 text-amber-800' : 'bg-amber-950 text-amber-400'
+                }`}
+              >
                 <Cpu className="w-6 h-6" />
               </div>
               <div>
@@ -634,18 +659,21 @@ export const MachineModelManagementView: React.FC = () => {
                   {editingModel ? 'Update Asset Model' : 'Catalog New Asset Model'}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Assign equipment type, manufacturer OEM, model designation, and specs. Includes automatic fuzzy match check.
+                  Assign equipment type, manufacturer OEM, model designation, and specs. Includes automatic fuzzy match
+                  check.
                 </p>
               </div>
             </div>
 
             {/* Fuzzy match warning banner */}
             {fuzzyWarning && (
-              <div className={`my-4 p-3.5 rounded-xl border text-xs flex items-start gap-2.5 transition-all ${
-                fuzzyWarning.similarityPercentage >= 95
-                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-500'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
-              }`}>
+              <div
+                className={`my-4 p-3.5 rounded-xl border text-xs flex items-start gap-2.5 transition-all ${
+                  fuzzyWarning.similarityPercentage >= 95
+                    ? 'bg-rose-500/10 border-rose-500/30 text-rose-500'
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+                }`}
+              >
                 <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold">
@@ -759,7 +787,9 @@ export const MachineModelManagementView: React.FC = () => {
               <div className="flex items-center justify-between p-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
                 <div>
                   <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Active Status</span>
-                  <p className="text-[11px] text-slate-500">Allow this model to be selected when commissioning fleet equipment</p>
+                  <p className="text-[11px] text-slate-500">
+                    Allow this model to be selected when commissioning fleet equipment
+                  </p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input

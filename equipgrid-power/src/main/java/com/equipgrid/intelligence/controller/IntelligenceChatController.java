@@ -21,18 +21,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/intelligence")
 @RequiredArgsConstructor
-@Tag(name = "Intelligence Service", description = "In-place website AI Copilot driven by backend Gemini AI and EquipGrid knowledge engine")
+@Tag(
+    name = "Intelligence Service",
+    description =
+        "In-place website AI Copilot driven by backend Gemini AI and EquipGrid knowledge engine")
 public class IntelligenceChatController {
 
-    private final IIntelligenceChatService intelligenceChatService;
+  private final IIntelligenceChatService intelligenceChatService;
 
-    @Operation(summary = "Chat with EquipGrid Intelligence Assistant", description = "Answers user questions using website data and Gemini AI, finds machinery, and facilitates booking")
-    @PostMapping("/chat")
-    @RequireBotShield
-    @RateLimited(name = "intelligence_chat")
-    public ResponseEntity<ApiResponse<IntelligenceChatResponse>> chat(@Valid @RequestBody IntelligenceChatRequest request) {
-        log.info("Received Intelligence chat request: message='{}'", request.getMessage());
-        IntelligenceChatResponse response = intelligenceChatService.chat(request);
-        return ResponseEntity.ok(ApiResponse.buildSuccess(response));
-    }
+  @Operation(
+      summary = "Chat with EquipGrid Intelligence Assistant",
+      description =
+          "Answers user questions using website data and Gemini AI, finds machinery, and facilitates booking")
+  @PostMapping("/chat")
+  @RequireBotShield
+  @RateLimited(name = "intelligence_chat")
+  public ResponseEntity<ApiResponse<IntelligenceChatResponse>> chat(
+      @Valid @RequestBody IntelligenceChatRequest request) {
+    log.info("Received Intelligence chat request: message='{}'", request.getMessage());
+    IntelligenceChatResponse response = intelligenceChatService.chat(request);
+    return ResponseEntity.ok(ApiResponse.buildSuccess(response));
+  }
 }

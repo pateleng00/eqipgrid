@@ -10,11 +10,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MessageApiResponse {
-    private String code;
-    private String text;
+  private String code;
+  private String text;
 
-    public MessageApiResponse(String text) {
-        this.code = "SUCCESS";
-        this.text = text;
-    }
+  public MessageApiResponse(String text) {
+    this.code = "SUCCESS";
+    this.text = text;
+  }
 }

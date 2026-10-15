@@ -12,7 +12,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class UpdateStatusRequest {
-    @NotNull(message = "New status is required")
-    private AssetStatus status;
-    private String conditionNotes;
+  @NotNull(message = "New status is required")
+  private AssetStatus status;
+
+  private String conditionNotes;
 }

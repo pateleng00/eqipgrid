@@ -12,27 +12,25 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class CreateCustomerRequest {
-    @NotBlank(message = "Customer full name is required")
-    private String fullName;
+  @NotBlank(message = "Customer full name is required")
+  private String fullName;
 
-    @NotBlank(message = "Phone number is required")
-    private String phone;
+  @NotBlank(message = "Phone number is required")
+  private String phone;
 
-    private String email;
+  private String email;
 
-    @NotBlank(message = "Address is required")
-    private String address;
+  @NotBlank(message = "Address is required")
+  private String address;
 
-    private String aadhaarNumber;
-    private String gstNumber;
+  private String aadhaarNumber;
+  private String gstNumber;
 
-    @Builder.Default
-    private CustomerTier tier = CustomerTier.TIER_1_BASIC;
+  @Builder.Default private CustomerTier tier = CustomerTier.TIER_1_BASIC;
 
-    @Builder.Default
-    private Boolean verified = false;
+  @Builder.Default private Boolean verified = false;
 
-    private String notes;
+  private String notes;
 
-    private Long hubId;
+  private Long hubId;
 }

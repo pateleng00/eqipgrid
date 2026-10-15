@@ -22,21 +22,22 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Authentication & Access", description = "User authentication.")
 public class AuthController {
 
-    private final IAuthService authService;
+  private final IAuthService authService;
 
-    @PostMapping("/login")
-    @RateLimited(name = "auth_login")
-    @Operation(summary = "Authenticate user and return JWT bearer token")
-    public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse response = authService.login(request);
-        return ResponseEntity.ok(ApiResponse.buildSuccess("Login successful", response));
-    }
+  @PostMapping("/login")
+  @RateLimited(name = "auth_login")
+  @Operation(summary = "Authenticate user and return JWT bearer token")
+  public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    AuthResponse response = authService.login(request);
+    return ResponseEntity.ok(ApiResponse.buildSuccess("Login successful", response));
+  }
 
-    @PostMapping("/register")
-    @RateLimited(name = "auth_register")
-    @Operation(summary = "Register new staff or customer account")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
-        return ResponseEntity.ok(ApiResponse.buildSuccess("Registration successful", response));
-    }
+  @PostMapping("/register")
+  @RateLimited(name = "auth_register")
+  @Operation(summary = "Register new staff or customer account")
+  public ResponseEntity<ApiResponse<AuthResponse>> register(
+      @Valid @RequestBody RegisterRequest request) {
+    AuthResponse response = authService.register(request);
+    return ResponseEntity.ok(ApiResponse.buildSuccess("Registration successful", response));
+  }
 }

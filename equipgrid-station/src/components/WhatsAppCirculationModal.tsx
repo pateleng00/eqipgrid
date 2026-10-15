@@ -1,15 +1,5 @@
 import React, { useState } from 'react';
-import {
-  MessageSquare,
-  Copy,
-  Check,
-  Send,
-  X,
-  Printer,
-  ShieldCheck,
-  Smartphone,
-  ExternalLink,
-} from 'lucide-react';
+import { MessageSquare, Copy, Check, Send, X, Printer, ShieldCheck, Smartphone, ExternalLink } from 'lucide-react';
 import { useTheme } from '../lib/ThemeContext';
 import { openWhatsAppCirculation, copyMessageToClipboard } from '../services/whatsappCirculation';
 

@@ -101,7 +101,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
         setLongitude('80.128700');
         setGpsLoading(false);
       },
-      { timeout: 7000, enableHighAccuracy: true }
+      { timeout: 7000, enableHighAccuracy: true },
     );
   };
 
@@ -159,7 +159,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
           'w-full max-w-2xl max-h-[92vh] overflow-y-auto rounded-2xl border p-5 sm:p-6 shadow-2xl transition-all',
           isDaylight
             ? 'border-amber-300 bg-white text-slate-900 shadow-amber-500/10'
-            : 'border-amber-500/30 bg-[#222222] text-slate-100 shadow-black/80'
+            : 'border-amber-500/30 bg-[#222222] text-slate-100 shadow-black/80',
         )}
       >
         {/* Header */}
@@ -175,7 +175,9 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
             </div>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               खेत व डिलीवरी स्थल का स्थानीय नाम, बोलचाल पहचान और ट्रैक्टर रास्ता विवरण
-              {customerName ? <span className="ml-1 font-semibold text-amber-600 dark:text-amber-400">• Farmer: {customerName}</span> : null}
+              {customerName ? (
+                <span className="ml-1 font-semibold text-amber-600 dark:text-amber-400">• Farmer: {customerName}</span>
+              ) : null}
             </p>
           </div>
           <button
@@ -213,9 +215,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
               <span className="text-[10px] text-slate-400">Common local or field parcel identifier</span>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-bold">
-                Local Name in Hindi (स्थानीय नाम)
-              </label>
+              <label className="mb-1 block text-xs font-bold">Local Name in Hindi (स्थानीय नाम)</label>
               <input
                 type="text"
                 value={localNameHindi}
@@ -230,9 +230,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
           {/* Row 2: Spoken Aliases & Location Type */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-bold">
-                Spoken Aliases / बोलचाल नाम
-              </label>
+              <label className="mb-1 block text-xs font-bold">Spoken Aliases / बोलचाल नाम</label>
               <input
                 type="text"
                 value={aliases}
@@ -259,7 +257,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
                       'py-2 px-1 text-center rounded-lg border text-[11px] font-bold transition-colors cursor-pointer flex flex-col items-center gap-0.5',
                       locationType === item.value
                         ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                        : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                        : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800',
                     )}
                   >
                     <span>{item.icon}</span>
@@ -428,7 +426,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
                 'rounded-xl border px-4 py-2.5 text-xs font-bold transition-colors cursor-pointer',
                 isDaylight
                   ? 'border-slate-300 text-slate-700 hover:bg-slate-100'
-                  : 'border-slate-700 text-slate-300 hover:bg-slate-800'
+                  : 'border-slate-700 text-slate-300 hover:bg-slate-800',
               )}
             >
               Cancel

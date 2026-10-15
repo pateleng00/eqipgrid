@@ -52,35 +52,20 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
   const { isDaylight } = useTheme();
 
   // Find currently selected option object
-  const selectedOption =
-    options.find((opt) => String(opt.value) === String(value)) || null;
+  const selectedOption = options.find((opt) => String(opt.value) === String(value)) || null;
 
   // Custom styles for 2-in-1 search and select dropdown
   const customStyles: StylesConfig<SelectOption, false> = {
     control: (provided, state) => ({
       ...provided,
-      backgroundColor: state.isDisabled
-        ? isDaylight
-          ? '#f8fafc'
-          : '#18181b'
-        : isDaylight
-        ? '#ffffff'
-        : '#121212',
+      backgroundColor: state.isDisabled ? (isDaylight ? '#f8fafc' : '#18181b') : isDaylight ? '#ffffff' : '#121212',
       opacity: state.isDisabled ? 0.7 : 1,
-      borderColor: state.isFocused
-        ? '#b45309'
-        : isDaylight
-        ? '#cbd5e1'
-        : '#334155',
+      borderColor: state.isFocused ? '#b45309' : isDaylight ? '#cbd5e1' : '#334155',
       borderRadius: '0.625rem',
       padding: '0 4px',
       fontSize: '0.875rem',
       borderWidth: isDaylight ? '1.5px' : '1px',
-      boxShadow: state.isFocused
-        ? isDaylight
-          ? '0 0 0 3px rgba(180, 83, 9, 0.15)'
-          : 'none'
-        : 'none',
+      boxShadow: state.isFocused ? (isDaylight ? '0 0 0 3px rgba(180, 83, 9, 0.15)' : 'none') : 'none',
       transition: 'all 0.15s ease',
       cursor: state.isDisabled ? 'not-allowed' : 'pointer',
       minHeight: '38px',
@@ -146,9 +131,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       backgroundColor: isDaylight ? '#ffffff' : '#242424',
       borderColor: isDaylight ? '#cbd5e1' : '#3f3f46',
       borderRadius: '0.75rem',
-      boxShadow: isDaylight
-        ? '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)'
-        : 'none',
+      boxShadow: isDaylight ? '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)' : 'none',
       overflow: 'hidden',
       zIndex: 60,
       border: `1px solid ${isDaylight ? '#cbd5e1' : '#3f3f46'}`,
@@ -255,8 +238,8 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
                   ? 'text-slate-800 font-semibold text-xs'
                   : 'text-slate-400 font-normal text-xs'
                 : isDaylight
-                ? 'text-slate-950 font-bold text-xs'
-                : 'text-white font-bold text-xs'
+                  ? 'text-slate-950 font-bold text-xs'
+                  : 'text-white font-bold text-xs'
             }`}
           >
             {data.label}
@@ -278,10 +261,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     );
   };
 
-  const handleChange = (
-    newValue: SingleValue<SelectOption>,
-    _actionMeta: ActionMeta<SelectOption>
-  ) => {
+  const handleChange = (newValue: SingleValue<SelectOption>, _actionMeta: ActionMeta<SelectOption>) => {
     if (!newValue) {
       onChange(null);
     } else {

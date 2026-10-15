@@ -13,19 +13,18 @@ import lombok.NoArgsConstructor;
 @Builder
 public class ModelRequest {
 
-    @NotNull(message = "Equipment type ID is required")
-    private Long typeId;
+  @NotNull(message = "Equipment type ID is required")
+  private Long typeId;
 
-    @NotNull(message = "Manufacturer ID is required")
-    private Long manufacturerId;
+  @NotNull(message = "Manufacturer ID is required")
+  private Long manufacturerId;
 
-    @NotBlank(message = "Model name is required")
-    private String name;
+  @NotBlank(message = "Model name is required")
+  private String name;
 
-    private String modelNumber;
+  private String modelNumber;
 
-    private String specs;
+  private String specs;
 
-    @Builder.Default
-    private Boolean active = true;
+  @Builder.Default private Boolean active = true;
 }
