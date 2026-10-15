@@ -57,6 +57,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/dealers/**")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/properties/**")
+                    .permitAll()
                     .requestMatchers(HttpMethod.POST, "/bookings/quote")
                     .permitAll()
                     .anyRequest()
