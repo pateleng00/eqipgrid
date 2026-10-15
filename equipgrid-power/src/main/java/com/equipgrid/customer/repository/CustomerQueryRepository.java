@@ -20,7 +20,12 @@ public class CustomerQueryRepository {
   private final QCustomer qCustomer = QCustomer.customer;
 
   public List<Customer> fetchAll() {
-    return queryFactory.selectFrom(qCustomer).orderBy(qCustomer.id.desc()).fetch();
+    return queryFactory
+        .selectFrom(qCustomer)
+        .leftJoin(qCustomer.hub)
+        .fetchJoin()
+        .orderBy(qCustomer.id.desc())
+        .fetch();
   }
 
   public Optional<Customer> fetchById(Long id) {
@@ -28,7 +33,12 @@ public class CustomerQueryRepository {
       return Optional.empty();
     }
     return Optional.ofNullable(
-        queryFactory.selectFrom(qCustomer).where(qCustomer.id.eq(id)).fetchOne());
+        queryFactory
+            .selectFrom(qCustomer)
+            .leftJoin(qCustomer.hub)
+            .fetchJoin()
+            .where(qCustomer.id.eq(id))
+            .fetchOne());
   }
 
   public Optional<Customer> fetchByPhone(String phone) {

@@ -3,11 +3,13 @@ package com.equipgrid.rentalconfig.repository;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface RentalConfigurationRepository extends JpaRepository<RentalConfiguration, Long> {
+  @EntityGraph(attributePaths = {"hub", "asset", "type", "billingUnitMaster"})
   List<RentalConfiguration> findByActiveTrueOrderByIdDesc();
 
   List<RentalConfiguration> findByHubIdAndActiveTrue(Long hubId);

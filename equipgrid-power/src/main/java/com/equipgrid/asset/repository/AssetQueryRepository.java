@@ -30,14 +30,42 @@ public class AssetQueryRepository {
     if (status != null) {
       builder.and(qAsset.status.eq(status));
     }
-    return queryFactory.selectFrom(qAsset).where(builder).fetch();
+    return queryFactory
+        .selectFrom(qAsset)
+        .leftJoin(qAsset.type)
+        .fetchJoin()
+        .leftJoin(qAsset.manufacturer)
+        .fetchJoin()
+        .leftJoin(qAsset.model)
+        .fetchJoin()
+        .leftJoin(qAsset.hub)
+        .fetchJoin()
+        .leftJoin(qAsset.billingUnitMaster)
+        .fetchJoin()
+        .where(builder)
+        .orderBy(qAsset.id.desc())
+        .fetch();
   }
 
   public Optional<Asset> fetchById(Long id) {
     if (id == null) {
       return Optional.empty();
     }
-    return Optional.ofNullable(queryFactory.selectFrom(qAsset).where(qAsset.id.eq(id)).fetchOne());
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qAsset)
+            .leftJoin(qAsset.type)
+            .fetchJoin()
+            .leftJoin(qAsset.manufacturer)
+            .fetchJoin()
+            .leftJoin(qAsset.model)
+            .fetchJoin()
+            .leftJoin(qAsset.hub)
+            .fetchJoin()
+            .leftJoin(qAsset.billingUnitMaster)
+            .fetchJoin()
+            .where(qAsset.id.eq(id))
+            .fetchOne());
   }
 
   public Optional<Asset> fetchByAssetTag(String tag) {
@@ -47,6 +75,16 @@ public class AssetQueryRepository {
     return Optional.ofNullable(
         queryFactory
             .selectFrom(qAsset)
+            .leftJoin(qAsset.type)
+            .fetchJoin()
+            .leftJoin(qAsset.manufacturer)
+            .fetchJoin()
+            .leftJoin(qAsset.model)
+            .fetchJoin()
+            .leftJoin(qAsset.hub)
+            .fetchJoin()
+            .leftJoin(qAsset.billingUnitMaster)
+            .fetchJoin()
             .where(qAsset.assetTag.equalsIgnoreCase(tag.trim()))
             .fetchOne());
   }
@@ -78,10 +116,33 @@ public class AssetQueryRepository {
       builder.and(qAsset.hub.id.eq(hubId));
     }
 
-    return queryFactory.selectFrom(qAsset).where(builder).fetch();
+    return queryFactory
+        .selectFrom(qAsset)
+        .leftJoin(qAsset.type)
+        .fetchJoin()
+        .leftJoin(qAsset.model)
+        .fetchJoin()
+        .leftJoin(qAsset.hub)
+        .fetchJoin()
+        .where(builder)
+        .fetch();
   }
 
   public long countOperationalMachinesByType(Long typeId, String name, Long hubId) {
-    return fetchOperationalMachinesByType(typeId, name, hubId).size();
+    BooleanBuilder builder = new BooleanBuilder();
+    builder.and(qAsset.status.notIn(AssetStatus.RETIRED, AssetStatus.DAMAGED));
+
+    if (typeId != null) {
+      builder.and(qAsset.type.id.eq(typeId));
+    } else if (name != null && !name.isBlank()) {
+      builder.and(qAsset.model.name.equalsIgnoreCase(name.trim()));
+    }
+
+    if (hubId != null) {
+      builder.and(qAsset.hub.id.eq(hubId));
+    }
+
+    Long count = queryFactory.select(qAsset.count()).from(qAsset).where(builder).fetchOne();
+    return count != null ? count : 0L;
   }
 }

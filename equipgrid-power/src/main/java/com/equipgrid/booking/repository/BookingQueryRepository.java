@@ -34,7 +34,19 @@ public class BookingQueryRepository {
     if (status != null) {
       builder.and(qBooking.status.eq(status));
     }
-    return queryFactory.selectFrom(qBooking).where(builder).orderBy(qBooking.id.desc()).fetch();
+    return queryFactory
+        .selectFrom(qBooking)
+        .leftJoin(qBooking.customer)
+        .fetchJoin()
+        .leftJoin(qBooking.asset)
+        .fetchJoin()
+        .leftJoin(qBooking.farmLocation)
+        .fetchJoin()
+        .leftJoin(qBooking.rentalConfig)
+        .fetchJoin()
+        .where(builder)
+        .orderBy(qBooking.id.desc())
+        .fetch();
   }
 
   public Optional<Booking> fetchById(Long id) {
@@ -42,7 +54,18 @@ public class BookingQueryRepository {
       return Optional.empty();
     }
     return Optional.ofNullable(
-        queryFactory.selectFrom(qBooking).where(qBooking.id.eq(id)).fetchOne());
+        queryFactory
+            .selectFrom(qBooking)
+            .leftJoin(qBooking.customer)
+            .fetchJoin()
+            .leftJoin(qBooking.asset)
+            .fetchJoin()
+            .leftJoin(qBooking.farmLocation)
+            .fetchJoin()
+            .leftJoin(qBooking.rentalConfig)
+            .fetchJoin()
+            .where(qBooking.id.eq(id))
+            .fetchOne());
   }
 
   public Optional<Booking> fetchByBookingNumber(String bookingNumber) {
@@ -52,6 +75,14 @@ public class BookingQueryRepository {
     return Optional.ofNullable(
         queryFactory
             .selectFrom(qBooking)
+            .leftJoin(qBooking.customer)
+            .fetchJoin()
+            .leftJoin(qBooking.asset)
+            .fetchJoin()
+            .leftJoin(qBooking.farmLocation)
+            .fetchJoin()
+            .leftJoin(qBooking.rentalConfig)
+            .fetchJoin()
             .where(qBooking.bookingNumber.equalsIgnoreCase(bookingNumber.trim()))
             .fetchOne());
   }
