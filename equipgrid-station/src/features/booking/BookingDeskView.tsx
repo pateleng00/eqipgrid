@@ -29,6 +29,12 @@ import {
   Compass,
   Edit2,
   Tag,
+  Building,
+  Wrench,
+  ArrowRight,
+  ArrowLeft,
+  Calendar,
+  User,
 } from 'lucide-react';
 import { cn, formatINR, formatDate } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -331,6 +337,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
   // Assisted booking channel & callback toggle
   const [bookingSource, setBookingSource] = useState<BookingSource>('STATION');
   const [callbackRequested, setCallbackRequested] = useState<boolean>(false);
+
+  // Step-wise tab navigation in reservation modal ('MACHINE' | 'CUSTOMER_LOGISTICS' | 'CONFIRMATION')
+  const [reservationStep, setReservationStep] = useState<'MACHINE' | 'CUSTOMER_LOGISTICS' | 'CONFIRMATION'>('MACHINE');
 
   // Farm Location modal for creating/editing from booking desk
   const [farmModalOpen, setFarmModalOpen] = useState(false);
@@ -663,6 +672,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
     setQuote(null);
     setDeliveryAddress('');
     setNotes('');
+    setReservationStep('MACHINE');
     setShowCreateModal(true);
   };
 
@@ -1350,577 +1360,965 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               </button>
             </div>
 
+            {/* Step-Wise Tab Navigation Bar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 rounded-2xl border bg-slate-100/90 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
+              {/* Step 1: Machine & Tariff */}
+              <button
+                type="button"
+                onClick={() => setReservationStep('MACHINE')}
+                className={cn(
+                  'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
+                  reservationStep === 'MACHINE'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}
+              >
+                <div className={cn(
+                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                  reservationStep === 'MACHINE'
+                    ? 'bg-slate-950 text-amber-400'
+                    : currentAsset
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}>
+                  {currentAsset && reservationStep !== 'MACHINE' ? '✓' : '1'}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black truncate leading-tight">1. Machine & Tariff</div>
+                  <div className={cn(
+                    'text-[10px] truncate leading-tight mt-0.5',
+                    reservationStep === 'MACHINE' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
+                  )}>
+                    {currentAsset ? currentAsset.name : 'Choose Equipment'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Step 2: Customer & Delivery */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!currentAsset) {
+                    setErrorModal({ isOpen: true, message: 'Please select an available machine before proceeding to customer & delivery details.' });
+                    return;
+                  }
+                  setReservationStep('CUSTOMER_LOGISTICS');
+                }}
+                className={cn(
+                  'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
+                  reservationStep === 'CUSTOMER_LOGISTICS'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}
+              >
+                <div className={cn(
+                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                  reservationStep === 'CUSTOMER_LOGISTICS'
+                    ? 'bg-slate-950 text-amber-400'
+                    : selectedCustomerId && deliveryAddress
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}>
+                  {selectedCustomerId && deliveryAddress && reservationStep !== 'CUSTOMER_LOGISTICS' ? '✓' : '2'}
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black truncate leading-tight">2. Customer & Delivery</div>
+                  <div className={cn(
+                    'text-[10px] truncate leading-tight mt-0.5',
+                    reservationStep === 'CUSTOMER_LOGISTICS' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
+                  )}>
+                    {selectedCustomerId ? (scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Farmer Set') : 'Farmer & Location'}
+                  </div>
+                </div>
+              </button>
+
+              {/* Step 3: Operations & Review */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (!currentAsset) {
+                    setErrorModal({ isOpen: true, message: 'Please select an available machine first.' });
+                    return;
+                  }
+                  if (!selectedCustomerId) {
+                    setErrorModal({ isOpen: true, message: 'Please select a customer for this hub yard.' });
+                    return;
+                  }
+                  if (!deliveryAddress) {
+                    setErrorModal({ isOpen: true, message: 'Please enter a delivery destination address.' });
+                    return;
+                  }
+                  setReservationStep('CONFIRMATION');
+                }}
+                className={cn(
+                  'p-2.5 rounded-xl text-left transition-all cursor-pointer flex items-center gap-2.5',
+                  reservationStep === 'CONFIRMATION'
+                    ? 'bg-amber-500 text-slate-950 font-bold shadow-sm'
+                    : 'hover:bg-white/80 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}
+              >
+                <div className={cn(
+                  'h-7 w-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0',
+                  reservationStep === 'CONFIRMATION'
+                    ? 'bg-slate-950 text-amber-400'
+                    : 'bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
+                )}>
+                  3
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-black truncate leading-tight">3. Operations & Review</div>
+                  <div className={cn(
+                    'text-[10px] truncate leading-tight mt-0.5',
+                    reservationStep === 'CONFIRMATION' ? 'text-slate-900/80 font-medium' : 'text-slate-500 dark:text-slate-400'
+                  )}>
+                    {quote ? `${formatINR(quote.totalAmount)} • Finalize` : 'Operator & Channels'}
+                  </div>
+                </div>
+              </button>
+            </div>
+
             <form onSubmit={handleCreateReservation} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left 2 Cols: Booking Inputs */}
+              {/* Left 2 Cols: Step-Based Content */}
               <div className="lg:col-span-2 space-y-5">
-                {/* Farmer Task Recommendation Assistant */}
-                <div className={`rounded-2xl border p-4 transition-all ${
-                  isDaylight ? 'border-amber-300 bg-amber-50/50' : 'border-amber-500/30 bg-amber-950/20'
-                }`}>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-500" />
-                      <h4 className="text-xs font-black uppercase tracking-wider">
-                        Task-Based Machine Recommender (कार्य अनुसार मशीन चयन)
-                      </h4>
-                    </div>
-                    <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold">
-                      Instant Farmer Recommendation
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-                    Select the farmer’s immediate field operation. We’ll find matching machines with zero-deposit eligibility & fuel-efficient specs.
-                  </p>
 
-                  {/* Task Chips */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 mb-3">
-                    {[
-                      { key: 'weeding', label: 'Weeding / निराई', icon: '🌿' },
-                      { key: 'tilling', label: 'Tilling / जुताई', icon: '🚜' },
-                      { key: 'harvesting', label: 'Harvesting / कटाई', icon: '🌾' },
-                      { key: 'spraying', label: 'Spraying / छिड़काव', icon: '💧' },
-                      { key: 'digging', label: 'Digging / गड्ढा', icon: '🕳️' },
-                      { key: 'irrigation', label: 'Irrigation / सिंचाई', icon: '🌊' },
-                    ].map((t) => (
-                      <button
-                        key={t.key}
-                        type="button"
-                        onClick={() => handleSelectTask(t.key)}
-                        className={cn(
-                          'py-2 px-1 text-center rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
-                          selectedTask === t.key
-                            ? 'border-amber-500 bg-amber-500 text-slate-950 shadow-sm'
-                            : 'border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
-                        )}
-                      >
-                        <span className="text-base">{t.icon}</span>
-                        <span className="truncate w-full text-[10px] leading-tight">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {/* STEP 1: MACHINE & TARIFF SELECTION                                    */}
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {reservationStep === 'MACHINE' && (
+                  <div className="space-y-5">
+                    {/* Farmer Task Recommendation Assistant */}
+                    <div className={`rounded-2xl border p-4 transition-all ${
+                      isDaylight ? 'border-amber-300 bg-amber-50/50' : 'border-amber-500/30 bg-amber-950/20'
+                    }`}>
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-amber-500" />
+                          <h4 className="text-xs font-black uppercase tracking-wider">
+                            Task-Based Machine Recommender (कार्य अनुसार मशीन चयन)
+                          </h4>
+                        </div>
+                        <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold">
+                          Instant Farmer Recommendation
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+                        Select the farmer’s immediate field operation. We’ll find matching machines with zero-deposit eligibility & fuel-efficient specs.
+                      </p>
 
-                  {/* Acreage Slider & Recommendations */}
-                  {selectedTask && (
-                    <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-3">
-                      <div className="flex items-center justify-between text-xs font-bold">
-                        <span className="text-slate-700 dark:text-slate-300">Field Size: {taskAcreage} Acres (बीघा / एकड़)</span>
-                        <input
-                          type="range"
-                          min="0.5"
-                          max="15"
-                          step="0.5"
-                          value={taskAcreage}
-                          onChange={(e) => {
-                            const val = parseFloat(e.target.value);
-                            setTaskAcreage(val);
-                            handleSelectTask(selectedTask, val);
-                          }}
-                          className="w-32 accent-amber-500 cursor-pointer"
-                        />
+                      {/* Task Chips */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-1.5 mb-3">
+                        {[
+                          { key: 'weeding', label: 'Weeding / निराई', icon: '🌿' },
+                          { key: 'tilling', label: 'Tilling / जुताई', icon: '🚜' },
+                          { key: 'harvesting', label: 'Harvesting / कटाई', icon: '🌾' },
+                          { key: 'spraying', label: 'Spraying / छिड़काव', icon: '💧' },
+                          { key: 'digging', label: 'Digging / गड्ढा', icon: '🕳️' },
+                          { key: 'irrigation', label: 'Irrigation / सिंचाई', icon: '🌊' },
+                        ].map((t) => (
+                          <button
+                            key={t.key}
+                            type="button"
+                            onClick={() => handleSelectTask(t.key)}
+                            className={cn(
+                              'py-2 px-1 text-center rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
+                              selectedTask === t.key
+                                ? 'border-amber-500 bg-amber-500 text-slate-950 shadow-sm'
+                                : 'border-slate-300 dark:border-slate-700 hover:border-amber-400 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300'
+                            )}
+                          >
+                            <span className="text-base">{t.icon}</span>
+                            <span className="truncate w-full text-[10px] leading-tight">{t.label}</span>
+                          </button>
+                        ))}
                       </div>
 
-                      {isTaskLoading ? (
-                        <div className="text-center py-3 text-xs text-amber-600 font-bold animate-pulse">
-                          Finding best matched equipment...
-                        </div>
-                      ) : taskRecommendations.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                          {taskRecommendations.map((rec) => (
-                            <div
-                              key={rec.assetId}
-                              className={`p-3 rounded-xl border transition-all ${
-                                selectedAssetId === rec.assetId
-                                  ? 'border-emerald-500 bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500'
-                                  : 'border-amber-500/40 bg-white dark:bg-slate-900'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-1">
-                                <div>
-                                  <div className="font-black text-xs text-slate-900 dark:text-slate-100">{rec.assetName}</div>
-                                  <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">{rec.assetTag}</div>
-                                </div>
-                                <div className="text-right">
-                                  <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/{getBillingUnitLabel((rec as any).billingUnit)}</div>
-                                  <div className="text-[10px] text-slate-500 font-semibold">
-                                    {rec.depositAmount === 0 ? 'Zero Deposit' : `Deposit ${formatINR(rec.depositAmount)}`}
-                                  </div>
-                                </div>
-                              </div>
-                              <p className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
-                                {rec.reason}
-                              </p>
-                              <button
-                                type="button"
-                                onClick={() => handleApplyRecommendation(rec)}
-                                className={cn(
-                                  'mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center justify-center gap-1',
-                                  selectedAssetId === rec.assetId
-                                    ? 'bg-emerald-600 text-white'
-                                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                                )}
-                              >
-                                {selectedAssetId === rec.assetId ? (
-                                  <>
-                                    <Check className="h-3 w-3" />
-                                    <span>Selected Machine</span>
-                                  </>
-                                ) : (
-                                  <span>Select This Machine</span>
-                                )}
-                              </button>
+                      {/* Acreage Slider & Recommendations */}
+                      {selectedTask && (
+                        <div className="mt-3 pt-3 border-t border-amber-500/20 space-y-3">
+                          <div className="flex items-center justify-between text-xs font-bold">
+                            <span className="text-slate-700 dark:text-slate-300">Field Size: {taskAcreage} Acres (बीघा / एकड़)</span>
+                            <input
+                              type="range"
+                              min="0.5"
+                              max="15"
+                              step="0.5"
+                              value={taskAcreage}
+                              onChange={(e) => {
+                                const val = parseFloat(e.target.value);
+                                setTaskAcreage(val);
+                                handleSelectTask(selectedTask, val);
+                              }}
+                              className="w-32 accent-amber-500 cursor-pointer"
+                            />
+                          </div>
+
+                          {isTaskLoading ? (
+                            <div className="text-center py-3 text-xs text-amber-600 font-bold animate-pulse">
+                              Finding best matched equipment...
                             </div>
-                          ))}
+                          ) : taskRecommendations.length > 0 ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                              {taskRecommendations.map((rec) => (
+                                <div
+                                  key={rec.assetId}
+                                  className={`p-3 rounded-xl border transition-all ${
+                                    selectedAssetId === rec.assetId
+                                      ? 'border-emerald-500 bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500'
+                                      : 'border-amber-500/40 bg-white dark:bg-slate-900'
+                                  }`}
+                                >
+                                  <div className="flex items-start justify-between gap-1">
+                                    <div>
+                                      <div className="font-black text-xs text-slate-900 dark:text-slate-100">{rec.assetName}</div>
+                                      <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-bold">{rec.assetTag}</div>
+                                    </div>
+                                    <div className="text-right">
+                                      <div className="font-black text-xs text-emerald-600 dark:text-emerald-400">{formatINR(rec.dailyRate)}/{getBillingUnitLabel((rec as any).billingUnit)}</div>
+                                      <div className="text-[10px] text-slate-500 font-semibold">
+                                        {rec.depositAmount === 0 ? 'Zero Deposit' : `Deposit ${formatINR(rec.depositAmount)}`}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <p className="mt-1.5 text-[11px] text-slate-600 dark:text-slate-400 leading-snug">
+                                    {rec.reason}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApplyRecommendation(rec)}
+                                    className={cn(
+                                      'mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-black transition-all cursor-pointer flex items-center justify-center gap-1',
+                                      selectedAssetId === rec.assetId
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                                    )}
+                                  >
+                                    {selectedAssetId === rec.assetId ? (
+                                      <>
+                                        <Check className="h-3 w-3" />
+                                        <span>Selected Machine</span>
+                                      </>
+                                    ) : (
+                                      <span>Select This Machine</span>
+                                    )}
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-500 text-center py-2">
+                              No specific machines matched this task. Please browse available machines below.
+                            </p>
+                          )}
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-slate-500 text-center py-2">
-                          No specific machines matched this task. Please browse available machines below.
-                        </p>
                       )}
                     </div>
-                  )}
-                </div>
 
-                <div className={`rounded-2xl border p-4 ${isDaylight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-700 bg-[#1e1e1e]'}`}>
-                  <div className="mb-3 flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-amber-500" />
-                    <h4 className="text-xs font-black uppercase tracking-wider">Machine availability filters</h4>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
-                    <SearchSelect
-                      options={states.map((state) => ({ value: String(state.id), label: state.name }))}
-                      value={bookingStateId}
-                      onChange={(value) => {
-                        setBookingStateId(String(value || ''));
-                        setBookingCityId('');
-                        setBookingHubId('');
-                      }}
-                      placeholder="Select State *"
-                      isClearable={true}
-                    />
-                    <SearchSelect
-                      options={bookingCities.map((city) => ({ value: String(city.id), label: city.name }))}
-                      value={bookingCityId}
-                      onChange={(value) => {
-                        setBookingCityId(String(value || ''));
-                        setBookingHubId('');
-                      }}
-                      placeholder={
-                        !bookingStateId
-                          ? 'Select State First'
-                          : bookingCities.length === 0
-                          ? 'No cities in this State'
-                          : 'Select City *'
-                      }
-                      isDisabled={!bookingStateId || bookingCities.length === 0}
-                      noOptionsMessage="No cities found in this State"
-                      isClearable={true}
-                    />
-                    <SearchSelect
-                      options={bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))}
-                      value={bookingHubId}
-                      onChange={(value) => setBookingHubId(String(value || ''))}
-                      placeholder={
-                        !bookingStateId
-                          ? 'Select State First'
-                          : !bookingCityId
-                          ? 'Select City First'
-                          : bookingHubs.length === 0
-                          ? 'No hubs in this City'
-                          : 'Select Hub *'
-                      }
-                      isDisabled={!bookingCityId || bookingHubs.length === 0}
-                      noOptionsMessage="No hubs found in this City"
-                      isClearable={true}
-                    />
-                    <SearchSelect
-                      options={[
-                        { value: 'CONSTRUCTION', label: 'Construction Fleet' },
-                        { value: 'AGRICULTURE', label: 'Agriculture Machinery' },
-                        { value: 'MULTIPURPOSE_FLEET', label: 'Multipurpose Fleet' },
-                      ]}
-                      value={bookingCategory}
-                      onChange={(value) => {
-                        setBookingCategory(String(value || ''));
-                        setBookingModelId('');
-                      }}
-                      placeholder="Category (Optional)"
-                      isClearable={true}
-                    />
-                    <SearchSelect
-                      options={[
-                        { value: '', label: 'All Machine Models' },
-                        ...availableBookingModels.map((m) => ({
-                          value: String(m.id),
-                          label: m.name,
-                          subLabel: m.modelNumber,
-                        })),
-                      ]}
-                      value={bookingModelId}
-                      onChange={(value) => setBookingModelId(String(value || ''))}
-                      placeholder="Model (Optional)"
-                      isClearable={true}
-                    />
-                  </div>
-                </div>
-                {/* Equipment Selection */}
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className="block text-xs font-bold">Available machine <span className="text-amber-500">*</span></label>
-                    <span className="text-[11px] font-bold text-emerald-500">
-                      {hasSelectedFilters ? `${availableMachines.length} available` : 'Filters required'}
-                    </span>
-                  </div>
-                  {!hasSelectedFilters ? (
-                    <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                      <Filter className="h-4 w-4 text-amber-500 shrink-0" />
-                      <span>Please select filters above (State, City, Hub, Category or Model) to display available machinery.</span>
-                    </div>
-                  ) : availableMachines.length ? (
-                    <SearchSelect
-                      options={availableMachines.map((a) => {
-                        const unitSuffix = `/${a.unitLabel || getBillingUnitLabel(a.billingUnit)}`;
-                        const depText = a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
-                        const shiftPolicy = a.shiftTerms || getBillingUnitShiftTerms(a.billingUnit);
-                        return {
-                          value: a.id,
-                          label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,
-                          subLabel: `${formatINR(a.dailyRate)}${unitSuffix} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
-                          badge: 'AVAILABLE',
-                        };
-                      })}
-                      value={selectedAssetId}
-                      onChange={(val) => val && setSelectedAssetId(Number(val))}
-                      placeholder="Search an available machine..."
-                      isClearable={false}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-400">
-                      No available machines match this filter. Adjust the filters to continue.
-                    </div>
-                  )}
-                </div>
+                    {/* Machine Availability Filters (Organized cleanly in 2 ROWS for full visibility) */}
+                    <div className={`rounded-2xl border p-4 space-y-3.5 ${isDaylight ? 'border-slate-200 bg-slate-50/70' : 'border-slate-700/70 bg-[#1e1e1e]'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-amber-500" />
+                          <h4 className="text-xs font-black uppercase tracking-wider">Machine Availability Filters</h4>
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                          2-Row Structured Scope
+                        </span>
+                      </div>
 
-                {/* Rental Configuration / Billing Metric Tariff Slab Selection */}
-                {currentAsset && (
-                  <div>
-                    <div className="mb-1 flex items-center justify-between gap-3">
-                      <label className="block text-xs font-bold flex items-center gap-1.5">
-                        <Tag className="h-3.5 w-3.5 text-amber-500" />
-                        <span>Tariff Plan / Billing Metric <span className="text-amber-500">*</span></span>
-                      </label>
-                      <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
-                        {availableTariffs.length > 0
-                          ? `${availableTariffs.length} tariff slab${availableTariffs.length > 1 ? 's' : ''} available`
-                          : 'Default Machine Rate'}
-                      </span>
+                      {/* Row 1: Territory & Hub Yard Location (3 Columns) */}
+                      <div>
+                        <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                          <Building className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <span>1. Yard Location Scope (State / City / Hub Yard):</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">State *</label>
+                            <SearchSelect
+                              options={states.map((state) => ({ value: String(state.id), label: state.name }))}
+                              value={bookingStateId}
+                              onChange={(value) => {
+                                setBookingStateId(String(value || ''));
+                                setBookingCityId('');
+                                setBookingHubId('');
+                              }}
+                              placeholder="Select State *"
+                              isClearable={true}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">City / District *</label>
+                            <SearchSelect
+                              options={bookingCities.map((city) => ({ value: String(city.id), label: city.name }))}
+                              value={bookingCityId}
+                              onChange={(value) => {
+                                setBookingCityId(String(value || ''));
+                                setBookingHubId('');
+                              }}
+                              placeholder={
+                                !bookingStateId
+                                  ? 'Select State First'
+                                  : bookingCities.length === 0
+                                  ? 'No cities in this State'
+                                  : 'Select City *'
+                              }
+                              isDisabled={!bookingStateId || bookingCities.length === 0}
+                              noOptionsMessage="No cities found in this State"
+                              isClearable={true}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Dispatch Hub Yard *</label>
+                            <SearchSelect
+                              options={bookingHubs.map((hub) => ({ value: String(hub.id), label: hub.name }))}
+                              value={bookingHubId}
+                              onChange={(value) => setBookingHubId(String(value || ''))}
+                              placeholder={
+                                !bookingStateId
+                                  ? 'Select State First'
+                                  : !bookingCityId
+                                  ? 'Select City First'
+                                  : bookingHubs.length === 0
+                                  ? 'No hubs in this City'
+                                  : 'Select Hub Yard *'
+                              }
+                              isDisabled={!bookingCityId || bookingHubs.length === 0}
+                              noOptionsMessage="No hubs found in this City"
+                              isClearable={true}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Row 2: Equipment Classification & Machine Model (2 Columns) */}
+                      <div className="pt-2.5 border-t border-slate-200 dark:border-slate-800">
+                        <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                          <Wrench className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <span>2. Equipment Classification & Model (Optional):</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Fleet Category</label>
+                            <SearchSelect
+                              options={[
+                                { value: 'CONSTRUCTION', label: 'Construction Fleet' },
+                                { value: 'AGRICULTURE', label: 'Agriculture Machinery' },
+                                { value: 'MULTIPURPOSE_FLEET', label: 'Multipurpose Fleet' },
+                              ]}
+                              value={bookingCategory}
+                              onChange={(value) => {
+                                setBookingCategory(String(value || ''));
+                                setBookingModelId('');
+                              }}
+                              placeholder="All Categories (Optional)"
+                              isClearable={true}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">Machine Model</label>
+                            <SearchSelect
+                              options={[
+                                { value: '', label: 'All Machine Models' },
+                                ...availableBookingModels.map((m) => ({
+                                  value: String(m.id),
+                                  label: m.name,
+                                  subLabel: m.modelNumber ? `Model: ${m.modelNumber}` : undefined,
+                                })),
+                              ]}
+                              value={bookingModelId}
+                              onChange={(value) => setBookingModelId(String(value || ''))}
+                              placeholder="All Machine Models (Optional)"
+                              isClearable={true}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    {availableTariffs.length > 0 ? (
-                      <div className="space-y-2">
+                    {/* Equipment Selection */}
+                    <div>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <label className="block text-xs font-bold">Available machine <span className="text-amber-500">*</span></label>
+                        <span className="text-[11px] font-bold text-emerald-500">
+                          {hasSelectedFilters ? `${availableMachines.length} available in fleet` : 'Filters required'}
+                        </span>
+                      </div>
+                      {!hasSelectedFilters ? (
+                        <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                          <Filter className="h-4 w-4 text-amber-500 shrink-0" />
+                          <span>Please select filters above (State, City, Hub, Category or Model) to display available machinery.</span>
+                        </div>
+                      ) : availableMachines.length ? (
                         <SearchSelect
-                          options={availableTariffs.map((t) => {
-                            const unit = t.unitLabel || getBillingUnitLabel(t.billingUnit);
-                            const depText = t.depositAmount === 0 ? 'Zero-Dep (₹0)' : `Dep: ${formatINR(t.depositAmount)}`;
-                            const opText = !t.operatorDailyRate || t.operatorDailyRate === 0 ? 'Operator: ₹0 (Optional)' : `Operator: ${formatINR(t.operatorDailyRate)}/day`;
-                            const deliveryText = t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0 ? 'Delivery: ₹0 (Per-Trip)' : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
-                            const terms = t.shiftTerms || 'Standard operational terms';
+                          options={availableMachines.map((a) => {
+                            const unitSuffix = `/${a.unitLabel || getBillingUnitLabel(a.billingUnit)}`;
+                            const depText = a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
+                            const shiftPolicy = a.shiftTerms || getBillingUnitShiftTerms(a.billingUnit);
                             return {
-                              value: t.id,
-                              label: `${formatINR(t.baseDailyRate)} / ${unit} (${t.billingUnit || 'DAILY'})`,
-                              subLabel: `${depText} • ${opText} • ${deliveryText} • ${terms}`,
-                              badge: String(t.unitLabel || t.billingUnit || 'RATE').toUpperCase(),
+                              value: a.id,
+                              label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,
+                              subLabel: `${formatINR(a.dailyRate)}${unitSuffix} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
+                              badge: 'AVAILABLE',
                             };
                           })}
-                          value={selectedRentalConfigId}
-                          onChange={(val) => val && setSelectedRentalConfigId(Number(val))}
-                          placeholder="Select a tariff slab..."
+                          value={selectedAssetId}
+                          onChange={(val) => val && setSelectedAssetId(Number(val))}
+                          placeholder="Search an available machine..."
                           isClearable={false}
                         />
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-amber-500/40 p-4 text-xs text-slate-400">
+                          No available machines match this filter. Adjust the filters to continue.
+                        </div>
+                      )}
+                    </div>
 
-                        {currentTariff && (
-                          <div className={`p-2.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
-                            isDaylight ? 'bg-amber-50/70 border-amber-300/80 text-amber-950' : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                    {/* Selected Machine Detail Spec Card */}
+                    {currentAsset && (
+                      <div className={`p-3.5 rounded-2xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        isDaylight ? 'bg-amber-50/60 border-amber-200 text-slate-900' : 'bg-amber-950/20 border-amber-500/30 text-slate-100'
+                      }`}>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
+                              {currentAsset.assetTag}
+                            </span>
+                            <span className="font-black text-sm text-slate-900 dark:text-white truncate">
+                              {currentAsset.name}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
+                            <span>📍 Yard: <strong>{currentAsset.hubName || 'Dispatched Yard'}</strong></span>
+                            <span>•</span>
+                            <span>Category: <strong>{currentAsset.category}</strong></span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">
+                            Base: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}
+                          </div>
+                          <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                            {currentAsset.depositAmount === 0 ? '✨ ₹0 Zero Deposit Scheme' : `Security Deposit: ${formatINR(currentAsset.depositAmount)}`}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Rental Configuration / Billing Metric Tariff Slab Selection */}
+                    {currentAsset && (
+                      <div>
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <label className="block text-xs font-bold flex items-center gap-1.5">
+                            <Tag className="h-3.5 w-3.5 text-amber-500" />
+                            <span>Tariff Plan / Billing Metric <span className="text-amber-500">*</span></span>
+                          </label>
+                          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                            {availableTariffs.length > 0
+                              ? `${availableTariffs.length} tariff slab${availableTariffs.length > 1 ? 's' : ''} configured`
+                              : 'Default Machine Rate'}
+                          </span>
+                        </div>
+
+                        {availableTariffs.length > 0 ? (
+                          <div className="space-y-2">
+                            <SearchSelect
+                              options={availableTariffs.map((t) => {
+                                const unit = t.unitLabel || getBillingUnitLabel(t.billingUnit);
+                                const depText = t.depositAmount === 0 ? 'Zero-Dep (₹0)' : `Dep: ${formatINR(t.depositAmount)}`;
+                                const opText = !t.operatorDailyRate || t.operatorDailyRate === 0 ? 'Operator: ₹0 (Optional)' : `Operator: ${formatINR(t.operatorDailyRate)}/day`;
+                                const deliveryText = t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0 ? 'Delivery: ₹0 (Per-Trip)' : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
+                                const terms = t.shiftTerms || 'Standard operational terms';
+                                return {
+                                  value: t.id,
+                                  label: `${formatINR(t.baseDailyRate)} / ${unit} (${t.billingUnit || 'DAILY'})`,
+                                  subLabel: `${depText} • ${opText} • ${deliveryText} • ${terms}`,
+                                  badge: String(t.unitLabel || t.billingUnit || 'RATE').toUpperCase(),
+                                };
+                              })}
+                              value={selectedRentalConfigId}
+                              onChange={(val) => val && setSelectedRentalConfigId(Number(val))}
+                              placeholder="Select a tariff slab..."
+                              isClearable={false}
+                            />
+
+                            {currentTariff && (
+                              <div className={`p-2.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                                isDaylight ? 'bg-amber-50/70 border-amber-300/80 text-amber-950' : 'bg-amber-950/20 border-amber-500/30 text-amber-200'
+                              }`}>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500 text-slate-950">
+                                      {currentTariff.billingUnit || 'ACTIVE'}
+                                    </span>
+                                    <span className="font-mono font-black text-xs">
+                                      {formatINR(currentTariff.baseDailyRate)} / {currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
+                                    </span>
+                                  </div>
+                                  <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
+                                    ⏱️ {currentTariff.shiftTerms || 'Standard operational deployment terms'}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono">
+                                  <span className={currentTariff.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
+                                    {currentTariff.depositAmount === 0 ? '₹0 Zero-Dep' : `Dep: ${formatINR(currentTariff.depositAmount)}`}
+                                  </span>
+                                  <span className="text-slate-400">•</span>
+                                  <span>
+                                    {!currentTariff.operatorDailyRate || currentTariff.operatorDailyRate === 0 ? 'Operator: ₹0' : `Op: ${formatINR(currentTariff.operatorDailyRate)}/d`}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                            isDaylight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900/50 border-slate-800 text-slate-300'
                           }`}>
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500 text-slate-950">
-                                  {currentTariff.billingUnit || 'ACTIVE'}
-                                </span>
-                                <span className="font-mono font-black text-xs">
-                                  {formatINR(currentTariff.baseDailyRate)} / {currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
-                                </span>
-                              </div>
-                              <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 truncate">
-                                ⏱️ {currentTariff.shiftTerms || 'Standard operational deployment terms'}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 text-[11px] font-mono">
-                              <span className={currentTariff.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
-                                {currentTariff.depositAmount === 0 ? '₹0 Zero-Dep' : `Dep: ${formatINR(currentTariff.depositAmount)}`}
-                              </span>
-                              <span className="text-slate-400">•</span>
-                              <span>
-                                {!currentTariff.operatorDailyRate || currentTariff.operatorDailyRate === 0 ? 'Operator: ₹0' : `Op: ${formatINR(currentTariff.operatorDailyRate)}/d`}
-                              </span>
-                            </div>
+                            <span>Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}</span>
                           </div>
                         )}
                       </div>
-                    ) : (
-                      <div className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
-                        isDaylight ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-slate-900/50 border-slate-800 text-slate-300'
-                      }`}>
-                        <span>Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}</span>
-                      </div>
                     )}
+
+                    {/* Step 1 Bottom Action Bar */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <div className="text-xs text-slate-500">
+                        {currentAsset ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                            <Check className="h-4 w-4" /> Selected: <strong>{currentAsset.name}</strong>
+                          </span>
+                        ) : (
+                          <span>Select an available machine above to continue</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!currentAsset) {
+                            setErrorModal({ isOpen: true, message: 'Please select an available machine before proceeding.' });
+                            return;
+                          }
+                          setReservationStep('CUSTOMER_LOGISTICS');
+                        }}
+                        disabled={!currentAsset}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50 transition-all shadow-sm"
+                      >
+                        <span>Continue to Customer & Delivery (Step 2)</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                {/* Customer Selection */}
-                <div>
-                  <div className="mb-1 flex items-center justify-between gap-3">
-                    <label className="block text-xs font-bold">
-                      Customer / Contractor <span className="text-amber-500">*</span>
-                    </label>
-                    <div className="flex items-center gap-2">
-                      {bookingHubId && bookingHubId !== 'ALL' && selectedCustomerId ? (
-                        <>
-                          <button type="button" onClick={() => openCustomerDialog('edit')} className="text-[11px] font-bold text-slate-400 hover:text-amber-400">Edit</button>
-                          <button type="button" onClick={() => setCustomerPendingDelete(customerList.find((customer) => customer.id === selectedCustomerId) || null)} className="text-[11px] font-bold text-rose-400 hover:text-rose-300">Delete</button>
-                        </>
-                      ) : null}
-                      <button
-                        type="button"
-                        onClick={() => openCustomerDialog('add')}
-                        className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-400 cursor-pointer"
-                      >
-                        <UserPlus className="h-3 w-3" /> Add customer
-                      </button>
-                    </div>
-                  </div>
-
-                  {!bookingHubId || bookingHubId === 'ALL' ? (
-                    <div className={`rounded-xl border border-dashed p-3 text-xs flex items-center gap-2 ${
-                      isDaylight ? 'border-amber-300 bg-amber-50/70 text-amber-900 font-medium' : 'border-amber-500/30 bg-amber-950/20 text-amber-300'
-                    }`}>
-                      <MapPin className="h-4 w-4 text-amber-500 flex-shrink-0" />
-                      <span>Select <strong>State, City & Hub Yard</strong> above first to view customers assigned to that yard.</span>
-                    </div>
-                  ) : scopedCustomers.length ? (
-                    <SearchSelect
-                      options={scopedCustomers.map((c) => ({
-                        value: c.id,
-                        label: c.fullName,
-                        subLabel: `Phone: ${c.phone} • ${c.address}`,
-                        badge: c.tier,
-                      }))}
-                      value={selectedCustomerId || ''}
-                      onChange={(val) => setSelectedCustomerId(Number(val) || 0)}
-                      placeholder="Select customer assigned to this hub yard..."
-                      isClearable={false}
-                    />
-                  ) : (
-                    <div className="rounded-xl border border-dashed border-amber-500/40 p-3.5 text-xs text-slate-400">
-                      No customer is mapped to this Hub Yard yet.{' '}
-                      <button type="button" onClick={() => openCustomerDialog('add')} className="font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer">
-                        Add the first customer for this hub.
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {selectedCustomerId ? (
-                  <div>
-                    <div className="mb-1 flex items-center justify-between gap-3">
-                      <label className="block text-xs font-bold">Saved farm / delivery place</label>
-                      <div className="flex items-center gap-2">
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {/* STEP 2: CUSTOMER & DELIVERY LOGISTICS                                 */}
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {reservationStep === 'CUSTOMER_LOGISTICS' && (
+                  <div className="space-y-5">
+                    {/* Machine Selection Reminder Banner */}
+                    {currentAsset && (
+                      <div className="flex items-center justify-between p-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base">🚜</span>
+                          <div>
+                            <span className="font-bold text-slate-900 dark:text-slate-100">{currentAsset.name}</span>
+                            <span className="text-slate-500 font-mono text-[11px] ml-1.5">({currentAsset.assetTag})</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-2">
+                              {formatINR(currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate)}/{getBillingUnitLabel(currentTariff?.billingUnit || currentAsset.billingUnit)}
+                            </span>
+                          </div>
+                        </div>
                         <button
                           type="button"
-                          onClick={() => {
-                            setFarmLocationToEdit(null);
-                            setFarmModalOpen(true);
-                          }}
-                          className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                          onClick={() => setReservationStep('MACHINE')}
+                          className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
                         >
-                          <Plus className="h-3 w-3" />
-                          <span>Add Field</span>
+                          Change Machine
                         </button>
-                        {selectedFarmLocationId ? (
+                      </div>
+                    )}
+
+                    {/* Customer Selection */}
+                    <div>
+                      <div className="mb-1 flex items-center justify-between gap-3">
+                        <label className="block text-xs font-bold">
+                          Customer / Contractor <span className="text-amber-500">*</span>
+                        </label>
+                        <div className="flex items-center gap-2">
+                          {bookingHubId && bookingHubId !== 'ALL' && selectedCustomerId ? (
+                            <>
+                              <button type="button" onClick={() => openCustomerDialog('edit')} className="text-[11px] font-bold text-slate-400 hover:text-amber-400">Edit</button>
+                              <button type="button" onClick={() => setCustomerPendingDelete(customerList.find((customer) => customer.id === selectedCustomerId) || null)} className="text-[11px] font-bold text-rose-400 hover:text-rose-300">Delete</button>
+                            </>
+                          ) : null}
                           <button
                             type="button"
-                            onClick={() => {
-                              const loc = farmLocations.find((l) => l.id === selectedFarmLocationId);
-                              setFarmLocationToEdit(loc || null);
-                              setFarmModalOpen(true);
-                            }}
-                            className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-0.5 cursor-pointer ml-1"
+                            onClick={() => openCustomerDialog('add')}
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-400 cursor-pointer"
                           >
-                            <Edit2 className="h-3 w-3" />
-                            <span>Edit</span>
+                            <UserPlus className="h-3 w-3" /> Add customer
                           </button>
-                        ) : null}
+                        </div>
                       </div>
-                    </div>
-                    {farmLocations.length ? (
-                      <>
+
+                      {!bookingHubId || bookingHubId === 'ALL' ? (
+                        <div className={`rounded-xl border border-dashed p-3 text-xs flex items-center gap-2 ${
+                          isDaylight ? 'border-amber-300 bg-amber-50/70 text-amber-900 font-medium' : 'border-amber-500/30 bg-amber-950/20 text-amber-300'
+                        }`}>
+                          <MapPin className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                          <span>Select <strong>State, City & Hub Yard</strong> in Step 1 first to view customers assigned to that yard.</span>
+                        </div>
+                      ) : scopedCustomers.length ? (
                         <SearchSelect
-                          options={farmLocations.map((location) => ({
-                            value: location.id,
-                            label: location.localNameHindi
-                              ? `${location.localName} (${location.localNameHindi})`
-                              : location.localName,
-                            subLabel: [location.landmark || location.village, location.accessNotes].filter(Boolean).join(' • '),
-                            badge: location.isDefault ? 'DEFAULT' : location.locationType,
+                          options={scopedCustomers.map((c) => ({
+                            value: c.id,
+                            label: c.fullName,
+                            subLabel: `Phone: ${c.phone} • ${c.address}`,
+                            badge: c.tier,
                           }))}
-                          value={selectedFarmLocationId || ''}
-                          onChange={(value) => {
-                            const location = farmLocations.find((item) => item.id === Number(value));
-                            setSelectedFarmLocationId(Number(value) || 0);
-                            if (location) {
-                              setDeliveryAddress([location.localName, location.landmark || location.village].filter(Boolean).join(' — '));
-                            }
-                          }}
-                          placeholder="Choose the farmer's locally named field..."
+                          value={selectedCustomerId || ''}
+                          onChange={(val) => setSelectedCustomerId(Number(val) || 0)}
+                          placeholder="Select customer assigned to this hub yard..."
                           isClearable={false}
                         />
-                        {selectedFarmLocationId ? (() => {
-                          const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
-                          return location?.accessNotes ? (
-                            <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">Access note: {location.accessNotes}</p>
-                          ) : null;
-                        })() : null}
-                      </>
-                    ) : (
-                      <p className="rounded-lg border border-dashed border-slate-300 p-2.5 text-[11px] text-slate-500">
-                        No saved farm yet. Use the farmer’s WhatsApp location pin to save a locally named field, or enter a one-time delivery address below.
-                      </p>
-                    )}
-                  </div>
-                ) : null}
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-amber-500/40 p-3.5 text-xs text-slate-400">
+                          No customer is mapped to this Hub Yard yet.{' '}
+                          <button type="button" onClick={() => openCustomerDialog('add')} className="font-bold text-amber-400 hover:text-amber-300 underline cursor-pointer">
+                            Add the first customer for this hub.
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
-                {/* Rental Dates */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold mb-1">Dispatch Start Date</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1">Return End Date</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {/* Transit Distance (5km free rule) */}
-                <div>
-                  <div className="flex justify-between text-xs font-bold mb-1">
-                    <span>Delivery Transit Distance: {distanceKm} km</span>
-                    <span className="font-mono text-emerald-600 font-bold">
-                      {distanceKm <= 5 ? 'Free Pick & Drop (₹0)' : `+${(distanceKm - 5).toFixed(1)} km @ ₹10/km`}
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.5"
-                    max="35"
-                    step="0.5"
-                    value={distanceKm}
-                    onChange={(e) => setDistanceKm(parseFloat(e.target.value))}
-                    className="w-full accent-amber-500"
-                  />
-                </div>
-
-                {/* Delivery Site Address */}
-                <div>
-                  <label className="block text-xs font-bold mb-1">Delivery Destination Address</label>
-                  <input
-                    type="text"
-                    value={deliveryAddress}
-                    onChange={(e) => setDeliveryAddress(e.target.value)}
-                    placeholder="e.g. Hardoi Bypass Road, Near Sugar Mill"
-                    className="w-full rounded-lg border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:border-amber-500"
-                    required
-                  />
-                </div>
-
-                {/* Operator Checkbox */}
-                <div className="flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-700 p-2.5">
-                  <div className="flex items-center gap-2">
-                    <UserCheck className="h-4 w-4 text-amber-500" />
-                    <span className="text-xs font-bold">EquipGrid Machine Operator</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={operatorRequired || !!currentAsset?.operatorRequired}
-                    disabled={!!currentAsset?.operatorRequired}
-                    onChange={(e) => setOperatorRequired(e.target.checked)}
-                    className="h-4 w-4 accent-amber-500 cursor-pointer"
-                  />
-                </div>
-
-                {/* Assisted Booking Channel */}
-                <div>
-                  <label className="block text-xs font-bold mb-1">Assisted Booking Channel</label>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                    {[
-                      { value: 'STATION' as const, label: 'Yard Counter', icon: '🏢' },
-                      { value: 'PHONE_AGENT' as const, label: 'Phone Agent', icon: '📞' },
-                      { value: 'KISAN_MITRA' as const, label: 'Kisan Mitra', icon: '👨‍🌾' },
-                      { value: 'DEALER' as const, label: 'Dealer Net', icon: '🏬' },
-                      { value: 'FPO' as const, label: 'FPO Lead', icon: '🌾' },
-                      { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: '💬' },
-                    ].map((ch) => (
-                      <button
-                        key={ch.value}
-                        type="button"
-                        onClick={() => setBookingSource(ch.value)}
-                        className={cn(
-                          'py-1.5 px-1 rounded-lg border text-[11px] font-bold transition-colors cursor-pointer flex flex-col items-center gap-0.5',
-                          bookingSource === ch.value
-                            ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-extrabold'
-                            : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    {/* Saved Farm Location Selection */}
+                    {selectedCustomerId ? (
+                      <div>
+                        <div className="mb-1 flex items-center justify-between gap-3">
+                          <label className="block text-xs font-bold">Saved farm / delivery place</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFarmLocationToEdit(null);
+                                setFarmModalOpen(true);
+                              }}
+                              className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-0.5 cursor-pointer"
+                            >
+                              <Plus className="h-3 w-3" />
+                              <span>Add Field</span>
+                            </button>
+                            {selectedFarmLocationId ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const loc = farmLocations.find((l) => l.id === selectedFarmLocationId);
+                                  setFarmLocationToEdit(loc || null);
+                                  setFarmModalOpen(true);
+                                }}
+                                className="text-[11px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-0.5 cursor-pointer ml-1"
+                              >
+                                <Edit2 className="h-3 w-3" />
+                                <span>Edit</span>
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                        {farmLocations.length ? (
+                          <>
+                            <SearchSelect
+                              options={farmLocations.map((location) => ({
+                                value: location.id,
+                                label: location.localNameHindi
+                                  ? `${location.localName} (${location.localNameHindi})`
+                                  : location.localName,
+                                subLabel: [location.landmark || location.village, location.accessNotes].filter(Boolean).join(' • '),
+                                badge: location.isDefault ? 'DEFAULT' : location.locationType,
+                              }))}
+                              value={selectedFarmLocationId || ''}
+                              onChange={(value) => {
+                                const location = farmLocations.find((item) => item.id === Number(value));
+                                setSelectedFarmLocationId(Number(value) || 0);
+                                if (location) {
+                                  setDeliveryAddress([location.localName, location.landmark || location.village].filter(Boolean).join(' — '));
+                                }
+                              }}
+                              placeholder="Choose the farmer's locally named field..."
+                              isClearable={false}
+                            />
+                            {selectedFarmLocationId ? (() => {
+                              const location = farmLocations.find((item) => item.id === selectedFarmLocationId);
+                              return location?.accessNotes ? (
+                                <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">Access note: {location.accessNotes}</p>
+                              ) : null;
+                            })() : null}
+                          </>
+                        ) : (
+                          <p className="rounded-lg border border-dashed border-slate-300 p-2.5 text-[11px] text-slate-500">
+                            No saved farm yet. Use the farmer’s WhatsApp location pin to save a locally named field, or enter a one-time delivery address below.
+                          </p>
                         )}
-                      >
-                        <span className="text-sm">{ch.icon}</span>
-                        <span className="truncate w-full text-center text-[10px]">{ch.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                      </div>
+                    ) : null}
 
-                {/* Farmer Telephone Callback Requested */}
-                <div className="flex items-center justify-between rounded-lg border border-slate-300 dark:border-slate-700 p-2.5 bg-amber-500/5">
-                  <div className="flex items-center gap-2">
-                    <PhoneCall className="h-4 w-4 text-amber-500" />
+                    {/* Rental Dates */}
                     <div>
-                      <span className="text-xs font-bold block">Farmer Telephone Callback</span>
-                      <span className="text-[10px] text-slate-500">Require verbal telephone verification with farmer before driver dispatch</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-xs font-bold">Rental Date Window *</label>
+                        <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                          {quote ? `Duration: ${quote.durationDays} Days` : ''}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Dispatch Start Date</label>
+                          <input
+                            type="date"
+                            value={startDate}
+                            onChange={(e) => setStartDate(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Return End Date</label>
+                          <input
+                            type="date"
+                            value={endDate}
+                            onChange={(e) => setEndDate(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 p-2 text-xs font-bold bg-white text-slate-900 focus:outline-none focus:border-amber-500"
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Transit Distance (5km free rule) */}
+                    <div>
+                      <div className="flex justify-between text-xs font-bold mb-1">
+                        <span>Delivery Transit Distance: {distanceKm} km</span>
+                        <span className="font-mono text-emerald-600 font-bold">
+                          {distanceKm <= 5 ? 'Free Pick & Drop (₹0)' : `+${(distanceKm - 5).toFixed(1)} km @ ₹10/km`}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="35"
+                        step="0.5"
+                        value={distanceKm}
+                        onChange={(e) => setDistanceKm(parseFloat(e.target.value))}
+                        className="w-full accent-amber-500"
+                      />
+                    </div>
+
+                    {/* Delivery Site Address */}
+                    <div>
+                      <label className="block text-xs font-bold mb-1">Delivery Destination Address *</label>
+                      <input
+                        type="text"
+                        value={deliveryAddress}
+                        onChange={(e) => setDeliveryAddress(e.target.value)}
+                        placeholder="e.g. Hardoi Bypass Road, Near Sugar Mill, or Village Landmark"
+                        className="w-full rounded-lg border border-slate-300 p-2 text-xs bg-white text-slate-900 focus:outline-none focus:border-amber-500"
+                        required
+                      />
+                    </div>
+
+                    {/* Step 2 Bottom Action Bar */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setReservationStep('MACHINE')}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span>Back to Machine</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedCustomerId) {
+                            setErrorModal({ isOpen: true, message: 'Please select a customer for this hub yard.' });
+                            return;
+                          }
+                          if (!deliveryAddress) {
+                            setErrorModal({ isOpen: true, message: 'Please enter a delivery destination address.' });
+                            return;
+                          }
+                          setReservationStep('CONFIRMATION');
+                        }}
+                        disabled={!selectedCustomerId || !deliveryAddress}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50 transition-all shadow-sm"
+                      >
+                        <span>Continue to Review & Operations (Step 3)</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={callbackRequested}
-                    onChange={(e) => setCallbackRequested(e.target.checked)}
-                    className="h-4 w-4 accent-amber-500 cursor-pointer"
-                  />
-                </div>
+                )}
+
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {/* STEP 3: OPERATIONS & FINAL REVIEW                                     */}
+                {/* ═══════════════════════════════════════════════════════════════════════ */}
+                {reservationStep === 'CONFIRMATION' && (
+                  <div className="space-y-5">
+                    {/* Review Overview Card */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className={`p-3 rounded-xl border text-xs ${
+                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                      }`}>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                          <Wrench className="h-3 w-3 text-amber-500" /> Machine & Plan
+                        </div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100 truncate">{currentAsset?.name}</div>
+                        <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
+                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset?.dailyRate)} / {getBillingUnitLabel(quote?.billingUnit || currentTariff?.billingUnit || currentAsset?.billingUnit)}
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-xl border text-xs ${
+                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                      }`}>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                          <User className="h-3 w-3 text-amber-500" /> Farmer & Destination
+                        </div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100 truncate">
+                          {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
+                        </div>
+                        <div className="text-[11px] text-slate-500 truncate mt-0.5">
+                          {deliveryAddress}
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-xl border text-xs ${
+                        isDaylight ? 'bg-slate-50 border-slate-200' : 'bg-slate-900/60 border-slate-800'
+                      }`}>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center gap-1">
+                          <Calendar className="h-3 w-3 text-amber-500" /> Window & Distance
+                        </div>
+                        <div className="font-bold text-slate-900 dark:text-slate-100">{quote?.durationDays || 1} Days</div>
+                        <div className="text-[11px] text-slate-500 mt-0.5">
+                          {startDate} to {endDate} ({distanceKm} km)
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Operator Checkbox */}
+                    <div className="flex items-center justify-between rounded-xl border border-slate-300 dark:border-slate-700 p-3 bg-white dark:bg-slate-900">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-amber-500/10 text-amber-500">
+                          <UserCheck className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold block">EquipGrid Machine Operator</span>
+                          <span className="text-[10px] text-slate-500">
+                            {currentTariff?.operatorDailyRate ? `Rate: ${formatINR(currentTariff.operatorDailyRate)}/day` : 'Certified station driver & operator included'}
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={operatorRequired || !!currentAsset?.operatorRequired}
+                        disabled={!!currentAsset?.operatorRequired}
+                        onChange={(e) => setOperatorRequired(e.target.checked)}
+                        className="h-4 w-4 accent-amber-500 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Assisted Booking Channel */}
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5">Assisted Booking Channel</label>
+                      <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                        {[
+                          { value: 'STATION' as const, label: 'Yard Counter', icon: '🏢' },
+                          { value: 'PHONE_AGENT' as const, label: 'Phone Agent', icon: '📞' },
+                          { value: 'KISAN_MITRA' as const, label: 'Kisan Mitra', icon: '👨‍🌾' },
+                          { value: 'DEALER' as const, label: 'Dealer Net', icon: '🏬' },
+                          { value: 'FPO' as const, label: 'FPO Lead', icon: '🌾' },
+                          { value: 'WHATSAPP' as const, label: 'WhatsApp', icon: '💬' },
+                        ].map((ch) => (
+                          <button
+                            key={ch.value}
+                            type="button"
+                            onClick={() => setBookingSource(ch.value)}
+                            className={cn(
+                              'py-2 px-1 rounded-xl border text-[11px] font-bold transition-all cursor-pointer flex flex-col items-center gap-1',
+                              bookingSource === ch.value
+                                ? 'border-amber-500 bg-amber-500/15 text-amber-600 dark:text-amber-400 font-black shadow-xs'
+                                : 'border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                            )}
+                          >
+                            <span className="text-base">{ch.icon}</span>
+                            <span className="truncate w-full text-center text-[10px]">{ch.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Farmer Telephone Callback Requested */}
+                    <div className="flex items-center justify-between rounded-xl border border-slate-300 dark:border-slate-700 p-3 bg-amber-500/5">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-lg bg-amber-500/15 text-amber-500">
+                          <PhoneCall className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-bold block">Farmer Telephone Callback</span>
+                          <span className="text-[10px] text-slate-500">Require verbal telephone verification with farmer before driver dispatch</span>
+                        </div>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={callbackRequested}
+                        onChange={(e) => setCallbackRequested(e.target.checked)}
+                        className="h-4 w-4 accent-amber-500 cursor-pointer"
+                      />
+                    </div>
+
+                    {/* Booking Notes */}
+                    <div>
+                      <label className="block text-xs font-bold mb-1">Booking & Dispatch Notes (Optional)</label>
+                      <input
+                        type="text"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="e.g. Field adjacent to canal, call 30 mins prior to arrival"
+                        className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+
+                    {/* Step 3 Bottom Action Bar */}
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-200 dark:border-slate-800">
+                      <button
+                        type="button"
+                        onClick={() => setReservationStep('CUSTOMER_LOGISTICS')}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        <ArrowLeft className="h-4 w-4" />
+                        <span>Back to Customer & Logistics</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
+                        className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50 transition-all shadow-md"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>{isSubmitting ? 'Reserving...' : 'Confirm Reservation'}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
-              {/* Right Col: Instant Commercial Breakdown */}
+              {/* Right Col: Instant Commercial Breakdown & Live Sidebar */}
               <div className={`rounded-2xl border p-5 space-y-4 flex flex-col justify-between ${isDaylight ? 'border-amber-200 bg-amber-50/40' : 'border-amber-500/25 bg-[#2c2c2c]'}`}>
                 <div>
-                  <div className="flex items-center gap-2 border-b pb-2 border-slate-200">
+                  <div className="flex items-center gap-2 border-b pb-2 border-slate-200 dark:border-slate-700">
                     <Calculator className="h-4 w-4 text-amber-500" />
                     <h4 className="font-black text-xs">Commercial Quote</h4>
                   </div>
@@ -1959,7 +2357,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       }`}>
                         <span>{quote.depositAmount === 0 ? 'Security Deposit (Zero Scheme)' : 'Refundable Deposit'}</span>
                         <span className={quote.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : ''}>
-                          {quote.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(quote.depositAmount)}
+                          {quote.depositAmount === 0 ? '✨ ₹0 (Zero Deposit)' : formatINR(quote.depositAmount)}
                         </span>
                       </div>
                       <div className={`flex justify-between pt-2 border-t text-sm font-bold ${
@@ -2010,17 +2408,53 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 </div>
 
                 <div className="space-y-2 pt-4">
-                  <button
-                    type="submit"
-                    disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
-                    className={`w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors ${
-                      isDaylight
-                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                        : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                    }`}
-                  >
-                    {isSubmitting ? 'Reserving...' : 'Confirm Reservation'}
-                  </button>
+                  {reservationStep === 'MACHINE' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!currentAsset) {
+                          setErrorModal({ isOpen: true, message: 'Please select an available machine before continuing.' });
+                          return;
+                        }
+                        setReservationStep('CUSTOMER_LOGISTICS');
+                      }}
+                      disabled={!currentAsset}
+                      className="w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <span>Continue to Customer & Delivery (Step 2)</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : reservationStep === 'CUSTOMER_LOGISTICS' ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedCustomerId) {
+                          setErrorModal({ isOpen: true, message: 'Please select a customer for this hub yard.' });
+                          return;
+                        }
+                        if (!deliveryAddress) {
+                          setErrorModal({ isOpen: true, message: 'Please enter a delivery destination address.' });
+                          return;
+                        }
+                        setReservationStep('CONFIRMATION');
+                      }}
+                      disabled={!selectedCustomerId || !deliveryAddress}
+                      className="w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <span>Continue to Operations & Review (Step 3)</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || !currentAsset || availableMachines.length === 0 || scopedCustomers.length === 0}
+                      className="w-full py-3 rounded-xl text-xs font-black cursor-pointer disabled:opacity-50 transition-colors bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{isSubmitting ? 'Reserving...' : 'Confirm Reservation'}</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
