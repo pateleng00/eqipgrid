@@ -60,12 +60,12 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       ...provided,
       backgroundColor: state.isDisabled ? (isDaylight ? '#f8fafc' : '#18181b') : isDaylight ? '#ffffff' : '#121212',
       opacity: state.isDisabled ? 0.7 : 1,
-      borderColor: state.isFocused ? '#b45309' : isDaylight ? '#cbd5e1' : '#334155',
+      borderColor: state.isFocused ? '#0f766e' : isDaylight ? '#cbd5e1' : '#334155',
       borderRadius: '0.625rem',
       padding: '0 4px',
       fontSize: '0.875rem',
       borderWidth: isDaylight ? '1.5px' : '1px',
-      boxShadow: state.isFocused ? (isDaylight ? '0 0 0 3px rgba(180, 83, 9, 0.15)' : 'none') : 'none',
+      boxShadow: state.isFocused ? (isDaylight ? '0 0 0 3px rgba(15, 118, 110, 0.15)' : 'none') : 'none',
       transition: 'all 0.15s ease',
       cursor: state.isDisabled ? 'not-allowed' : 'pointer',
       minHeight: '38px',
@@ -74,7 +74,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       flexWrap: 'nowrap',
       alignItems: 'center',
       '&:hover': {
-        borderColor: state.isFocused ? '#b45309' : isDaylight ? '#94a3b8' : '#475569',
+        borderColor: state.isFocused ? '#0f766e' : isDaylight ? '#94a3b8' : '#475569',
       },
     }),
     valueContainer: (provided) => ({
@@ -150,8 +150,8 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       let textColor = isDaylight ? '#020617' : '#f4f4f5';
 
       if (isSelected) {
-        bgColor = isDaylight ? '#fed7aa' : 'rgba(245, 158, 11, 0.2)';
-        textColor = isDaylight ? '#78350f' : '#fbbf24';
+        bgColor = isDaylight ? '#ccfbf1' : 'rgba(15, 118, 110, 0.25)';
+        textColor = isDaylight ? '#0f766e' : '#2dd4bf';
       } else if (isFocused) {
         bgColor = isDaylight ? '#f1f5f9' : '#2c2c2c';
         textColor = isDaylight ? '#020617' : '#f4f4f5';
@@ -178,9 +178,9 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     }),
     dropdownIndicator: (provided, state) => ({
       ...provided,
-      color: state.isFocused ? '#b45309' : isDaylight ? '#1e293b' : '#a1a1aa',
+      color: state.isFocused ? '#0f766e' : isDaylight ? '#1e293b' : '#a1a1aa',
       '&:hover': {
-        color: '#b45309',
+        color: '#0f766e',
       },
     }),
     clearIndicator: (provided) => ({
@@ -232,7 +232,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       <components.SingleValue {...props}>
         <div className="flex items-center gap-1.5 truncate min-w-0 max-w-full overflow-hidden">
           <span
-            className={`truncate shrink-0 ${
+            className={`truncate min-w-0 ${
               isAllOption
                 ? isDaylight
                   ? 'text-slate-800 font-semibold text-xs'
@@ -249,7 +249,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
               className={`text-[10px] font-medium px-1.5 py-0.2 rounded shrink-0 border ${
                 data.badgeColor ||
                 (isDaylight
-                  ? 'bg-amber-100 text-amber-950 border-amber-400'
+                  ? 'bg-teal-50 text-teal-900 border-teal-300'
                   : 'bg-slate-800 text-slate-300 border-slate-700')
               }`}
             >

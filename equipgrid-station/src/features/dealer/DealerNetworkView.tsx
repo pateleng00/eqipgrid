@@ -177,10 +177,11 @@ export const DealerNetworkView: React.FC = () => {
             )}
           >
             <Users className="h-5 w-5 text-amber-500" />
-            Channel Partners & Dealer Network (6% Model)
+            Partner Dealers (डीलर साथी - 6% कमीशन)
           </h2>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-            Strategic partnerships across key cement yards, brick kilns & agri equipment stores
+            Local fertilizer, seed, cement, and brick kiln stores who book equipment for farmers (खाद, बीज व सीमेंट
+            डीलर)
           </p>
         </div>
 
@@ -189,11 +190,11 @@ export const DealerNetworkView: React.FC = () => {
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-none self-start sm:self-auto ${
             isDaylight
               ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold'
+              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
           }`}
         >
           <Plus className="h-4 w-4" />
-          <span>Onboard Channel Partner</span>
+          <span>+ Add Partner Dealer (+ नया डीलर जोड़ें)</span>
         </button>
       </div>
 
@@ -211,15 +212,15 @@ export const DealerNetworkView: React.FC = () => {
               isDaylight ? 'text-slate-500' : 'text-slate-400',
             )}
           >
-            Active Partners
+            Total Dealers (कुल डीलर)
           </span>
           <div
             className={cn('text-xl sm:text-2xl font-extrabold mt-0.5', isDaylight ? 'text-slate-950' : 'text-white')}
           >
-            {filteredDealers.length} Yards / Stores
+            {filteredDealers.length} Shops / Stores
           </div>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
-            Covering network service territories
+            Active partner stores across villages
           </p>
         </div>
 
@@ -235,11 +236,11 @@ export const DealerNetworkView: React.FC = () => {
               isDaylight ? 'text-slate-500' : 'text-slate-400',
             )}
           >
-            Commission Rule
+            Commission Rule (डीलर कमीशन)
           </span>
           <div className="text-xl sm:text-2xl font-extrabold text-amber-500 mt-0.5">6.0% Flat</div>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-500')}>
-            Calculated on Gross Equipment Rent
+            Given on equipment rent to partner shop
           </p>
         </div>
 

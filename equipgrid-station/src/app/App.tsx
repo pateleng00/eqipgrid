@@ -1,9 +1,10 @@
-import React, { useState, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Layout } from './Layout';
 import { Asset } from '../types';
 import { useAuth } from '../lib/AuthContext';
 import { LoginPage } from '../features/auth/LoginPage';
 import { ConfirmationModal } from '../components/ConfirmationModal';
+import { CommandPalette } from '../components/CommandPalette';
 import { api } from '../services/api';
 import { getInitialActiveTab, persistActiveTab } from '../lib/navigationState';
 
@@ -13,6 +14,9 @@ const DashboardView = lazy(() =>
 );
 const EquipmentCatalogView = lazy(() =>
   import('../features/equipment/EquipmentCatalogView').then((m) => ({ default: m.EquipmentCatalogView })),
+);
+const MaintenanceDeckView = lazy(() =>
+  import('../features/maintenance/MaintenanceDeckView').then((m) => ({ default: m.MaintenanceDeckView })),
 );
 const BookingDeskView = lazy(() =>
   import('../features/booking/BookingDeskView').then((m) => ({ default: m.BookingDeskView })),
@@ -61,6 +65,7 @@ export const App: React.FC = () => {
   });
   const [preselectedAsset, setPreselectedAsset] = useState<Asset | null>(null);
   const [guestBlockModal, setGuestBlockModal] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [triggerNewDeployment, setTriggerNewDeployment] = useState(false);
   const [, setApiVersion] = useState(0);
 
@@ -69,6 +74,19 @@ export const App: React.FC = () => {
     return api.subscribe(() => {
       setApiVersion((v) => v + 1);
     });
+  }, []);
+
+  // Global Command+K / Ctrl+K listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setCommandPaletteOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Listen to browser Back/Forward (popstate)
@@ -124,10 +142,12 @@ export const App: React.FC = () => {
       activeTab={isGuest ? 'catalog' : activeTab}
       onTabChange={handleTabChange}
       onNewDeployment={handleNewDeployment}
+      onOpenCommandPalette={() => setCommandPaletteOpen(true)}
     >
       <Suspense fallback={<ViewLoadingFallback />}>
         {activeTab === 'dashboard' && <DashboardView onNavigate={handleTabChange} />}
         {activeTab === 'catalog' && <EquipmentCatalogView onSelectForBooking={handleSelectForBooking} />}
+        {activeTab === 'maintenance' && <MaintenanceDeckView onNavigate={handleTabChange} />}
         {activeTab === 'booking' && (
           <BookingDeskView
             preselectedAsset={preselectedAsset}
@@ -146,6 +166,15 @@ export const App: React.FC = () => {
         {activeTab === 'cash' && <DailyCashReconciliationView />}
         {activeTab === 'users' && <UserManagementView />}
       </Suspense>
+
+      {/* Global Command Palette */}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        onNavigate={handleTabChange}
+        onNewDeployment={handleNewDeployment}
+        onSelectAsset={handleSelectForBooking}
+      />
 
       {/* Guest booking restriction modal */}
       <ConfirmationModal

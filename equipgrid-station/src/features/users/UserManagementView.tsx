@@ -336,7 +336,7 @@ export const UserManagementView: React.FC = () => {
             )}
           >
             <Crown className={cn('w-3.5 h-3.5', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
-            Root Super Admin
+            Root Admin (मुख्य एडमिन)
           </span>
         );
       case 'ADMIN':
@@ -350,7 +350,7 @@ export const UserManagementView: React.FC = () => {
             )}
           >
             <Shield className={cn('w-3.5 h-3.5', isDaylight ? 'text-indigo-700' : 'text-indigo-400')} />
-            Operations Admin
+            Admin (एडमिन)
           </span>
         );
       case 'MANAGER':
@@ -364,7 +364,7 @@ export const UserManagementView: React.FC = () => {
             )}
           >
             <Building2 className={cn('w-3.5 h-3.5', isDaylight ? 'text-emerald-700' : 'text-emerald-400')} />
-            Yard Manager
+            Yard Manager (यार्ड मैनेजर)
           </span>
         );
       case 'OPERATOR':
@@ -378,7 +378,7 @@ export const UserManagementView: React.FC = () => {
             )}
           >
             <KeyRound className={cn('w-3.5 h-3.5', isDaylight ? 'text-sky-700' : 'text-cyan-400')} />
-            Desk Operator
+            Desk Operator (काउंटर ऑपरेटर)
           </span>
         );
       case 'TECHNICIAN':
@@ -391,7 +391,7 @@ export const UserManagementView: React.FC = () => {
                 : 'bg-orange-500/15 text-orange-400 border-orange-500/30',
             )}
           >
-            Yard Technician
+            Mechanic (मिस्त्री / मैकेनिक)
           </span>
         );
       case 'DRIVER':
@@ -404,7 +404,7 @@ export const UserManagementView: React.FC = () => {
                 : 'bg-violet-500/15 text-violet-400 border-violet-500/30',
             )}
           >
-            Logistics Driver
+            Driver (ड्राइवर)
           </span>
         );
       default:
@@ -467,8 +467,11 @@ export const UserManagementView: React.FC = () => {
                   isDaylight ? 'text-slate-900' : 'text-white',
                 )}
               >
-                Staff & User Access Control
+                Station Staff & Logins (स्टाफ सदस्य व लॉगिन)
               </h1>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Team member accounts, roles, and yard permissions (स्टाफ सदस्य और उनकी जिम्मेदारियां)
+              </p>
             </div>
           </div>
         </div>
@@ -778,43 +781,6 @@ export const UserManagementView: React.FC = () => {
 
                       {/* Access Level Badge */}
                       <td className="px-4 py-3">{getRoleBadge(user.role)}</td>
-
-                      {/* Assigned Hub */}
-                      <td className="px-4 py-3">
-                        {user.hubName ? (
-                          <div
-                            className={cn(
-                              'flex items-center gap-1.5 font-medium',
-                              isDaylight ? 'text-slate-800' : 'text-white',
-                            )}
-                          >
-                            <MapPin
-                              className={cn(
-                                'w-3.5 h-3.5 shrink-0',
-                                isDaylight ? 'text-emerald-600' : 'text-emerald-400',
-                              )}
-                            />
-                            <span>{user.hubName}</span>
-                            {user.hubCode && (
-                              <span
-                                className={cn(
-                                  'text-[10px] font-mono px-1.5 py-0.5 rounded border',
-                                  isDaylight
-                                    ? 'bg-slate-100 text-slate-700 border-slate-300'
-                                    : 'bg-slate-800 text-slate-400 border-slate-700',
-                                )}
-                              >
-                                {user.hubCode}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className={cn('italic', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-                            Central HQ / Global
-                          </span>
-                        )}
-                      </td>
-
                       {/* Phone */}
                       <td className={cn('px-4 py-3 font-mono', isDaylight ? 'text-slate-800' : 'text-slate-300')}>
                         {user.phone ? (

@@ -11,6 +11,7 @@
 export const VALID_TABS = [
   'dashboard',
   'catalog',
+  'maintenance',
   'booking',
   'dispatch',
   'rental-configs',
@@ -83,6 +84,10 @@ export function getInitialActiveTab(isGuest: boolean): string {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const urlTab = urlParams.get('tab');
+      if (urlTab === 'yard-map') {
+        localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'catalog');
+        return 'catalog';
+      }
       if (urlTab && VALID_TABS.includes(urlTab as any)) {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, urlTab);
         return urlTab;
@@ -90,6 +95,10 @@ export function getInitialActiveTab(isGuest: boolean): string {
 
       // Check URL hash fallback (#payments)
       const hashTab = window.location.hash.replace(/^#/, '');
+      if (hashTab === 'yard-map') {
+        localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, 'catalog');
+        return 'catalog';
+      }
       if (hashTab && VALID_TABS.includes(hashTab as any)) {
         localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, hashTab);
         return hashTab;

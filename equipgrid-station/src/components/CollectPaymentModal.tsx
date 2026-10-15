@@ -321,21 +321,20 @@ export const CollectPaymentModal: React.FC<CollectPaymentModalProps> = ({
           >
             <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
             <div>
-              <strong className="font-bold">Zero-Open-Credit Policy Barrier (SOP-003):</strong>
+              <strong className="font-bold">Full Payment Required Before Release (नो उधारी नियम):</strong>
               <p className="text-[11px] mt-0.5 opacity-90">
                 {depositRequired === 0 ? (
                   <>
-                    Machinery cannot be released for yard handover until <strong>Advance Rent</strong> has been
-                    collected in full.{' '}
+                    Machine can only be released after <strong>Advance Rent</strong> has been collected in full.{' '}
                     <span className="text-emerald-600 dark:text-emerald-400 font-bold">
-                      Zero-Deposit Scheme Active (₹0 Deposit Required)
+                      Zero-Deposit Scheme Active (₹0 Deposit)
                     </span>
                     .
                   </>
                 ) : (
                   <>
-                    Machinery cannot be released for yard handover until both the <strong>Advance Rent</strong> and{' '}
-                    <strong>Security Deposit</strong> have been collected in full.
+                    Machine can only be released from yard after <strong>Advance Rent</strong> and{' '}
+                    <strong>Security Deposit</strong> have been paid in full (किराया और सिक्योरिटी पूरी जमा करें).
                   </>
                 )}
               </p>

@@ -737,10 +737,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             }`}
           >
             <CalendarCheck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-amber-400'}`} />
-            Deployments Desk
+            Bookings & Orders (बुकिंग व ग्राहक)
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            Manage equipment reservations, payment collection, and yard delivery challans in one unified workflow.
+            Farmer machine bookings, customer details, and booking status (किसानों की मशीन बुकिंग और विवरण)
           </p>
         </div>
 
@@ -757,7 +757,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             }`}
           >
             <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-            <span>Farmer Task Matcher</span>
+            <span>Match by Farm Work (काम से मशीन चुनें)</span>
           </button>
 
           <button
@@ -769,7 +769,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
             }`}
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>New Deployment</span>
+            <span>+ New Booking (नई बुकिंग)</span>
           </button>
         </div>
       </div>
@@ -980,7 +980,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
           <div className="flex items-center gap-2">
             <CalendarCheck className={`h-4 w-4 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
             <h3 className={`text-xs sm:text-sm font-black ${isDaylight ? 'text-slate-950' : 'text-white'}`}>
-              Equipment Deployments ({filteredBookings.length})
+              Customer Bookings (ग्राहक बुकिंग - {filteredBookings.length})
             </h3>
           </div>
 
@@ -1000,7 +1000,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
-              <span>All Bookings</span>
+              <span>All Bookings (सभी बुकिंग)</span>
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.2 rounded-full font-mono',
@@ -1026,7 +1026,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               )}
             >
               <Truck className="h-3 w-3" />
-              <span>Ready for Dispatch</span>
+              <span>Ready to Send (भेजने के लिए तैयार)</span>
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
@@ -1051,7 +1051,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     : 'bg-slate-800/80 text-slate-400 hover:bg-slate-700',
               )}
             >
-              <span>Dispatched & On Rent</span>
+              <span>On Field (किराए पर चल रही)</span>
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
@@ -1077,7 +1077,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
               )}
             >
               <Banknote className="h-3 w-3" />
-              <span>Pending Payment</span>
+              <span>Payment Due (बकाया रुपये)</span>
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold',
@@ -1442,9 +1442,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   <CalendarCheck className="h-5 w-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-lg">New Equipment Reservation</h3>
+                  <h3 className="font-black text-lg">Book a Machine (नई मशीन बुकिंग)</h3>
                   <p className="mt-0.5 text-xs text-slate-400">
-                    Set the rental dates, delivery details, and commercial terms.
+                    Select machine, dates, customer, and delivery details (तारीख, ग्राहक और डिलीवरी विवरण)
                   </p>
                 </div>
               </div>
@@ -1464,7 +1464,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
             {/* Step-Wise Tab Navigation Bar */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 rounded-2xl border bg-slate-100/90 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800">
-              {/* Step 1: Machine & Tariff */}
+              {/* Step 1: Select Machine */}
               <button
                 type="button"
                 onClick={() => setReservationStep('MACHINE')}
@@ -1488,7 +1488,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   {currentAsset && reservationStep !== 'MACHINE' ? '✓' : '1'}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-black truncate leading-tight">1. Machine & Tariff</div>
+                  <div className="text-xs font-black truncate leading-tight">1. Machine (मशीन चुनें)</div>
                   <div
                     className={cn(
                       'text-[10px] truncate leading-tight mt-0.5',
@@ -1535,7 +1535,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   {selectedCustomerId && deliveryAddress && reservationStep !== 'CUSTOMER_LOGISTICS' ? '✓' : '2'}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-black truncate leading-tight">2. Customer & Delivery</div>
+                  <div className="text-xs font-black truncate leading-tight">2. Customer (ग्राहक और पता)</div>
                   <div
                     className={cn(
                       'text-[10px] truncate leading-tight mt-0.5',
@@ -1551,7 +1551,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                 </div>
               </button>
 
-              {/* Step 3: Operations & Review */}
+              {/* Step 3: Review & Confirm */}
               <button
                 type="button"
                 onClick={() => {
@@ -1587,7 +1587,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                   3
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs font-black truncate leading-tight">3. Operations & Review</div>
+                  <div className="text-xs font-black truncate leading-tight">3. Review (जांचें और पक्का करें)</div>
                   <div
                     className={cn(
                       'text-[10px] truncate leading-tight mt-0.5',
@@ -1596,7 +1596,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         : 'text-slate-500 dark:text-slate-400',
                     )}
                   >
-                    {quote ? `${formatINR(quote.totalAmount)} • Finalize` : 'Operator & Channels'}
+                    Confirm Booking
                   </div>
                 </div>
               </button>

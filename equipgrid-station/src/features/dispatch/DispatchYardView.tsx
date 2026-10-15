@@ -378,8 +378,8 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
     if (!isZeroCreditPassed) {
       setErrorModal({
         isOpen: true,
-        title: 'Zero-Credit Barrier — Dispatch Blocked',
-        message: `Required minimum collection is ${formatINR(requiredInitial)}, but only ${formatINR(totalCollected)} has been received. Record the payment first, then return to dispatch.`,
+        title: 'Payment Required Before Handover (नो उधारी)',
+        message: `Total payment required is ${formatINR(requiredInitial)}, but only ${formatINR(totalCollected)} has been received so far. Please collect remaining balance first before releasing machine.`,
         variant: 'warning',
       });
       return;
@@ -427,10 +427,11 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
             )}
           >
             <Send className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-slate-400')} />
-            Fulfillment & Logistics Dispatch
+            Send Machine to Customer (मशीन भेजना व डिलीवरी)
           </h2>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-            Driver assignment, farm navigation, delivery ETA, field handover, and return pickup scheduling
+            Driver details, delivery address, time, and handing over machine to customer (ड्राइवर, डिलीवरी और मशीन
+            सुपुर्दगी)
           </p>
         </div>
       </div>
@@ -456,7 +457,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           )}
         >
           <Truck className="h-3.5 w-3.5 text-amber-500" />
-          <span>Delivery Jobs & Outbound Schedule</span>
+          <span>Machines to Send (भेजने वाली मशीनें)</span>
           <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950">
             {combinedDeliveries.length}
           </span>
@@ -476,7 +477,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           )}
         >
           <RotateCcw className="h-3.5 w-3.5 text-purple-500" />
-          <span>Return Pickup Jobs</span>
+          <span>Pickup from Field (खेत से वापस लाने वाली)</span>
           {combinedReturns.length > 0 ? (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-purple-500 text-white animate-pulse">
               {combinedReturns.length}
@@ -502,7 +503,7 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
           )}
         >
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-          <span>Yard Handover Desk</span>
+          <span>Yard Handover (यार्ड से मशीन देना)</span>
           <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-slate-800 text-slate-500">
             {pendingHandovers.length}
           </span>

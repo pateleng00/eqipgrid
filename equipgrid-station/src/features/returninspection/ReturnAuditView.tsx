@@ -176,10 +176,11 @@ export const ReturnAuditView: React.FC = () => {
           )}
         >
           <RotateCcw className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-purple-400')} />
-          Return Audit
+          Receive Return & Refund (मशीन वापसी व रिफंड)
         </h2>
         <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-          Showing dispatched & on-rent machines — select a booking to submit return inspection
+          Machines currently with customers — take return, check condition, and refund security deposit (मशीन वापस लें
+          और सिक्योरिटी लौटाएं)
         </p>
       </div>
 
@@ -431,10 +432,10 @@ export const ReturnAuditView: React.FC = () => {
                   </div>
                   <div>
                     <h3 className={cn('font-black text-base', isDaylight ? 'text-slate-950' : 'text-white')}>
-                      Return Audit Complete
+                      Machine Returned & Refund Completed (वापसी व रिफंड पूरा)
                     </h3>
                     <p className={cn('text-xs', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-                      Asset <strong className="text-amber-500">{completedInspection.assetTag}</strong> ·{' '}
+                      Machine <strong className="text-amber-500">{completedInspection.assetTag}</strong> ·{' '}
                       {completedInspection.nextAction}
                     </p>
                   </div>
@@ -447,10 +448,10 @@ export const ReturnAuditView: React.FC = () => {
                   )}
                 >
                   <div className="font-bold uppercase tracking-wider text-[10px] text-slate-500 border-b pb-1">
-                    Security Deposit Settlement Audit (F-004)
+                    Customer Refund & Deposit Receipt (सिक्योरिटी वापसी रसीद)
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Security Deposit Held in Escrow:</span>
+                    <span className="text-slate-500">Security Deposit Kept Earlier (जमा सिक्योरिटी):</span>
                     <span className="font-bold font-mono">
                       {depositPaid === 0 ? (
                         <span className="text-emerald-600 dark:text-emerald-400 font-bold">
@@ -462,7 +463,7 @@ export const ReturnAuditView: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Fuel Delta / Refueling Surcharge:</span>
+                    <span className="text-slate-500">Fuel Difference (डीजल/ईंधन का हिसाब):</span>
                     <span
                       className={cn('font-bold font-mono', fuelDeltaCharge > 0 ? 'text-rose-600' : 'text-slate-500')}
                     >
@@ -470,7 +471,7 @@ export const ReturnAuditView: React.FC = () => {
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-500">Damage / Repair Deductions:</span>
+                    <span className="text-slate-500">Damage / Repair Charges (टूट-फूट कटौती):</span>
                     <span
                       className={cn(
                         'font-bold font-mono',
@@ -482,7 +483,7 @@ export const ReturnAuditView: React.FC = () => {
                   </div>
                   {hasDamage && damageDescription && (
                     <div className="text-[11px] text-rose-500 bg-rose-50 dark:bg-rose-950/30 p-2 rounded border border-rose-200 dark:border-rose-900/40">
-                      <strong>Audit Damage Notes:</strong> {damageDescription}
+                      <strong>Damage Notes (खराबी का विवरण):</strong> {damageDescription}
                     </div>
                   )}
                   <div className="flex justify-between items-center border-t pt-2 font-bold text-sm">

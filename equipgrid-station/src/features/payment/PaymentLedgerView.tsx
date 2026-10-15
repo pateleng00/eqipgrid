@@ -271,10 +271,10 @@ export const PaymentLedgerView: React.FC = () => {
             )}
           >
             <CreditCard className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-emerald-400')} />
-            Payments & Ledger
+            Payments & Money (रुपये और हिसाब)
           </h2>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-            Append-only transaction ledger — payments are recorded at Booking, Dispatch, and Return stages
+            All money received via UPI & Cash during booking, dispatch, and returns (सभी भुगतान रिकॉर्ड)
           </p>
         </div>
         <button
@@ -284,10 +284,10 @@ export const PaymentLedgerView: React.FC = () => {
             setQrAmount('');
             fetchMerchantQr();
           }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black shadow-sm cursor-pointer whitespace-nowrap self-start sm:self-auto"
         >
           <QrCode className="h-4 w-4" />
-          Merchant UPI QR
+          Show UPI QR Code (QR कोड दिखाएं)
         </button>
       </div>
 
@@ -295,19 +295,19 @@ export const PaymentLedgerView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-shrink-0">
         {[
           {
-            label: 'Total Collected',
+            label: 'Total Collected (कुल कमाई)',
             value: formatINR(totalCollected),
             color: isDaylight ? 'text-emerald-700' : 'text-emerald-400',
             icon: <ArrowUpRight className="h-4 w-4" />,
           },
           {
-            label: 'Total Refunded',
+            label: 'Total Refunded (सिक्योरिटी वापसी)',
             value: formatINR(totalRefunded),
             color: isDaylight ? 'text-rose-600' : 'text-rose-400',
             icon: <ArrowDownLeft className="h-4 w-4" />,
           },
           {
-            label: 'Net Balance',
+            label: 'Net in Station (नेट बची राशि)',
             value: formatINR(netBalance),
             color: isDaylight ? 'text-slate-950' : 'text-white',
             icon: <CreditCard className="h-4 w-4" />,
@@ -364,7 +364,7 @@ export const PaymentLedgerView: React.FC = () => {
           )}
         >
           <CreditCard className="h-3.5 w-3.5" />
-          <span>Transaction Ledger</span>
+          <span>Payment Records (भुगतान रिकॉर्ड)</span>
         </button>
 
         <button
@@ -381,7 +381,7 @@ export const PaymentLedgerView: React.FC = () => {
           )}
         >
           <FileCheck className="h-3.5 w-3.5 text-amber-500" />
-          <span>Payment Proof Verification Queue</span>
+          <span>UPI Approvals (स्क्रीनशॉट जांच)</span>
           {pendingProofsCount > 0 ? (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500 text-slate-950 animate-pulse">
               {pendingProofsCount} PENDING
@@ -407,7 +407,7 @@ export const PaymentLedgerView: React.FC = () => {
           )}
         >
           <DollarSign className="h-3.5 w-3.5 text-purple-500" />
-          <span>Refund Settlement Queue</span>
+          <span>Refund Requests (सिक्योरिटी वापसी)</span>
           {pendingRefundsCount > 0 ? (
             <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
               {pendingRefundsCount} PENDING

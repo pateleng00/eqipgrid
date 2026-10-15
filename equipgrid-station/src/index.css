@@ -5,106 +5,23 @@
 :root {
   --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
-  /* Night mode elevation: surfaces get lighter as they rise above the canvas. */
-  --night-canvas: #121212;
-  --night-surface-1: #1e1e1e;
-  --night-surface-2: #242424;
-  --night-surface-3: #2c2c2c;
-  --night-text: #f4f4f5;
-  --night-text-muted: #a1a1aa;
-  --night-text-disabled: #52525b;
-  color-scheme: dark;
+  --primary-teal: #0f766e;
+  --primary-teal-hover: #115e59;
+  --primary-teal-light: #f0fdfa;
+  --primary-teal-border: #99f6e4;
+  color-scheme: light;
 }
 
+html,
 html.daylight {
   color-scheme: light;
 }
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--night-canvas);
-  color: var(--night-text);
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-
-/*
- * DARK MODE
- *
- * Dark surfaces use reflected ambient light instead of cast shadows. A barely
- * visible indigo wash keeps the neutral canvas connected to the product's
- * brand without changing the #121212 base colour.
- */
-html:not(.daylight) body {
-  background-image: radial-gradient(circle at top left, rgba(99, 102, 241, 0.035), transparent 42%);
-}
-
-html:not(.daylight) .bg-slate-950,
-html:not(.daylight) [class*='bg-slate-950/'] {
-  background-color: var(--night-canvas) !important;
-}
-
-/* Cards, sidebars, and persistent application chrome. */
-html:not(.daylight) .bg-slate-900,
-html:not(.daylight) [class*='bg-slate-900/'] {
-  background-color: var(--night-surface-1) !important;
-}
-
-/* Nested controls and raised content. */
-html:not(.daylight) .bg-slate-800,
-html:not(.daylight) [class*='bg-slate-800/'] {
-  background-color: var(--night-surface-2) !important;
-}
-
-/* Menus, selected controls, and the highest local elevation. */
-html:not(.daylight) .bg-slate-700,
-html:not(.daylight) [class*='bg-slate-700/'] {
-  background-color: var(--night-surface-3) !important;
-}
-
-/* Do not use shadows to signal elevation in night mode. */
-html:not(.daylight) [class*='shadow-'],
-html:not(.daylight) [class*='drop-shadow'] {
-  box-shadow: none !important;
-  filter: none !important;
-}
-
-/* Comfortable text contrast: reserve bright text for primary content only. */
-html:not(.daylight) .text-white,
-html:not(.daylight) [class*='text-slate-100'] {
-  color: var(--night-text) !important;
-}
-
-html:not(.daylight) [class*='text-slate-200'] {
-  color: #d4d4d8 !important;
-}
-
-html:not(.daylight) [class*='text-slate-300'],
-html:not(.daylight) [class*='text-slate-400'],
-html:not(.daylight) [class*='text-slate-500'] {
-  color: var(--night-text-muted) !important;
-}
-
-html:not(.daylight) [class*='text-slate-600'],
-html:not(.daylight) [class*='placeholder-slate-'] {
-  color: var(--night-text-disabled) !important;
-}
-
-/* Keep controls inside dark dialogs on the same soft elevation as the dialog. */
-html:not(.daylight)
-  [class*='fixed'][class*='inset-0']
-  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='select']):not([class*='Select']),
-html:not(.daylight) [class*='fixed'][class*='inset-0'] textarea,
-html:not(.daylight) [class*='fixed'][class*='inset-0'] select {
-  background-color: var(--night-surface-1) !important;
-  color: var(--night-text) !important;
-  border-color: #3f3f46 !important;
-}
-
-html:not(.daylight) [class*='fixed'][class*='inset-0'] input:not([class*='select']):not([class*='Select'])::placeholder,
-html:not(.daylight) [class*='fixed'][class*='inset-0'] textarea::placeholder {
-  color: var(--night-text-disabled) !important;
+  background-color: #f8fafc;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
 }
 
 code,
@@ -112,309 +29,160 @@ code,
   font-family: var(--font-mono);
 }
 
-/* Custom scrollbars */
+/* ==========================================================================
+   SCROLLBAR SYSTEM (Clean, Light Minimalist)
+   ========================================================================== */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--night-canvas);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--night-surface-3);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
-
-/* Daylight mode: Transparent background only, darker color combination for maximum contrast */
-html.daylight ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-html.daylight ::-webkit-scrollbar-thumb {
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-html.daylight ::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-html.daylight body {
-  background-color: #f1f5f9;
+/* ==========================================================================
+   LIGHT MODE: SOLID SURFACES, CARDS & DIALOGS
+   (Fix accidental dark backgrounds in light mode)
+   ========================================================================== */
+aside,
+header,
+footer,
+.card,
+[class*='bg-slate-950']:not(button):not([class*='ring-']):not([data-tooltip]):not(.fixed):not([class*='inset-0']):not([class*='backdrop-']),
+[class*='bg-slate-900']:not(button):not([class*='ring-']):not([data-tooltip]):not(.fixed):not([class*='inset-0']):not([class*='backdrop-']),
+[class*='bg-slate-850']:not(button):not([class*='ring-']):not([data-tooltip]):not(.fixed):not([class*='inset-0']):not([class*='backdrop-']),
+[class*='bg-slate-800']:not(button):not([class*='ring-']):not([data-tooltip]):not(.fixed):not([class*='inset-0']):not([class*='backdrop-']),
+[class*='bg-[#1e1e1e]']:not(button):not([data-tooltip]),
+[class*='bg-[#242424]']:not(button):not([data-tooltip]) {
+  background-color: #ffffff;
   color: #0f172a;
 }
 
+/* Sub-containers inside cards */
+.bg-slate-50,
+[class*='bg-slate-50/'] {
+  background-color: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+/* Crisp lighter borders across light mode */
+[class*='border-slate-800'],
+[class*='border-slate-900'],
+[class*='border-slate-700'] {
+  border-color: #e2e8f0;
+}
+
+[class*='divide-slate-800'],
+[class*='divide-slate-700'] {
+  border-color: #e2e8f0;
+}
+
 /* ==========================================================================
-   DAYLIGHT MODE: SOLID WHITE BACKGROUND DEFAULT FOR TABS, CARDS & PANELS
+   HIGH-CONTRAST TYPOGRAPHY
    ========================================================================== */
-html.daylight aside,
-html.daylight header,
-html.daylight footer,
-html.daylight .card,
-html.daylight [class*='bg-slate-950']:not(button):not([class*='text-']):not([class*='badge']),
-html.daylight [class*='bg-slate-900']:not(button):not([class*='text-']):not([class*='badge']),
-html.daylight [class*='bg-slate-850']:not(button):not([class*='text-']):not([class*='badge']),
-html.daylight [class*='bg-slate-800']:not(button):not([class*='text-']):not([class*='badge']),
-html.daylight [class*='bg-[#1e1e1e]'],
-html.daylight [class*='bg-[#242424]'] {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #0f172a;
+  font-weight: 800;
 }
 
-/* All Modals & Dialog popups: solid white background by default */
-html.daylight [class*='fixed'][class*='inset-0'] > div {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.2) !important;
+/* ==========================================================================
+   PRIMARY ACCENTS: DEEP FOREST TEAL (Replaces vibrant amber)
+   ========================================================================== */
+/* Primary Action Buttons */
+button[class*='bg-amber-500'],
+button[class*='bg-amber-400'],
+button[class*='bg-amber-600'],
+a[class*='bg-amber-500'],
+a[class*='bg-amber-600'] {
+  background-color: #0f766e !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-color: #0f766e !important;
+  box-shadow: 0 1px 2px 0 rgba(15, 118, 110, 0.2) !important;
 }
 
-/* Secondary info pills inside modals and cards (e.g., equipment details block) */
-html.daylight .bg-slate-50,
-html.daylight [class*='bg-slate-50/'] {
-  background-color: #f8fafc !important;
-  border-color: #e2e8f0 !important;
+button[class*='bg-amber-500']:hover,
+button[class*='bg-amber-400']:hover,
+button[class*='bg-amber-600']:hover,
+a[class*='bg-amber-500']:hover,
+a[class*='bg-amber-600']:hover {
+  background-color: #115e59 !important;
+  border-color: #115e59 !important;
 }
 
-/* Maintain solid visibility for primary buttons */
-html.daylight button[class*='bg-amber-500'],
-html.daylight button[class*='bg-amber-400'],
-html.daylight a[class*='bg-amber-500'] {
-  background-color: #f59e0b !important;
-  color: #020617 !important;
-  font-weight: 800 !important;
-}
-
-/* Dark action buttons preserve white text */
-html.daylight button[class~='bg-slate-950'],
-html.daylight button[class~='bg-slate-950'] *,
-html.daylight button[class~='bg-slate-900'],
-html.daylight button[class~='bg-slate-900'] *,
-html.daylight button[class~='bg-slate-800'],
-html.daylight button[class~='bg-slate-800'] *,
-html.daylight button[class~='bg-slate-700'],
-html.daylight button[class~='bg-slate-700'] *,
-html.daylight button[class*='bg-indigo-600'],
-html.daylight button[class*='bg-indigo-600'] *,
-html.daylight button[class*='bg-rose-600'],
-html.daylight button[class*='bg-rose-600'] *,
-html.daylight button[class*='bg-emerald-600'],
-html.daylight button[class*='bg-emerald-600'] *,
-html.daylight button[class*='bg-blue-600'],
-html.daylight button[class*='bg-blue-600'] * {
+/* Icons or text inside amber action buttons become white */
+button[class*='bg-amber-500'] svg,
+button[class*='bg-amber-400'] svg,
+button[class*='bg-amber-600'] svg,
+button[class*='bg-amber-500'] span,
+button[class*='bg-amber-400'] span,
+button[class*='bg-amber-600'] span {
   color: #ffffff !important;
 }
 
-/* Subtle badge fills */
-html.daylight [class*='bg-emerald-500/20'],
-html.daylight [class*='bg-emerald-500/10'],
-html.daylight [class*='bg-emerald-950/40'] {
-  background-color: rgba(16, 185, 129, 0.12) !important;
+/* Subtle Teal / Calm Badges */
+[class*='bg-amber-500/10'],
+[class*='bg-amber-500/15'],
+[class*='bg-amber-500/20'],
+[class*='bg-amber-900/20'],
+[class*='bg-amber-950/20'],
+.bg-amber-50 {
+  background-color: #f0fdfa !important;
+  border-color: #99f6e4 !important;
+  color: #0f766e !important;
+}
+
+[class*='bg-amber-500/10'] *,
+[class*='bg-amber-500/15'] *,
+[class*='bg-amber-500/20'] *,
+[class*='bg-amber-900/20'] *,
+[class*='bg-amber-950/20'] *,
+.bg-amber-50 * {
+  color: #0f766e !important;
+}
+
+/* Accent text */
+[class*='text-amber-500'],
+[class*='text-amber-600'],
+[class*='text-amber-700'] {
+  color: #0f766e !important;
+}
+
+svg[class*='text-amber-500'],
+svg[class*='text-amber-600'] {
+  color: #0f766e !important;
+}
+
+/* Emerald Badges */
+[class*='bg-emerald-500/20'],
+[class*='bg-emerald-500/10'],
+[class*='bg-emerald-950/40'] {
+  background-color: #ecfdf5 !important;
   color: #047857 !important;
-  border-color: #6ee7b7 !important;
-}
-
-html.daylight [class*='bg-amber-500/20'],
-html.daylight [class*='bg-amber-500/10'],
-html.daylight [class*='bg-amber-950/30'] {
-  background-color: rgba(245, 158, 11, 0.12) !important;
-  color: #92400e !important;
-  border-color: #fcd34d !important;
-}
-
-html.daylight [class*='bg-rose-500/20'],
-html.daylight [class*='bg-rose-500/10'] {
-  background-color: rgba(244, 63, 94, 0.12) !important;
-  color: #be123c !important;
-  border-color: #fda4af !important;
-}
-
-html.daylight [class*='bg-purple-500/20'],
-html.daylight [class*='bg-purple-500/10'],
-html.daylight [class*='bg-purple-950/25'] {
-  background-color: rgba(168, 85, 247, 0.12) !important;
-  color: #6b21a8 !important;
-  border-color: #d8b4fe !important;
-}
-
-html.daylight [class*='bg-sky-500/20'],
-html.daylight [class*='bg-sky-500/10'],
-html.daylight [class*='bg-sky-950/25'],
-html.daylight [class*='bg-sky-950/40'],
-html.daylight [class*='bg-blue-500/20'],
-html.daylight [class*='bg-blue-950/25'] {
-  background-color: #f0f9ff !important;
-  color: #0369a1 !important;
-  border-color: #7dd3fc !important;
-}
-
-html.daylight [class*='text-sky-300'],
-html.daylight [class*='text-sky-400'] {
-  color: #0369a1 !important;
-  font-weight: 800 !important;
+  border-color: #a7f3d0 !important;
 }
 
 /* ==========================================================================
-   DAYLIGHT MODE: CRISP DARKER BORDERS
+   FORM CONTROLS (Clean White, Slate-300 Border, Dark Slate Text)
    ========================================================================== */
-html.daylight [class*='border-slate-800'],
-html.daylight [class*='border-slate-900'],
-html.daylight [class*='border-slate-700'] {
-  border-color: #cbd5e1 !important;
-}
-
-html.daylight [class*='divide-slate-800'],
-html.daylight [class*='divide-slate-700'] {
-  border-color: #e2e8f0 !important;
-}
-
-/* ==========================================================================
-   DAYLIGHT MODE: DARKER COLOR COMBINATIONS (HIGH CONTRAST)
-   ========================================================================== */
-html.daylight h1,
-html.daylight h2,
-html.daylight h3,
-html.daylight h4,
-html.daylight h5,
-html.daylight h6 {
-  color: #020617 !important;
-  font-weight: 800;
-}
-
-/* Any light/white text classes become dark slate in daylight unless in a colored button */
-html.daylight :not(button):not(button *) > .text-white,
-html.daylight :not(button):not(button *) > [class*='text-white'],
-html.daylight [class*='dark:text-white']:not(button):not(button *) {
-  color: #0f172a !important;
-}
-
-html.daylight [class*='text-slate-100'],
-html.daylight [class*='text-slate-200'],
-html.daylight [class*='dark:text-slate-100'],
-html.daylight [class*='dark:text-slate-200'] {
-  color: #0f172a !important;
-  font-weight: 600;
-}
-
-html.daylight [class*='text-slate-300'],
-html.daylight [class*='dark:text-slate-300'] {
-  color: #1e293b !important;
-  font-weight: 600;
-}
-
-html.daylight [class*='text-slate-400'],
-html.daylight [class*='dark:text-slate-400'] {
-  color: #475569 !important;
-  font-weight: 600;
-}
-
-html.daylight [class*='text-slate-500'],
-html.daylight [class*='dark:text-slate-500'] {
-  color: #475569 !important;
-}
-
-/* Dark High-Contrast Amber & Yellow accents in Daylight Mode */
-html.daylight [class*='text-amber-100'],
-html.daylight [class*='text-amber-200'],
-html.daylight [class*='text-amber-300'],
-html.daylight [class*='text-amber-400'],
-html.daylight [class*='text-amber-500'],
-html.daylight [class*='text-yellow-100'],
-html.daylight [class*='text-yellow-200'],
-html.daylight [class*='text-yellow-300'],
-html.daylight [class*='text-yellow-400'],
-html.daylight [class*='text-yellow-500'],
-html.daylight [class*='text-orange-200'],
-html.daylight [class*='text-orange-300'],
-html.daylight [class*='text-orange-400'] {
-  color: #78350f !important; /* amber-900: ultra-high contrast on light/white */
-  font-weight: 700;
-}
-
-html.daylight strong[class*='text-amber-'],
-html.daylight b[class*='text-amber-'],
-html.daylight [class*='font-bold'][class*='text-amber-'],
-html.daylight [class*='font-extrabold'][class*='text-amber-'],
-html.daylight [class*='font-black'][class*='text-amber-'] {
-  color: #451a03 !important; /* amber-950 */
-  font-weight: 800;
-}
-
-html.daylight svg[class*='text-amber-'],
-html.daylight svg[class*='text-yellow-'] {
-  color: #92400e !important; /* amber-800 */
-}
-
-/* Light Amber Banners & Badges in Daylight */
-html.daylight [class*='bg-amber-500/10'],
-html.daylight [class*='bg-amber-500/15'],
-html.daylight [class*='bg-amber-500/20'],
-html.daylight [class*='bg-amber-900/20'],
-html.daylight [class*='bg-amber-900/25'],
-html.daylight [class*='bg-amber-950/20'],
-html.daylight .bg-amber-50 {
-  background-color: #fef3c7 !important;
-  border-color: #f59e0b !important;
-  color: #78350f !important;
-}
-
-html.daylight [class*='bg-amber-500/10'] *,
-html.daylight [class*='bg-amber-500/15'] *,
-html.daylight [class*='bg-amber-500/20'] *,
-html.daylight [class*='bg-amber-900/20'] *,
-html.daylight [class*='bg-amber-900/25'] *,
-html.daylight [class*='bg-amber-950/20'] *,
-html.daylight .bg-amber-50 * {
-  color: #78350f !important;
-}
-
-html.daylight [class*='bg-amber-500/10'] strong,
-html.daylight [class*='bg-amber-500/10'] b,
-html.daylight .bg-amber-50 strong,
-html.daylight .bg-amber-50 b {
-  color: #451a03 !important;
-}
-
-html.daylight [class*='bg-amber-500/10'] svg,
-html.daylight [class*='bg-amber-500/20'] svg,
-html.daylight .bg-amber-50 svg {
-  color: #92400e !important;
-}
-
-/* Darker Emerald */
-html.daylight [class*='text-emerald-400'],
-html.daylight [class*='text-emerald-300'] {
-  color: #047857 !important;
-  font-weight: 800;
-}
-
-/* Darker Rose */
-html.daylight [class*='text-rose-400'],
-html.daylight [class*='text-rose-300'] {
-  color: #be123c !important;
-  font-weight: 800;
-}
-
-/* Darker Purple */
-html.daylight [class*='text-purple-400'],
-html.daylight [class*='text-purple-300'] {
-  color: #6b21a8 !important;
-  font-weight: 800;
-}
-
-/* ==========================================================================
-   DAYLIGHT MODE: FORM CONTROLS
-   Solid white background, crisp border, dark text
-   ========================================================================== */
-html.daylight
-  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='select']):not([class*='Select']),
-html.daylight textarea,
-html.daylight select {
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='select']):not([class*='Select']),
+textarea,
+select {
   background-color: #ffffff !important;
   color: #0f172a !important;
   border-color: #cbd5e1 !important;
@@ -437,50 +205,33 @@ div[class*='Input'] input {
   padding: 0 !important;
 }
 
-html.daylight input:not([class*='select']):not([class*='Select'])::placeholder,
-html.daylight textarea::placeholder {
+input:not([class*='select']):not([class*='Select'])::placeholder,
+textarea::placeholder {
   color: #94a3b8 !important;
   font-weight: 400 !important;
   opacity: 1 !important;
 }
 
-html:not(.daylight) input::placeholder,
-html:not(.daylight) textarea::placeholder {
-  color: #71717a !important;
-  font-weight: 400 !important;
-  opacity: 0.85 !important;
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #0f766e !important;
+  box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2) !important;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #94a3b8;
-  font-weight: 400 !important;
-}
-
-html.daylight input:focus,
-html.daylight textarea:focus,
-html.daylight select:focus {
-  border-color: #b45309 !important;
-  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.2) !important;
-}
-
-html.daylight input[type='range'] {
-  accent-color: #b45309 !important;
-}
-
-html.daylight input[type='checkbox'] {
-  accent-color: #b45309 !important;
+input[type='range'],
+input[type='checkbox'] {
+  accent-color: #0f766e !important;
 }
 
 /* Table row hovers */
-html.daylight tr:hover {
-  background-color: rgba(226, 232, 240, 0.5) !important;
+tr:hover {
+  background-color: #f1f5f9 !important;
 }
 
 /* ==========================================================================
-   INSTANT CSS TOOLTIP SYSTEM (0ms Delay, Hardware Accelerated)
+   INSTANT CSS TOOLTIP SYSTEM
    ========================================================================== */
-
 [data-tooltip] {
   position: relative;
 }
@@ -502,12 +253,10 @@ html.daylight tr:hover {
     opacity 0.08s ease,
     transform 0.08s ease,
     visibility 0.08s;
-  box-shadow:
-    0 10px 25px -3px rgba(0, 0, 0, 0.4),
-    0 4px 6px -4px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background-color: #1e1e1e;
-  color: #f4f4f5;
+  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.25);
+  background-color: #0f172a;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* Arrow notch */
@@ -526,13 +275,6 @@ html.daylight tr:hover {
     visibility 0.08s;
 }
 
-html.daylight [data-tooltip]::before {
-  background-color: #0f172a;
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 10px 25px -3px rgba(15, 23, 42, 0.25);
-}
-
 /* Default / Top position */
 [data-tooltip]:not([data-tooltip-pos])::before,
 [data-tooltip][data-tooltip-pos='top']::before {
@@ -545,14 +287,10 @@ html.daylight [data-tooltip]::before {
   bottom: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  border-top-color: #1e1e1e;
-}
-html.daylight [data-tooltip]:not([data-tooltip-pos])::after,
-html.daylight [data-tooltip][data-tooltip-pos='top']::after {
   border-top-color: #0f172a;
 }
 
-/* Right position (for Sidebar and action buttons) */
+/* Right position */
 [data-tooltip][data-tooltip-pos='right']::before {
   left: calc(100% + 9px);
   top: 50%;
@@ -562,9 +300,6 @@ html.daylight [data-tooltip][data-tooltip-pos='top']::after {
   left: calc(100% + 4px);
   top: 50%;
   transform: translateY(-50%);
-  border-right-color: #1e1e1e;
-}
-html.daylight [data-tooltip][data-tooltip-pos='right']::after {
   border-right-color: #0f172a;
 }
 
@@ -578,13 +313,10 @@ html.daylight [data-tooltip][data-tooltip-pos='right']::after {
   top: calc(100% + 2px);
   left: 50%;
   transform: translateX(-50%);
-  border-bottom-color: #1e1e1e;
-}
-html.daylight [data-tooltip][data-tooltip-pos='bottom']::after {
   border-bottom-color: #0f172a;
 }
 
-/* Hover trigger: instant reveal (0ms delay) */
+/* Hover trigger */
 [data-tooltip]:hover::before {
   opacity: 1;
   visibility: visible;

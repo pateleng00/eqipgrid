@@ -735,7 +735,7 @@ export interface FarmerFriendlyStatusInfo {
   internalStatus: string;
   farmerLabelEn: string;
   farmerLabelHi: string;
-  step: 1 | 2 | 3 | 4 | 5;
+  step: 0 | 1 | 2 | 3 | 4 | 5;
   badgeColor: string;
   badgeDarkColor: string;
   descriptionEn: string;
@@ -816,6 +816,62 @@ export function getFarmerFriendlyStatus(status: BookingStatus | string): FarmerF
         badgeDarkColor: 'bg-slate-900/60 text-slate-300 border-slate-700',
         descriptionEn: 'Machine inspected and security deposit settled/refunded.',
         descriptionHi: 'मशीन यार्ड में वापस आई, सुरक्षा राशि का निपटारा हुआ।',
+      };
+    case 'AVAILABLE':
+      return {
+        internalStatus: status,
+        farmerLabelEn: 'Ready to Rent',
+        farmerLabelHi: 'किराए के लिए तैयार',
+        step: 0,
+        badgeColor: 'bg-emerald-50 text-emerald-900 border-emerald-300',
+        badgeDarkColor: 'bg-emerald-950/40 text-emerald-300 border-emerald-800/50',
+        descriptionEn: 'Cleaned, inspected, and ready for customer pickup.',
+        descriptionHi: 'साफ, जांची हुई और तुरंत किराए पर देने के लिए तैयार।',
+      };
+    case 'RESERVED':
+      return {
+        internalStatus: status,
+        farmerLabelEn: 'Booked',
+        farmerLabelHi: 'आरक्षित',
+        step: 1,
+        badgeColor: 'bg-sky-50 text-sky-900 border-sky-300',
+        badgeDarkColor: 'bg-sky-950/40 text-sky-300 border-sky-800/50',
+        descriptionEn: 'Reserved for an upcoming booking.',
+        descriptionHi: 'किसान के लिए सुरक्षित रखी गई है।',
+      };
+    case 'MAINTENANCE':
+      return {
+        internalStatus: status,
+        farmerLabelEn: 'In Repair Shed',
+        farmerLabelHi: 'सर्विस शेड में',
+        step: 0,
+        badgeColor: 'bg-amber-50 text-amber-900 border-amber-300',
+        badgeDarkColor: 'bg-amber-950/40 text-amber-300 border-amber-800/50',
+        descriptionEn: 'Undergoing routine oil change, sharpening or service.',
+        descriptionHi: 'नियमित सर्विस, तेल बदलाव या जांच में है।',
+      };
+    case 'INSPECTION':
+      return {
+        internalStatus: status,
+        farmerLabelEn: 'Condition Check',
+        farmerLabelHi: 'जांच जारी',
+        step: 0,
+        badgeColor: 'bg-sky-50 text-sky-900 border-sky-300',
+        badgeDarkColor: 'bg-sky-950/40 text-sky-300 border-sky-800/50',
+        descriptionEn: 'Technical inspection underway.',
+        descriptionHi: 'तकनीकी जांच की जा रही है।',
+      };
+    case 'DAMAGED':
+    case 'DAMAGE_ASSESSMENT':
+      return {
+        internalStatus: status,
+        farmerLabelEn: 'Needs Repair',
+        farmerLabelHi: 'मरम्मत चाहिए',
+        step: 0,
+        badgeColor: 'bg-rose-50 text-rose-900 border-rose-300',
+        badgeDarkColor: 'bg-rose-950/40 text-rose-300 border-rose-800/50',
+        descriptionEn: 'Broken part or damaged during field operation.',
+        descriptionHi: 'खराबी या टूट-फूट, मिस्त्री द्वारा ठीक होना बाकी।',
       };
     default:
       return {

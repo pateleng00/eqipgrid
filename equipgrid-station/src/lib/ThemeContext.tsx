@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type Theme = 'dark' | 'daylight';
+type Theme = 'daylight';
 
 interface ThemeContextType {
   theme: Theme;
@@ -9,35 +9,27 @@ interface ThemeContextType {
 }
 
 const ThemeContext = createContext<ThemeContextType>({
-  theme: 'dark',
+  theme: 'daylight',
   toggleTheme: () => {},
-  isDaylight: false,
+  isDaylight: true,
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(() => {
-    const saved = localStorage.getItem('equipgrid-theme') as Theme;
-    return saved === 'daylight' ? 'daylight' : 'dark';
-  });
+  const [theme] = useState<Theme>('daylight');
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'daylight') {
-      root.classList.add('daylight');
-      root.classList.remove('dark');
-    } else {
-      root.classList.remove('daylight');
-      root.classList.add('dark');
-    }
-    localStorage.setItem('equipgrid-theme', theme);
-  }, [theme]);
+    root.classList.add('daylight');
+    root.classList.remove('dark');
+    localStorage.setItem('equipgrid-theme', 'daylight');
+  }, []);
 
   const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'daylight' : 'dark'));
+    // Light mode is the default and only theme for station operations
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDaylight: theme === 'daylight' }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, isDaylight: true }}>
       {children}
     </ThemeContext.Provider>
   );

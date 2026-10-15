@@ -8,9 +8,16 @@ interface LayoutProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onNewDeployment?: () => void;
+  onOpenCommandPalette?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, onNewDeployment }) => {
+export const Layout: React.FC<LayoutProps> = ({
+  children,
+  activeTab,
+  onTabChange,
+  onNewDeployment,
+  onOpenCommandPalette,
+}) => {
   const { isDaylight } = useTheme();
 
   return (
@@ -20,7 +27,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
       }`}
     >
       {/* Top Navbar */}
-      <Navbar activeTab={activeTab} onTabChange={onTabChange} onNewDeployment={onNewDeployment} />
+      <Navbar
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        onNewDeployment={onNewDeployment}
+        onOpenCommandPalette={onOpenCommandPalette}
+      />
 
       {/* Main Container */}
       <div className="flex-1 flex overflow-hidden min-h-0">

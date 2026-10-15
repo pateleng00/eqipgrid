@@ -78,10 +78,10 @@ export const DailyCashReconciliationView: React.FC = () => {
             )}
           >
             <BarChart3 className={cn('h-5 w-5', isDaylight ? 'text-amber-700' : 'text-amber-400')} />
-            End of Day Report
+            Daily Cash Register (दैनिक नकद हिसाब)
           </h2>
           <p className={cn('text-[11px] mt-0.5', isDaylight ? 'text-slate-500' : 'text-slate-400')}>
-            Daily cash balancing, receipts breakdown & DPR benchmark vs actuals
+            Cash in drawer, UPI collections, and day-end balancing (दैनिक गल्ला व रोकड़ मिलान)
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

@@ -99,7 +99,7 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
               <Send className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="font-black text-sm sm:text-base">Yard Dispatch & Handover Formality</h3>
+              <h3 className="font-black text-sm sm:text-base">Send Machine to Customer (मशीन सुपुर्दगी व चालान)</h3>
               <p className="text-[11px] text-slate-500 font-mono">
                 Booking: <span className="text-amber-600 font-bold">{booking.bookingNumber}</span>
               </p>
@@ -132,10 +132,11 @@ export const HandoverChecklistModal: React.FC<HandoverChecklistModalProps> = ({
             >
               <CheckCircle2 className="h-7 w-7 shrink-0 text-emerald-500" />
               <div>
-                <h4 className="font-black text-base">Outward Challan Issued Successfully!</h4>
+                <h4 className="font-black text-base">Delivery Receipt Generated (चालान तैयार हो गया)</h4>
                 <p className={cn('text-xs mt-0.5', isDaylight ? 'text-slate-700' : 'opacity-90')}>
                   Machine <strong className="text-amber-600 font-bold">{issuedChallan.assetTag}</strong> has been handed
-                  over and transitioned to <strong className="text-emerald-600 font-bold">ON_RENT</strong>.
+                  over to customer and marked <strong className="text-emerald-600 font-bold">On Rent (किराए पर)</strong>
+                  .
                 </p>
               </div>
             </div>

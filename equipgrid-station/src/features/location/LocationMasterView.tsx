@@ -329,8 +329,11 @@ export const LocationMasterView: React.FC = () => {
             }`}
           >
             <MapPin className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Location & Territory Master
+            Hub Locations & Areas (स्टेशन व केंद्र)
           </h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Station yards, operating cities, and farmer delivery locations (स्टेशन, शहर व खेत)
+          </p>
         </div>
 
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -345,7 +348,7 @@ export const LocationMasterView: React.FC = () => {
                 }`}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Add State</span>
+                <span>+ State (+ राज्य)</span>
               </button>
               <button
                 onClick={handleOpenAddCity}
@@ -356,18 +359,18 @@ export const LocationMasterView: React.FC = () => {
                 }`}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>Add City</span>
+                <span>+ City (+ शहर)</span>
               </button>
               <button
                 onClick={handleOpenAddHub}
                 className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none ${
                   isDaylight
                     ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
+                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
                 }`}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>New Hub Yard</span>
+                <span>+ New Station Yard (+ नया स्टेशन)</span>
               </button>
             </>
           ) : (
@@ -388,7 +391,7 @@ export const LocationMasterView: React.FC = () => {
               }`}
             >
               <Plus className="h-4 w-4" />
-              <span>Add Farmer Field / Delivery Place</span>
+              <span>+ Add Farmer Field (+ खेत का पता जोड़ें)</span>
             </button>
           )}
         </div>
@@ -402,12 +405,12 @@ export const LocationMasterView: React.FC = () => {
           className={cn(
             'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
             activeTab === 'hubs'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
+              ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
               : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800',
           )}
         >
           <Building2 className="h-3.5 w-3.5" />
-          <span>Hub Yards & Territory</span>
+          <span>Station Yards (स्टेशन व यार्ड)</span>
           <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/10 font-mono">
             {hubs.length}
           </span>
@@ -418,12 +421,12 @@ export const LocationMasterView: React.FC = () => {
           className={cn(
             'px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer',
             activeTab === 'farms'
-              ? 'bg-amber-500 text-slate-950 shadow-sm'
+              ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
               : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800',
           )}
         >
           <MapPin className="h-3.5 w-3.5" />
-          <span>Farmer Farm Locations (खेत मास्टर)</span>
+          <span>Farmer Fields (किसानों के खेत)</span>
           <span className="ml-1 text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 dark:bg-white/10 font-mono">
             {allFarmLocations.length}
           </span>

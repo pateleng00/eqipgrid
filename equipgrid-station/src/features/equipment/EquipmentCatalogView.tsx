@@ -818,25 +818,25 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
           {[
             {
               id: 'fleet' as const,
-              label: 'Fleet Machinery',
+              label: 'All Machines (सभी मशीनें)',
               icon: Truck,
               count: assetsList.length,
             },
             {
               id: 'manufacturers' as const,
-              label: 'Manufacturers (OEM)',
+              label: 'Brands & Companies (कंपनियां)',
               icon: Building2,
               count: mfgCount,
             },
             {
               id: 'types' as const,
-              label: 'Equipment Types',
+              label: 'Machine Types (मशीन प्रकार)',
               icon: Layers,
               count: typeCount,
             },
             {
               id: 'models' as const,
-              label: 'Asset Models',
+              label: 'Models (मॉडल)',
               icon: Cpu,
               count: modelCount,
             },
@@ -896,10 +896,11 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                 className={`text-lg sm:text-xl font-black flex items-center gap-2 ${isDaylight ? 'text-slate-950' : 'text-white'}`}
               >
                 <Truck className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-                Fleet &amp; Machinery
+                All Machines (सभी मशीनें)
               </h2>
               <p className={`text-[11px] mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                {filteredAssets.length} machines · {statsAvailable} available · {statsOnRent} on rent
+                {filteredAssets.length} machines · {statsAvailable} ready to rent (तैयार) · {statsOnRent} on rent (किराए
+                पर)
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -932,11 +933,10 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     isDaylight
                       ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
                   }`}
                 >
-                  <Plus className="h-4 w-4 stroke-[2.5]" />
-                  Add Machine
+                  <Plus className="h-4 w-4 stroke-[2.5]" />+ Add Machine (+ नई मशीन)
                 </button>
               )}
             </div>

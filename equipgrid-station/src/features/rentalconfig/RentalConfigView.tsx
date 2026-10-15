@@ -351,20 +351,23 @@ export const RentalConfigView: React.FC = () => {
             }`}
           >
             <SlidersHorizontal className={`h-5 w-5 ${isDaylight ? 'text-amber-700' : 'text-slate-400'}`} />
-            Rental Configuration
+            Rental Rates & Pricing (किराया दरें व नियम)
           </h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Daily rates, security deposit, and free delivery distance for each machine (दैनिक किराया और सिक्योरिटी)
+          </p>
         </div>
 
         <button
           onClick={handleOpenAdd}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-none self-start sm:self-auto ${
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none self-start sm:self-auto ${
             isDaylight
-              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-              : 'bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700'
+              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
+              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
           }`}
         >
           <Plus className="h-4 w-4" />
-          <span>New Rental Config</span>
+          <span>+ Add New Rate (+ नई दर जोड़ें)</span>
         </button>
       </div>
 

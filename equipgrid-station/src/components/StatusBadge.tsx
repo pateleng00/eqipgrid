@@ -9,7 +9,7 @@ interface StatusBadgeProps {
   showFarmerLabel?: boolean;
 }
 
-export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', showFarmerLabel = false }) => {
+export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, size = 'md', showFarmerLabel = true }) => {
   const { isDaylight } = useTheme();
   const color = getStatusColor(status, isDaylight);
   const farmerInfo = getFarmerFriendlyStatus(status);
