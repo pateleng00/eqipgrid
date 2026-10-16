@@ -100,7 +100,7 @@ public class DispatchServiceImpl implements IDispatchService {
             .fuelLevel(
                 request.getFuelLevel() != null && !request.getFuelLevel().isBlank()
                     ? request.getFuelLevel()
-                    : null)
+                    : "100%")
             .engineHoursOut(
                 request.getEngineHoursOut() != null
                     ? request.getEngineHoursOut()

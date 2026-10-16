@@ -348,7 +348,7 @@ export const LocationMasterView: React.FC = () => {
                 }`}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>+ State (+ राज्य)</span>
+                <span>State (राज्य)</span>
               </button>
               <button
                 onClick={handleOpenAddCity}
@@ -359,18 +359,14 @@ export const LocationMasterView: React.FC = () => {
                 }`}
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>+ City (+ शहर)</span>
+                <span>City (शहर)</span>
               </button>
               <button
                 onClick={handleOpenAddHub}
-                className={`flex items-center gap-1 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-colors shadow-none ${
-                  isDaylight
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                    : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
-                }`}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30"
               >
                 <Plus className="h-3.5 w-3.5" />
-                <span>+ New Station Yard (+ नया स्टेशन)</span>
+                <span>Add Hub (नया स्टेशन)</span>
               </button>
             </>
           ) : (
@@ -384,14 +380,10 @@ export const LocationMasterView: React.FC = () => {
                 setFarmModalCustomer(targetCustomer || null);
                 setIsFarmModalOpen(true);
               }}
-              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-colors shadow-sm ${
-                isDaylight
-                  ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                  : 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-              }`}
+              className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30"
             >
               <Plus className="h-4 w-4" />
-              <span>+ Add Farmer Field (+ खेत का पता जोड़ें)</span>
+              <span>Add Farmer Field (खेत का पता जोड़ें)</span>
             </button>
           )}
         </div>
@@ -794,7 +786,7 @@ export const LocationMasterView: React.FC = () => {
                 <MapPin className="h-10 w-10 text-slate-400 mb-2 stroke-[1.5]" />
                 <p className="text-sm font-bold">No farmer fields found</p>
                 <p className="text-xs text-slate-400 mt-1 max-w-md">
-                  No farm location matched your search criteria. Click "+ Add Farmer Field / Delivery Place" above to
+                  No farm location matched your search criteria. Click "Add Farmer Field / Delivery Place" above to
                   register a field with local spoken names and tractor access instructions.
                 </p>
               </div>

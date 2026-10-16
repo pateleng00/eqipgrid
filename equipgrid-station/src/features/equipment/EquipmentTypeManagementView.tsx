@@ -334,7 +334,7 @@ export const EquipmentTypeManagementView: React.FC = () => {
           </button>
           <button
             onClick={openCreateModal}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-900/30 transition-all cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             Add Equipment Type

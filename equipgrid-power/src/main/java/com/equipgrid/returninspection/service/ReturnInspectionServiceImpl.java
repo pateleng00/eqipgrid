@@ -67,7 +67,10 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
         ReturnInspection.builder()
             .booking(booking)
             .asset(asset)
-            .fuelLevelReturn(request.getFuelLevelReturn())
+            .fuelLevelReturn(
+                request.getFuelLevelReturn() != null && !request.getFuelLevelReturn().isBlank()
+                    ? request.getFuelLevelReturn()
+                    : "100%")
             .fuelDeltaCharge(
                 request.getFuelDeltaCharge() != null
                     ? request.getFuelDeltaCharge()
@@ -76,11 +79,15 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
                 request.getEngineHoursIn() != null
                     ? request.getEngineHoursIn()
                     : asset.getEngineHours())
-            .accessoriesReturnedOk(request.getAccessoriesReturnedOk())
-            .hasDamage(request.getHasDamage())
+            .accessoriesReturnedOk(
+                request.getAccessoriesReturnedOk() == null || request.getAccessoriesReturnedOk())
+            .hasDamage(Boolean.TRUE.equals(request.getHasDamage()))
             .damageCost(request.getDamageCost() != null ? request.getDamageCost() : BigDecimal.ZERO)
             .damageDescription(request.getDamageDescription())
-            .inspectorName(request.getInspectorName())
+            .inspectorName(
+                request.getInspectorName() != null && !request.getInspectorName().isBlank()
+                    ? request.getInspectorName().trim()
+                    : (performedBy != null && !performedBy.isBlank() ? performedBy : "INSPECTOR"))
             .nextAction(finalStatus)
             .build();
 

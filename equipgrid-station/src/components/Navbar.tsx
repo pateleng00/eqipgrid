@@ -159,17 +159,6 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, onTabChange, onNewDep
             <Search className="h-4 w-4" />
           </button>
 
-          {/* New Booking Button */}
-          {currentUser?.permissions.canBook && !isGuest && (
-            <button
-              onClick={onNewDeployment}
-              className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer shadow-xs active:scale-95 bg-teal-700 hover:bg-teal-800 text-white border border-teal-800"
-            >
-              <Zap className="h-3.5 w-3.5 text-white" />
-              <span className="hidden sm:inline">+ New Booking (नई बुकिंग)</span>
-            </button>
-          )}
-
           {/* Operational Alerts Popover */}
           {!isGuest && <NotificationsPopover onNavigate={onTabChange} />}
 

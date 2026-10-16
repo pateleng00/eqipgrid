@@ -38,8 +38,11 @@ public class CreateAssetRequest {
   @NotNull(message = "Hub / Yard station selection is required")
   private Long hubId;
 
-  @NotBlank(message = "Machine image URL is strictly mandatory for new machine addition")
   private String imageUrl;
+
+  private java.util.List<String> galleryImageUrls;
+
+  private String videoUrl;
 
   private String modelName;
   private String serialNumber;

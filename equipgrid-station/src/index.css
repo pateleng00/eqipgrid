@@ -180,7 +180,7 @@ svg[class*='text-amber-600'] {
 /* ==========================================================================
    FORM CONTROLS (Clean White, Slate-300 Border, Dark Slate Text)
    ========================================================================== */
-input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='select']):not([class*='Select']),
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([class*='select']):not([class*='Select']):not([data-palette-search]):not(.palette-search-input),
 textarea,
 select {
   background-color: #ffffff !important;
@@ -205,18 +205,40 @@ div[class*='Input'] input {
   padding: 0 !important;
 }
 
-input:not([class*='select']):not([class*='Select'])::placeholder,
+/* Ensure Command Palette Search Modal input is completely borderless and transparent */
+input[data-palette-search],
+input.palette-search-input,
+.palette-search-input {
+  background-color: transparent !important;
+  background: transparent !important;
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+}
+
+input:not([class*='select']):not([class*='Select']):not([data-palette-search]):not(.palette-search-input)::placeholder,
 textarea::placeholder {
   color: #94a3b8 !important;
   font-weight: 400 !important;
   opacity: 1 !important;
 }
 
-input:focus,
+input:not([data-palette-search]):not(.palette-search-input):focus,
 textarea:focus,
 select:focus {
   border-color: #0f766e !important;
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.2) !important;
+}
+
+input[data-palette-search]:focus,
+input.palette-search-input:focus {
+  border: none !important;
+  border-width: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 input[type='range'],

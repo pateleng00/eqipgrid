@@ -19,25 +19,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-/**
- * Manages the media gallery for each asset:
- *
- * <ul>
- *   <li>Upload up to 4 images per machine
- *   <li>Upload exactly 1 short video (max 30 seconds) per machine
- *   <li>Delete any media item by ID
- *   <li>List all media for a machine with presigned access URLs
- * </ul>
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AssetMediaService {
 
-  private static final int MAX_IMAGES = 4;
+  private static final int MAX_IMAGES = 10;
   private static final int MAX_VIDEOS = 1;
   private static final int MAX_VIDEO_DURATION_SECONDS = 30;
-  private static final long MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024L; // 10 MB
+  private static final long MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024L; // 15 MB
   private static final long MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024L; // 100 MB
 
   private static final Set<String> ALLOWED_IMAGE_TYPES =
@@ -77,10 +67,11 @@ public class AssetMediaService {
     validateImageFile(file);
 
     // Upload: tmp → permanent
-    Map<String, String> tmp = storageService.uploadFileTemporary(file);
+    Map<String, Object> tmp = storageService.uploadFileTemporary(file);
     String identifier = asset.getAssetTag().toLowerCase() + "_img_" + System.currentTimeMillis();
     String s3Key =
-        storageService.copyToPermanentStorage(DocumentType.ASSET_IMAGE, tmp.get("url"), identifier);
+        storageService.copyToPermanentStorage(
+            DocumentType.ASSET_IMAGE, (String) tmp.get("url"), identifier);
 
     int nextOrder = mediaRepository.findMaxDisplayOrder(assetId, "IMAGE") + 1;
 
@@ -137,11 +128,11 @@ public class AssetMediaService {
     validateVideoFile(file);
 
     // Upload: tmp → permanent
-    Map<String, String> tmp = storageService.uploadFileTemporary(file);
+    Map<String, Object> tmp = storageService.uploadFileTemporary(file);
     String identifier = asset.getAssetTag().toLowerCase() + "_vid_" + System.currentTimeMillis();
     String s3Key =
         storageService.copyToPermanentStorage(
-            DocumentType.ASSET_DOCUMENT, tmp.get("url"), identifier);
+            DocumentType.ASSET_DOCUMENT, (String) tmp.get("url"), identifier);
 
     AssetMedia media =
         AssetMedia.builder()

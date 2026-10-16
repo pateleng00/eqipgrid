@@ -21,6 +21,7 @@ Thumbs.db
 .env.local
 .env.prod
 *.local
+**/application-dev.properties
 **/application-prod.properties
 **/application-production.properties
 config-secret/

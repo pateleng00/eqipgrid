@@ -18,20 +18,36 @@ public class S3Config {
 
   private final AwsProperties awsProperties;
 
-  /**
-   * Creates an {@link AmazonS3} (SDK v1) client bean.
-   *
-   * <p>When {@code aws.s3.endpoint} is set (e.g. {@code http://localhost:4566}), the client points
-   * to LocalStack instead of real AWS — allowing full local dev/test without AWS costs.
-   *
-   * <p>For production on EC2/ECS, switch the credentials provider to {@code
-   * InstanceProfileCredentialsProvider.getInstance()} and remove the access/secret keys.
-   */
   @Bean
   public AmazonS3 amazonS3() {
-    var credentials =
-        new BasicAWSCredentials(awsProperties.getAccessKey(), awsProperties.getSecretKey());
-    var credentialsProvider = new AWSStaticCredentialsProvider(credentials);
+    String accessKey = awsProperties.getAccessKey();
+    String secretKey = awsProperties.getSecretKey();
+
+    if (accessKey == null
+        || accessKey.trim().isEmpty()
+        || secretKey == null
+        || secretKey.trim().isEmpty()) {
+      throw new IllegalStateException(
+          "[Security Policy Violation] Explicit AWS S3 credentials are required (Fail-Fast). "
+              + "Missing 'aws.s3.access-key' and/or 'aws.s3.secret-key'. "
+              + "Please supply AWS_S3_ACCESS_KEY and AWS_S3_SECRET_KEY in your environment or application properties. "
+              + "Ambient/host credential discovery (~/.aws/credentials) is strictly disabled.");
+    }
+
+    log.info(
+        "[S3] Initializing AmazonS3 client with explicit static credentials (accessKey suffix: ...{})",
+        accessKey.trim().length() > 4
+            ? accessKey.trim().substring(accessKey.trim().length() - 4)
+            : "****");
+
+    var credentialsProvider =
+        new AWSStaticCredentialsProvider(
+            new BasicAWSCredentials(accessKey.trim(), secretKey.trim()));
+
+    String region =
+        (awsProperties.getRegion() != null && !awsProperties.getRegion().isBlank())
+            ? awsProperties.getRegion().trim()
+            : "ap-south-1";
 
     // LocalStack / custom endpoint override
     if (awsProperties.getEndpoint() != null && !awsProperties.getEndpoint().isBlank()) {
@@ -39,15 +55,14 @@ public class S3Config {
       return AmazonS3ClientBuilder.standard()
           .withCredentials(credentialsProvider)
           .withEndpointConfiguration(
-              new AwsClientBuilder.EndpointConfiguration(
-                  awsProperties.getEndpoint(), awsProperties.getRegion()))
+              new AwsClientBuilder.EndpointConfiguration(awsProperties.getEndpoint(), region))
           .withPathStyleAccessEnabled(true) // required for LocalStack
           .build();
     }
 
     return AmazonS3ClientBuilder.standard()
         .withCredentials(credentialsProvider)
-        .withRegion(awsProperties.getRegion())
+        .withRegion(region)
         .build();
   }
 }

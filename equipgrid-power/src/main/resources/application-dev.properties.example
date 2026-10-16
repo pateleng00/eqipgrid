@@ -1,0 +1,18 @@
+spring.datasource.url=jdbc:postgresql://localhost:5432/equipgrid_dev
+spring.datasource.username=postgres
+spring.datasource.password=postgres
+
+# Local AWS credentials for development
+aws.s3.access-key=YOUR_AWS_ACCESS_KEY
+aws.s3.secret-key=YOUR_AWS_SECRET_KEY
+aws.s3.region=ap-south-1
+aws.s3.tmp-bucket-name=equipgrid-tmp-dev
+aws.s3.common-bucket-name=equipgrid-assets-dev
+aws.s3.signed-url-expiry-minutes=1440
+
+# EquipGrid UPI Configuration
+equipgrid.upi.vpa=your_vpa@upi
+
+# AI & Verification keys for dev
+equipgrid.intelligence.gemini.api-key=YOUR_GEMINI_KEY
+equipgrid.botshield.turnstile.secret-key=YOUR_TURNSTILE_SECRET

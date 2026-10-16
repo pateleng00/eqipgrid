@@ -25,15 +25,38 @@ public class StorageController {
   private final StorageService storageService;
 
   @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-  @RateLimited(limit = 10, name = "storage_upload")
+  @RateLimited(limit = 30, name = "storage_upload")
   @Operation(
       summary = "Upload file to temporary bucket",
       description =
-          "Uploads a file (image: jpeg/png/webp/gif, max 10 MB) to the staging bucket. "
+          "Uploads a media file (images up to 15 MB, videos up to 100 MB) to the staging bucket. "
               + "Use the returned URL when creating an asset, then the backend promotes it to permanent storage.")
-  public ResponseEntity<ApiResponse<Map<String, String>>> uploadFile(
+  public ResponseEntity<ApiResponse<Map<String, Object>>> uploadFile(
       @RequestParam("file") MultipartFile file) {
     return ResponseEntity.ok(ApiResponse.buildSuccess(storageService.uploadFileTemporary(file)));
+  }
+
+  @PostMapping("/promote")
+  @Operation(
+      summary = "Promote temporary media to permanent storage",
+      description = "Copies a file from the temporary staging bucket to the common bucket.")
+  public ResponseEntity<ApiResponse<Map<String, String>>> promoteFile(
+      @RequestBody Map<String, String> payload) {
+    String tempUrl = payload.get("tempUrl");
+    String type = payload.getOrDefault("type", "IMAGE");
+    String identifier = payload.getOrDefault("identifier", "asset_" + System.currentTimeMillis());
+    com.equipgrid.common.storage.enums.DocumentType docType =
+        "VIDEO".equalsIgnoreCase(type)
+            ? com.equipgrid.common.storage.enums.DocumentType.ASSET_DOCUMENT
+            : com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
+    var res = storageService.promoteToPermanentStorage(docType, tempUrl, identifier);
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess(
+            Map.of(
+                "url",
+                res.url() != null ? res.url() : "",
+                "key",
+                res.key() != null ? res.key() : "")));
   }
 
   @PostMapping("/signed-url")

@@ -126,32 +126,50 @@ class WhatsAppFlowIntegrationTest {
     // Ensure available asset exists for test
     if (assetRepository.count() == 0) {
       com.equipgrid.master.entity.EquipmentType type =
-          equipmentTypeRepository.save(
-              com.equipgrid.master.entity.EquipmentType.builder()
-                  .name("Heavy Tractor")
-                  .code("TRAC-HEAVY")
-                  .category(AssetCategory.AGRICULTURE)
-                  .build());
+          equipmentTypeRepository.findAll().stream()
+              .filter(t -> "TRAC-HEAVY".equalsIgnoreCase(t.getCode()))
+              .findFirst()
+              .orElseGet(
+                  () ->
+                      equipmentTypeRepository.save(
+                          com.equipgrid.master.entity.EquipmentType.builder()
+                              .name("Heavy Tractor")
+                              .code("TRAC-HEAVY")
+                              .category(AssetCategory.AGRICULTURE)
+                              .build()));
 
       com.equipgrid.master.entity.Manufacturer mfg =
-          manufacturerRepository.save(
-              com.equipgrid.master.entity.Manufacturer.builder()
-                  .name("Sonalika")
-                  .code("MFG-SONALIKA")
-                  .build());
+          manufacturerRepository.findAll().stream()
+              .filter(m -> "MFG-SONALIKA".equalsIgnoreCase(m.getCode()))
+              .findFirst()
+              .orElseGet(
+                  () ->
+                      manufacturerRepository.save(
+                          com.equipgrid.master.entity.Manufacturer.builder()
+                              .name("Sonalika")
+                              .code("MFG-SONALIKA")
+                              .build()));
 
       com.equipgrid.master.entity.MachineModel model =
-          machineModelRepository.save(
-              com.equipgrid.master.entity.MachineModel.builder()
-                  .name("Sonalika DI 745 III Heavy Tractor")
-                  .modelNumber("DI-745")
-                  .type(type)
-                  .manufacturer(mfg)
-                  .build());
+          machineModelRepository.findAll().stream()
+              .filter(m -> "DI-745".equalsIgnoreCase(m.getModelNumber()))
+              .findFirst()
+              .orElseGet(
+                  () ->
+                      machineModelRepository.save(
+                          com.equipgrid.master.entity.MachineModel.builder()
+                              .name("Sonalika DI 745 III Heavy Tractor")
+                              .modelNumber("DI-745")
+                              .type(type)
+                              .manufacturer(mfg)
+                              .build()));
 
       Asset tractor =
           Asset.builder()
               .assetTag("TRAC-001")
+              .name("Sonalika DI 745 III Heavy Tractor")
+              .category(AssetCategory.AGRICULTURE)
+              .imageUrl("https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800")
               .model(model)
               .type(type)
               .manufacturer(mfg)

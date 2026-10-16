@@ -930,13 +930,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               {!isGuest && (
                 <button
                   onClick={() => setIsAddModalOpen(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                    isDaylight
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-                      : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
-                  }`}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30"
                 >
-                  <Plus className="h-4 w-4 stroke-[2.5]" />+ Add Machine (+ नई मशीन)
+                  <Plus className="h-4 w-4" /> Add Machine (नई मशीन)
                 </button>
               )}
             </div>

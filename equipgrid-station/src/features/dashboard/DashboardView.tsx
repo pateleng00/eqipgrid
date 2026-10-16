@@ -251,7 +251,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs border bg-teal-700 hover:bg-teal-800 text-white border-teal-800"
           >
             <Zap className="h-3.5 w-3.5 text-white" />
-            <span>+ New Booking (नई बुकिंग)</span>
+            <span>New Booking (नई बुकिंग)</span>
           </button>
 
           <button

@@ -187,14 +187,10 @@ export const DealerNetworkView: React.FC = () => {
 
         <button
           onClick={handleOpenAdd}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors shadow-none self-start sm:self-auto ${
-            isDaylight
-              ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm'
-              : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black'
-          }`}
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold cursor-pointer transition-all bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30 self-start sm:self-auto"
         >
           <Plus className="h-4 w-4" />
-          <span>+ Add Partner Dealer (+ नया डीलर जोड़ें)</span>
+          <span>Add Partner Dealer (नया डीलर जोड़ें)</span>
         </button>
       </div>
 

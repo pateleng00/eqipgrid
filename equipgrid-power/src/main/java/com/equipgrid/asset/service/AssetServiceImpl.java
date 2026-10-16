@@ -3,6 +3,7 @@ package com.equipgrid.asset.service;
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
 import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.asset.enums.BillingUnit;
@@ -99,17 +100,47 @@ public class AssetServiceImpl implements IAssetService {
     var hub =
         request.getHubId() != null ? hubRepository.findById(request.getHubId()).orElse(null) : null;
 
+    String initialImage =
+        request.getImageUrl() != null && !request.getImageUrl().isBlank()
+            ? request.getImageUrl()
+            : (request.getGalleryImageUrls() != null && !request.getGalleryImageUrls().isEmpty()
+                ? request.getGalleryImageUrls().get(0)
+                : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800");
+
+    String resolvedName =
+        request.getName() != null && !request.getName().isBlank()
+            ? request.getName().trim()
+            : (model != null && model.getName() != null
+                ? model.getName()
+                : (type != null && type.getName() != null
+                    ? type.getName()
+                    : request.getAssetTag()));
+
+    String resolvedModelName =
+        request.getModelName() != null && !request.getModelName().isBlank()
+            ? request.getModelName().trim()
+            : (model != null ? model.getName() : null);
+
+    AssetCategory resolvedCategory =
+        request.getCategory() != null
+            ? request.getCategory()
+            : (type != null && type.getCategory() != null
+                ? type.getCategory()
+                : (model != null && model.getType() != null && model.getType().getCategory() != null
+                    ? model.getType().getCategory()
+                    : AssetCategory.CONSTRUCTION));
+
     Asset asset =
         Asset.builder()
             .assetTag(request.getAssetTag().toUpperCase().trim())
+            .name(resolvedName)
+            .category(resolvedCategory)
+            .modelName(resolvedModelName)
             .type(type)
             .manufacturer(manufacturer)
             .model(model)
             .hub(hub)
-            .imageUrl(
-                request.getImageUrl() != null && !request.getImageUrl().isBlank()
-                    ? request.getImageUrl()
-                    : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800")
+            .imageUrl(initialImage)
             .serialNumber(request.getSerialNumber())
             .dailyRate(request.getDailyRate())
             .depositAmount(request.getDepositAmount())
@@ -139,6 +170,93 @@ public class AssetServiceImpl implements IAssetService {
     }
 
     Asset saved = assetRepository.save(asset);
+
+    // Process and promote staged gallery images (from tmp bucket to permanent bucket)
+    List<String> gallery = request.getGalleryImageUrls();
+    if (gallery != null && !gallery.isEmpty()) {
+      if (gallery.size() > 10) {
+        throw new Exceptions.BusinessRuleViolationException(
+            "Maximum 10 images allowed per machine");
+      }
+      String primaryPermUrl = null;
+      for (int i = 0; i < gallery.size(); i++) {
+        String rawUrl = gallery.get(i);
+        if (rawUrl == null || rawUrl.isBlank()) continue;
+
+        String identifier =
+            saved.getAssetTag().toLowerCase()
+                + "_img_"
+                + (i + 1)
+                + "_"
+                + System.currentTimeMillis();
+        var promo =
+            storageService.promoteToPermanentStorage(DocumentType.ASSET_IMAGE, rawUrl, identifier);
+
+        AssetMedia media =
+            AssetMedia.builder()
+                .asset(saved)
+                .mediaType("IMAGE")
+                .s3Key(promo.key() != null ? promo.key() : promo.url())
+                .displayOrder(i)
+                .fileName(saved.getAssetTag() + "_img_" + (i + 1))
+                .contentType("image/jpeg")
+                .build();
+        assetMediaRepository.save(media);
+
+        if (i == 0 && promo.url() != null) {
+          primaryPermUrl = promo.url();
+        }
+      }
+      if (primaryPermUrl != null) {
+        saved.setImageUrl(primaryPermUrl);
+        assetRepository.save(saved);
+      }
+    } else if (request.getImageUrl() != null && !request.getImageUrl().isBlank()) {
+      String rawUrl = request.getImageUrl();
+      String identifier =
+          saved.getAssetTag().toLowerCase() + "_img_1_" + System.currentTimeMillis();
+      var promo =
+          storageService.promoteToPermanentStorage(DocumentType.ASSET_IMAGE, rawUrl, identifier);
+
+      AssetMedia media =
+          AssetMedia.builder()
+              .asset(saved)
+              .mediaType("IMAGE")
+              .s3Key(promo.key() != null ? promo.key() : promo.url())
+              .displayOrder(0)
+              .fileName(saved.getAssetTag() + "_img_1")
+              .contentType("image/jpeg")
+              .build();
+      assetMediaRepository.save(media);
+
+      if (promo.url() != null && !promo.url().equals(rawUrl)) {
+        saved.setImageUrl(promo.url());
+        assetRepository.save(saved);
+      }
+    }
+
+    // Process and promote staged demonstration video (from tmp bucket to permanent bucket)
+    if (request.getVideoUrl() != null && !request.getVideoUrl().isBlank()) {
+      String rawVideo = request.getVideoUrl().trim();
+      String identifier = saved.getAssetTag().toLowerCase() + "_vid_" + System.currentTimeMillis();
+      var promo =
+          storageService.promoteToPermanentStorage(
+              DocumentType.ASSET_DOCUMENT, rawVideo, identifier);
+
+      AssetMedia videoMedia =
+          AssetMedia.builder()
+              .asset(saved)
+              .mediaType("VIDEO")
+              .s3Key(promo.key() != null ? promo.key() : promo.url())
+              .displayOrder(0)
+              .fileName(saved.getAssetTag() + "_video")
+              .contentType("video/mp4")
+              .build();
+      assetMediaRepository.save(videoMedia);
+    }
+
+    populateMedia(saved);
+
     auditService.log(
         "ASSET",
         saved.getAssetTag(),
@@ -154,8 +272,19 @@ public class AssetServiceImpl implements IAssetService {
       Long id, com.equipgrid.asset.dto.request.UpdateAssetRequest request, String performedBy) {
     Asset asset = getAssetById(id);
 
+    if (request.getName() != null && !request.getName().isBlank()) {
+      asset.setName(request.getName().trim());
+    }
+    if (request.getCategory() != null) {
+      asset.setCategory(request.getCategory());
+    }
     if (request.getTypeId() != null) {
       asset.setType(equipmentTypeRepository.findById(request.getTypeId()).orElse(asset.getType()));
+      if (request.getCategory() == null
+          && asset.getType() != null
+          && asset.getType().getCategory() != null) {
+        asset.setCategory(asset.getType().getCategory());
+      }
     }
     if (request.getManufacturerId() != null) {
       asset.setManufacturer(
@@ -268,8 +397,8 @@ public class AssetServiceImpl implements IAssetService {
     Asset asset = getAssetById(id);
 
     // 1. Upload to tmp bucket
-    Map<String, String> tmpResult = storageService.uploadFileTemporary(file);
-    String tmpUrl = tmpResult.get("url");
+    Map<String, Object> tmpResult = storageService.uploadFileTemporary(file);
+    String tmpUrl = (String) tmpResult.get("url");
 
     // 2. Promote tmp → permanent via S3-to-S3 copy (no data through server)
     String permanentKey =

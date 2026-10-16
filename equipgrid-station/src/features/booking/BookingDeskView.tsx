@@ -616,6 +616,13 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
       });
       return;
     }
+    if (!deliveryAddress || !deliveryAddress.trim()) {
+      setErrorModal({
+        isOpen: true,
+        message: 'Please provide a farm delivery address before confirming the reservation.',
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -762,14 +769,10 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
           <button
             onClick={handleOpenCreateModal}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer whitespace-nowrap ${
-              isDaylight
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold shadow-sm'
-                : 'bg-amber-500 hover:bg-amber-400 text-slate-950 font-black shadow-none'
-            }`}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30"
           >
             <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>+ New Booking (नई बुकिंग)</span>
+            <span>New Booking (नई बुकिंग)</span>
           </button>
         </div>
       </div>
@@ -2175,7 +2178,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           <button
                             type="button"
                             onClick={() => openCustomerDialog('add')}
-                            className="inline-flex items-center gap-1 rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-black text-slate-950 hover:bg-amber-400 cursor-pointer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-500 cursor-pointer shadow-sm shadow-emerald-900/20"
                           >
                             <UserPlus className="h-3 w-3" /> Add customer
                           </button>

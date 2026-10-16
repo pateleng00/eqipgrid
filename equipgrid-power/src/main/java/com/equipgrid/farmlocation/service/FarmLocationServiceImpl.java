@@ -65,7 +65,12 @@ public class FarmLocationServiceImpl implements IFarmLocationService {
     location.setLocalName(request.getLocalName().trim());
     location.setLocalNameHindi(request.getLocalNameHindi());
     location.setAliases(request.getAliases());
-    location.setLocationType(request.getLocationType());
+    location.setLocationType(
+        request.getLocationType() != null
+            ? request.getLocationType()
+            : (location.getLocationType() != null
+                ? location.getLocationType()
+                : com.equipgrid.farmlocation.enums.FarmLocationType.FARM));
     location.setLatitude(request.getLatitude());
     location.setLongitude(request.getLongitude());
     location.setVillage(request.getVillage());

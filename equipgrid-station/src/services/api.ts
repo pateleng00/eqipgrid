@@ -181,9 +181,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
     let errMsg = `Request failed: ${res.status} ${res.statusText}`;
     try {
       const errBody = await res.json();
-      if (errBody?.message?.text) errMsg = errBody.message.text;
-      else if (errBody?.message)
+      if (errBody?.data && typeof errBody.data === 'object' && Object.keys(errBody.data).length > 0) {
+        const fieldMsgs = Object.entries(errBody.data)
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(', ');
+        errMsg = fieldMsgs || errBody?.message?.text || errBody?.message || errMsg;
+      } else if (errBody?.message?.text) {
+        errMsg = errBody.message.text;
+      } else if (errBody?.message) {
         errMsg = typeof errBody.message === 'string' ? errBody.message : JSON.stringify(errBody.message);
+      }
     } catch {
       // ignore
     }
@@ -192,6 +199,57 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   const data = await res.json();
   return (data?.data !== undefined ? data.data : data) as T;
+}
+
+export async function uploadTemporaryMedia(file: File): Promise<{
+  url: string;
+  key?: string;
+  fileName?: string;
+  mediaType?: 'IMAGE' | 'VIDEO';
+  fileSizeBytes?: number;
+}> {
+  const url = `${API_BASE}/common/storage/upload`;
+  let token = '';
+  try {
+    const authStored = localStorage.getItem('equipgrid_auth_user');
+    if (authStored) {
+      const parsed = JSON.parse(authStored);
+      if (parsed?.token) token = parsed.token;
+    }
+  } catch {}
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const headers: Record<string, string> = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    let errMsg = `Upload failed: ${res.status} ${res.statusText}`;
+    try {
+      const errBody = await res.json();
+      if (errBody?.message?.text) errMsg = errBody.message.text;
+      else if (errBody?.message)
+        errMsg = typeof errBody.message === 'string' ? errBody.message : JSON.stringify(errBody.message);
+    } catch {}
+    throw new Error(errMsg);
+  }
+
+  const json = await res.json();
+  return (json?.data !== undefined ? json.data : json) as {
+    url: string;
+    key?: string;
+    fileName?: string;
+    mediaType?: 'IMAGE' | 'VIDEO';
+    fileSizeBytes?: number;
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -992,6 +1050,24 @@ export class ApiStore {
       if (booking.customer.id === id) booking.customer = customer;
     });
     this.notify();
+
+    const tierNum = customer.tier === 'TIER_2_VERIFIED' ? 2 : 1;
+    request<any>('/customers', {
+      method: 'POST',
+      body: JSON.stringify({
+        fullName: customer.fullName,
+        phone: customer.phone,
+        email: customer.email,
+        address: customer.address,
+        aadhaarNumber: customer.aadhaarNumber,
+        gstNumber: customer.gstNumber,
+        tier: tierNum,
+        verified: customer.verified,
+        notes: customer.notes,
+        hubId: customer.hubId,
+      }),
+    }).catch((e) => console.error('Failed to sync customer update to backend:', e));
+
     return customer;
   }
 
@@ -1068,17 +1144,20 @@ export class ApiStore {
   }
 
   async updateEquipmentType(id: number, data: Partial<EquipmentType>): Promise<EquipmentType> {
+    const existing = this.types.find((t) => t.id === id);
+    const cat = data.category !== undefined ? data.category : existing?.category;
+    const catInt = cat === 'MULTIPURPOSE_FLEET' ? 3 : cat === 'AGRICULTURE' ? 2 : 1;
     const raw = await request<any>(`/masters/types/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        name: data.name,
-        code: data.code ? data.code.toUpperCase() : undefined,
-        category: data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1,
-        description: data.description,
-        hindiName: data.hindiName,
-        localLanguageName: data.localLanguageName,
-        hindiDescription: data.hindiDescription,
-        active: data.active,
+        name: data.name ?? existing?.name,
+        code: (data.code ?? existing?.code)?.toUpperCase(),
+        category: catInt,
+        description: data.description !== undefined ? data.description : existing?.description,
+        hindiName: data.hindiName !== undefined ? data.hindiName : existing?.hindiName,
+        localLanguageName: data.localLanguageName !== undefined ? data.localLanguageName : existing?.localLanguageName,
+        hindiDescription: data.hindiDescription !== undefined ? data.hindiDescription : existing?.hindiDescription,
+        active: data.active !== undefined ? data.active : existing?.active,
       }),
     });
     const updated: EquipmentType = {
@@ -1153,13 +1232,14 @@ export class ApiStore {
   }
 
   async updateManufacturer(id: number, data: Partial<Manufacturer>): Promise<Manufacturer> {
+    const existing = this.manufacturers.find((m) => m.id === id);
     const raw = await request<any>(`/masters/manufacturers/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        name: data.name,
-        code: data.code ? data.code.toUpperCase() : undefined,
-        country: data.country,
-        active: data.active,
+        name: data.name ?? existing?.name,
+        code: (data.code ?? existing?.code)?.toUpperCase(),
+        country: data.country ?? existing?.country ?? 'India',
+        active: data.active !== undefined ? data.active : existing?.active,
       }),
     });
     const updated: Manufacturer = {
@@ -1247,21 +1327,22 @@ export class ApiStore {
   }
 
   async updateMachineModel(id: number, data: Partial<MachineModel>): Promise<MachineModel> {
+    const existing = this.models.find((m) => m.id === id);
     const raw = await request<any>(`/masters/models/${id}`, {
       method: 'PUT',
       body: JSON.stringify({
-        typeId: data.typeId,
-        manufacturerId: data.manufacturerId,
-        name: data.name,
-        modelNumber: data.modelNumber,
-        specs: data.specs,
-        active: data.active,
+        typeId: data.typeId ?? existing?.typeId,
+        manufacturerId: data.manufacturerId ?? existing?.manufacturerId,
+        name: data.name ?? existing?.name,
+        modelNumber: data.modelNumber !== undefined ? data.modelNumber : existing?.modelNumber,
+        specs: data.specs !== undefined ? data.specs : existing?.specs,
+        active: data.active !== undefined ? data.active : existing?.active,
       }),
     });
     const updated: MachineModel = {
       id: raw.id,
-      typeId: raw.type?.id || raw.typeId || data.typeId!,
-      manufacturerId: raw.manufacturer?.id || raw.manufacturerId || data.manufacturerId!,
+      typeId: raw.type?.id || raw.typeId || data.typeId || existing?.typeId!,
+      manufacturerId: raw.manufacturer?.id || raw.manufacturerId || data.manufacturerId || existing?.manufacturerId!,
       name: raw.name,
       modelNumber: raw.modelNumber,
       specs: raw.specs,
@@ -1477,13 +1558,16 @@ export class ApiStore {
     return this.assets.find((a) => a.assetTag.toLowerCase() === tag.toLowerCase());
   }
 
-  addAsset(data: {
+  async addAsset(data: {
     name: string;
+    category?: AssetCategory;
     typeId: number;
     manufacturerId: number;
     modelId: number;
     hubId: number;
-    imageUrl: string;
+    imageUrl?: string;
+    galleryImageUrls?: string[];
+    videoUrl?: string;
     dailyRate?: number;
     depositAmount?: number;
     operatorRequired: boolean;
@@ -1492,12 +1576,11 @@ export class ApiStore {
     conditionNotes?: string;
     accessoriesIncluded?: string;
     assetTag?: string;
-    videoUrl?: string;
     billingUnit?: BillingUnit;
     billingUnitId?: number;
     workingHoursLimit?: number;
     shiftTerms?: string;
-  }): Asset {
+  }): Promise<Asset> {
     const type = this.types.find((t) => t.id === data.typeId);
     const mfg = this.manufacturers.find((m) => m.id === data.manufacturerId);
     const model = this.models.find((m) => m.id === data.modelId);
@@ -1517,26 +1600,74 @@ export class ApiStore {
           ? matchingConfig.depositAmount
           : 3000;
 
-    const prefix = type?.category === 'MULTIPURPOSE_FLEET' ? 'M' : type?.category === 'AGRICULTURE' ? 'A' : 'C';
+    const resolvedCategory: AssetCategory =
+      data.category ||
+      type?.category ||
+      'CONSTRUCTION';
+    const categoryInt =
+      resolvedCategory === 'MULTIPURPOSE_FLEET' ? 3 : resolvedCategory === 'AGRICULTURE' ? 2 : 1;
+
+    const prefix = resolvedCategory === 'MULTIPURPOSE_FLEET' ? 'M' : resolvedCategory === 'AGRICULTURE' ? 'A' : 'C';
     const subCode = type?.code?.split('-')[1] || 'MCH';
     const tag = data.assetTag || `${prefix}-${subCode}-${String(this.assets.length + 1).padStart(3, '0')}`;
+
+    const resolvedName = data.name?.trim() || model?.name?.trim() || type?.name?.trim() || tag;
+    const resolvedModelName = model?.name?.trim() || resolvedName;
+
+    const effectiveImageUrl =
+      data.imageUrl ||
+      (data.galleryImageUrls && data.galleryImageUrls.length > 0 ? data.galleryImageUrls[0] : '') ||
+      'https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800';
+
+    const customMedia: AssetMedia[] = [];
+    if (data.galleryImageUrls && data.galleryImageUrls.length > 0) {
+      data.galleryImageUrls.forEach((img, idx) => {
+        customMedia.push({
+          id: Date.now() + idx,
+          mediaType: 'IMAGE',
+          url: img,
+          s3Key: img,
+          displayOrder: idx,
+        });
+      });
+    } else if (data.imageUrl) {
+      customMedia.push({
+        id: Date.now(),
+        mediaType: 'IMAGE',
+        url: data.imageUrl,
+        s3Key: data.imageUrl,
+        displayOrder: 0,
+      });
+    }
+
+    if (data.videoUrl) {
+      customMedia.push({
+        id: Date.now() + 99,
+        mediaType: 'VIDEO',
+        url: data.videoUrl,
+        s3Key: data.videoUrl,
+        displayOrder: 0,
+        durationSeconds: 15,
+        contentType: 'video/mp4',
+      });
+    }
 
     const newAsset: Asset = {
       id: Date.now(),
       assetTag: tag,
-      name: data.name,
-      category: type!.category,
+      name: resolvedName,
+      category: resolvedCategory,
       typeId: data.typeId,
       typeName: type?.name,
       manufacturerId: data.manufacturerId,
       manufacturerName: mfg?.name,
       modelId: data.modelId,
-      modelName: model?.name || 'Standard Model',
+      modelName: resolvedModelName,
       hubId: data.hubId,
       hubName: hub?.name,
       cityName: city?.name,
       stateName: state?.name,
-      imageUrl: data.imageUrl,
+      imageUrl: effectiveImageUrl,
       serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
       dailyRate: resolvedDailyRate,
       depositAmount: resolvedDepositAmount,
@@ -1552,45 +1683,53 @@ export class ApiStore {
       hindiUnitLabel: getBillingUnitHindiLabel(data.billingUnit),
       workingHoursLimit: data.workingHoursLimit,
       shiftTerms: data.shiftTerms,
-      mediaItems: buildMachineMedia(Date.now(), tag, type?.category, type?.name, data.imageUrl),
+      mediaItems: customMedia.length > 0 ? customMedia : buildMachineMedia(Date.now(), tag, resolvedCategory, type?.name, effectiveImageUrl),
     };
 
     this.assets.unshift(newAsset);
     this.notify();
 
-    request<any>('/assets', {
-      method: 'POST',
-      body: JSON.stringify({
-        assetTag: tag,
-        name: data.name,
-        category: type?.category === 'MULTIPURPOSE_FLEET' ? 3 : type?.category === 'AGRICULTURE' ? 2 : 1,
-        typeId: data.typeId,
-        manufacturerId: data.manufacturerId,
-        modelId: data.modelId,
-        hubId: data.hubId,
-        imageUrl: data.imageUrl,
-        dailyRate: resolvedDailyRate,
-        depositAmount: resolvedDepositAmount,
-        purchaseCost: data.purchaseCost,
-        operatorRequired: data.operatorRequired,
-        serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
-        conditionNotes: data.conditionNotes,
-        accessoriesIncluded: data.accessoriesIncluded,
-        billingUnit: resolveBillingUnitInt(data.billingUnit),
-        billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
-        workingHoursLimit: data.workingHoursLimit,
-        shiftTerms: data.shiftTerms,
-      }),
-    })
-      .then((raw) => {
-        const mapped = mapAsset(raw);
-        const idx = this.assets.findIndex((a) => a.id === newAsset.id);
-        if (idx !== -1) this.assets[idx] = mapped;
-        this.notify();
-      })
-      .catch((e) => console.error('Failed to persist asset:', e));
+    try {
+      const raw = await request<any>('/assets', {
+        method: 'POST',
+        body: JSON.stringify({
+          assetTag: tag,
+          name: resolvedName,
+          modelName: resolvedModelName,
+          category: categoryInt,
+          typeId: data.typeId,
+          manufacturerId: data.manufacturerId,
+          modelId: data.modelId,
+          hubId: data.hubId,
+          imageUrl: effectiveImageUrl,
+          galleryImageUrls: data.galleryImageUrls,
+          videoUrl: data.videoUrl,
+          dailyRate: resolvedDailyRate > 0 ? resolvedDailyRate : 1000,
+          depositAmount: resolvedDepositAmount >= 0 ? resolvedDepositAmount : 3000,
+          purchaseCost: data.purchaseCost,
+          operatorRequired: data.operatorRequired,
+          serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
+          conditionNotes: data.conditionNotes,
+          accessoriesIncluded: data.accessoriesIncluded,
+          billingUnit: resolveBillingUnitInt(data.billingUnit),
+          billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
+          workingHoursLimit: data.workingHoursLimit,
+          shiftTerms: data.shiftTerms,
+        }),
+      });
 
-    return newAsset;
+      const mapped = mapAsset(raw);
+      const idx = this.assets.findIndex((a) => a.id === newAsset.id);
+      if (idx !== -1) this.assets[idx] = mapped;
+      this.notify();
+      return mapped;
+    } catch (e: any) {
+      // Rollback optimistic add if backend failed
+      this.assets = this.assets.filter((a) => a.id !== newAsset.id);
+      this.notify();
+      console.error('Failed to persist asset on backend:', e);
+      throw e;
+    }
   }
 
   async updateAsset(
@@ -1618,14 +1757,32 @@ export class ApiStore {
     const existing = this.assets.find((a) => a.id === id);
     if (!existing) return undefined;
 
-    const payload: any = { ...data };
-    if (data.billingUnit !== undefined) {
-      payload.billingUnit = resolveBillingUnitInt(data.billingUnit);
-      payload.billingUnitId = (data as any).billingUnitId || resolveBillingUnitInt(data.billingUnit);
-    }
-    if (data.category !== undefined) {
-      payload.category = data.category === 'MULTIPURPOSE_FLEET' ? 3 : data.category === 'AGRICULTURE' ? 2 : 1;
-    }
+    const cat = data.category !== undefined ? data.category : existing.category;
+    const catInt = cat === 'MULTIPURPOSE_FLEET' ? 3 : cat === 'AGRICULTURE' ? 2 : 1;
+
+    const payload: any = {
+      name: data.name ?? existing.name,
+      category: catInt,
+      typeId: data.typeId ?? existing.typeId,
+      manufacturerId: data.manufacturerId ?? existing.manufacturerId,
+      modelId: data.modelId ?? existing.modelId,
+      hubId: data.hubId ?? existing.hubId,
+      imageUrl: data.imageUrl ?? existing.imageUrl,
+      serialNumber: data.serialNumber ?? existing.serialNumber,
+      dailyRate: data.dailyRate ?? existing.dailyRate,
+      depositAmount: data.depositAmount ?? existing.depositAmount,
+      purchaseCost: data.purchaseCost ?? existing.purchaseCost,
+      operatorRequired: data.operatorRequired ?? existing.operatorRequired,
+      conditionNotes: data.conditionNotes ?? existing.conditionNotes,
+      accessoriesIncluded: data.accessoriesIncluded ?? existing.accessoriesIncluded,
+      workingHoursLimit: data.workingHoursLimit ?? existing.workingHoursLimit,
+      shiftTerms: data.shiftTerms ?? existing.shiftTerms,
+      billingUnit:
+        data.billingUnit !== undefined ? resolveBillingUnitInt(data.billingUnit) : resolveBillingUnitInt(existing.billingUnit),
+      billingUnitId:
+        (data as any).billingUnitId ||
+        (data.billingUnit !== undefined ? resolveBillingUnitInt(data.billingUnit) : existing.billingUnitId),
+    };
 
     const updatedAsset: Asset = {
       ...existing,
@@ -2000,7 +2157,10 @@ export class ApiStore {
   }): Promise<Booking> {
     const raw = await request<any>('/bookings', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        deliveryAddress: data.deliveryAddress?.trim() || 'Standard Delivery Location',
+      }),
     });
 
     const newBooking = mapBooking(raw);
@@ -2532,9 +2692,16 @@ export class ApiStore {
   }
 
   async addDealer(data: Omit<Dealer, 'id' | 'totalCommissionEarned' | 'totalReferrals'>): Promise<Dealer> {
+    const payload = {
+      name: data.name,
+      tradeName: data.tradeName,
+      phone: data.phone,
+      location: data.location || data.address || 'Yard Area',
+      commissionRate: data.commissionRate || 0.06,
+    };
     const raw = await request<any>('/dealers', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     }).catch(() => null);
 
     const newDealer: Dealer = {

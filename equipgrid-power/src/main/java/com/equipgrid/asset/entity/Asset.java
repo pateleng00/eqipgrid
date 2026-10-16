@@ -44,15 +44,17 @@ public class Asset extends BaseEntity {
   @JoinColumn(name = "hub_id")
   private Hub hub;
 
+  @Column(name = "category", nullable = false)
+  private AssetCategory category;
+
   @Column(name = "name")
   private String name;
 
   @Column(name = "model_name")
   private String modelName;
 
-  @Builder.Default
   @Column(name = "image_url", nullable = false, length = 512)
-  private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
+  private String imageUrl;
 
   @Column(name = "serial_number", length = 128)
   private String serialNumber;
@@ -116,6 +118,9 @@ public class Asset extends BaseEntity {
   }
 
   public AssetCategory getCategory() {
+    if (this.category != null) {
+      return this.category;
+    }
     return this.type != null ? this.type.getCategory() : null;
   }
 
@@ -133,5 +138,38 @@ public class Asset extends BaseEntity {
 
   public String getDescription() {
     return this.type != null ? this.type.getDescription() : null;
+  }
+
+  @PrePersist
+  @PreUpdate
+  public void ensureDefaults() {
+    if (this.category == null) {
+      if (this.type != null && this.type.getCategory() != null) {
+        this.category = this.type.getCategory();
+      } else if (this.model != null
+          && this.model.getType() != null
+          && this.model.getType().getCategory() != null) {
+        this.category = this.model.getType().getCategory();
+      } else {
+        this.category = AssetCategory.CONSTRUCTION;
+      }
+    }
+    if (this.name == null || this.name.isBlank()) {
+      if (this.model != null && this.model.getName() != null) {
+        this.name = this.model.getName();
+      } else if (this.type != null && this.type.getName() != null) {
+        this.name = this.type.getName();
+      } else if (this.assetTag != null) {
+        this.name = this.assetTag;
+      }
+    }
+    if (this.modelName == null || this.modelName.isBlank()) {
+      if (this.model != null && this.model.getName() != null) {
+        this.modelName = this.model.getName();
+      }
+    }
+    if (this.imageUrl == null || this.imageUrl.isBlank()) {
+      this.imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
+    }
   }
 }

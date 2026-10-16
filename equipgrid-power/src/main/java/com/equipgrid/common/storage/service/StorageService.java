@@ -33,28 +33,48 @@ import org.springframework.web.multipart.MultipartFile;
 @AllArgsConstructor
 public class StorageService {
 
-  private static final long MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024L; // 10 MB
+  private static final long MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024L; // 15 MB
+  private static final long MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024L; // 100 MB
 
   private static final Set<String> ALLOWED_IMAGE_TYPES =
       Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
+  private static final Set<String> ALLOWED_VIDEO_TYPES =
+      Set.of("video/mp4", "video/webm", "video/quicktime");
 
   private final AmazonS3 s3client;
   private final AwsProperties awsProperties;
   private final Environment environment;
 
-  public Map<String, String> uploadFileTemporary(MultipartFile file) {
-    validateImageFile(file);
+  public record StoragePromotionResult(String key, String url) {}
+
+  public Map<String, Object> uploadFileTemporary(MultipartFile file) {
+    String mediaType = validateMediaFile(file);
 
     String originalFilename = file.getOriginalFilename();
     String sanitizedFilename =
         originalFilename == null ? "file" : originalFilename.replaceAll("\\s+", "_");
     String key = appName() + "/" + UUID.randomUUID() + "_" + sanitizedFilename;
-    String fileUrl = buildTmpUrl(key);
 
     try {
       uploadFileWithKey(awsProperties.getTmpBucketName(), file, key);
-      log.info("[Storage] Temporary upload: {}", fileUrl);
-      return Map.of("url", fileUrl);
+
+      // Generate presigned GET URL so private staging bucket files can be previewed/downloaded
+      Date expiration = DateUtils.addMinutes(new Date(), awsProperties.getSignedUrlExpiryMinutes());
+      String presignedUrl =
+          s3client
+              .generatePresignedUrl(
+                  new GeneratePresignedUrlRequest(awsProperties.getTmpBucketName(), key)
+                      .withMethod(HttpMethod.GET)
+                      .withExpiration(expiration))
+              .toString();
+
+      log.info("[Storage] Temporary upload ({}): key={}", mediaType, key);
+      return Map.of(
+          "url", presignedUrl,
+          "key", key,
+          "fileName", sanitizedFilename,
+          "mediaType", mediaType,
+          "fileSizeBytes", file.getSize());
     } catch (IOException e) {
       log.error("[Storage] Error uploading temporary file", e);
       throw new EquipGridException(EquipGridExceptionEnum.EG_500);
@@ -120,19 +140,33 @@ public class StorageService {
 
   public String copyToPermanentStorage(
       DocumentType documentType, String fileUrl, String identifier) {
+    if (fileUrl == null || fileUrl.isBlank()) {
+      return null;
+    }
     String mapping = documentType.getFileStorageName();
     String category = documentType.getDocumentCategory().getFileStorageName();
 
     try {
-      URL parsedUrl = new URL(fileUrl);
-      String host = parsedUrl.getHost().split("\\.")[0];
-      String key = parsedUrl.getPath().substring(1);
-      String ext = key.substring(key.lastIndexOf('.') + 1);
+      String key;
+      String host = "";
+      if (fileUrl.startsWith("http://") || fileUrl.startsWith("https://")) {
+        URL parsedUrl = new URL(fileUrl);
+        host = parsedUrl.getHost().split("\\.")[0];
+        String rawKey =
+            parsedUrl.getPath().startsWith("/")
+                ? parsedUrl.getPath().substring(1)
+                : parsedUrl.getPath();
+        key = java.net.URLDecoder.decode(rawKey, java.nio.charset.StandardCharsets.UTF_8);
+      } else {
+        key = fileUrl.startsWith("/") ? fileUrl.substring(1) : fileUrl;
+      }
+      String ext = key.contains(".") ? key.substring(key.lastIndexOf('.') + 1) : "jpg";
 
-      // Already in permanent storage — nothing to do
-      if (!host.equals(awsProperties.getTmpBucketName())) {
-        log.info("[Storage] File already in permanent storage: {}", key);
-        return key;
+      // Already in permanent storage or external URL — nothing to copy
+      if (!host.contains(awsProperties.getTmpBucketName())
+          && !key.contains(awsProperties.getTmpBucketName())) {
+        log.info("[Storage] File already outside tmp bucket, preserving: {}", fileUrl);
+        return fileUrl;
       }
 
       String objectKey = appName() + "/" + category + "/" + mapping + "/" + identifier + "." + ext;
@@ -147,9 +181,24 @@ public class StorageService {
       return objectKey;
 
     } catch (Exception e) {
-      log.error("[Storage] Error copying file to permanent storage", e);
-      throw new EquipGridException(EquipGridExceptionEnum.EG_500);
+      log.error("[Storage] Error copying file to permanent storage: {}", fileUrl, e);
+      return fileUrl;
     }
+  }
+
+  public StoragePromotionResult promoteToPermanentStorage(
+      DocumentType documentType, String fileUrl, String identifier) {
+    if (fileUrl == null || fileUrl.isBlank()) {
+      return new StoragePromotionResult(null, null);
+    }
+    String s3Key = copyToPermanentStorage(documentType, fileUrl, identifier);
+    String permUrl;
+    if (s3Key != null && (s3Key.startsWith("http://") || s3Key.startsWith("https://"))) {
+      permUrl = s3Key;
+    } else {
+      permUrl = getPublicFileUrl(awsProperties.getCommonBucketName(), s3Key);
+    }
+    return new StoragePromotionResult(s3Key, permUrl);
   }
 
   public String moveFileToPermanentStorage(
@@ -162,9 +211,9 @@ public class StorageService {
       URL parsedUrl = new URL(fileUrl);
       String host = parsedUrl.getHost().split("\\.")[0];
       String key = parsedUrl.getPath().substring(1);
-      String ext = key.substring(key.lastIndexOf('.') + 1);
+      String ext = key.contains(".") ? key.substring(key.lastIndexOf('.') + 1) : "jpg";
 
-      if (!host.equals(awsProperties.getTmpBucketName())) {
+      if (!host.contains(awsProperties.getTmpBucketName())) {
         return key;
       }
 
@@ -203,6 +252,9 @@ public class StorageService {
 
   public String createPreSignedFileUrl(String key) {
     if (key == null || key.isBlank()) return null;
+    if (key.startsWith("http://") || key.startsWith("https://")) {
+      return key;
+    }
     if (awsProperties.getAccessKey() == null || awsProperties.getAccessKey().isBlank()) {
       return getPublicFileUrl(awsProperties.getCommonBucketName(), key);
     }
@@ -233,9 +285,13 @@ public class StorageService {
 
   public void uploadFileWithKey(String bucketName, MultipartFile file, String key)
       throws IOException {
-    if (!s3client.doesBucketExistV2(bucketName)) {
-      log.info("[Storage] Bucket {} not found — creating...", bucketName);
-      s3client.createBucket(bucketName);
+    try {
+      if (!s3client.doesBucketExistV2(bucketName)) {
+        log.info("[Storage] Bucket {} not found — creating...", bucketName);
+        s3client.createBucket(bucketName);
+      }
+    } catch (Exception e) {
+      log.debug("[Storage] Bucket existence check or creation skipped: {}", e.getMessage());
     }
 
     try {
@@ -243,30 +299,40 @@ public class StorageService {
       metadata.setContentLength(file.getSize());
       metadata.setContentType(
           file.getContentType() != null ? file.getContentType() : "application/octet-stream");
+      s3client.putObject(bucketName, key, file.getInputStream(), metadata);
     } catch (Exception e) {
-      log.error("[Storage] Error uploading file to permanent storage", e);
+      log.error("[Storage] Error uploading file to bucket: {}", bucketName, e);
       throw new RuntimeException(e);
     }
 
     log.info("[Storage] Uploaded key={} to bucket={} ({} bytes)", key, bucketName, file.getSize());
   }
 
-  private void validateImageFile(MultipartFile file) {
+  private String validateMediaFile(MultipartFile file) {
     if (file == null || file.isEmpty()) {
       throw new EquipGridException(
           EquipGridExceptionEnum.EG_400, "Upload file is empty or missing");
     }
-    if (file.getSize() > MAX_FILE_SIZE_BYTES) {
-      throw new EquipGridException(
-          EquipGridExceptionEnum.EG_400,
-          "File exceeds maximum size of 10 MB (" + file.getSize() + " bytes received)");
-    }
     String ct = file.getContentType();
-    if (ct == null || !ALLOWED_IMAGE_TYPES.contains(ct)) {
-      throw new EquipGridException(
-          EquipGridExceptionEnum.EG_400,
-          "Unsupported content type: " + ct + ". Allowed: jpeg, png, webp, gif");
+    if (ct != null && ALLOWED_IMAGE_TYPES.contains(ct)) {
+      if (file.getSize() > MAX_IMAGE_SIZE_BYTES) {
+        throw new EquipGridException(
+            EquipGridExceptionEnum.EG_400,
+            "Image exceeds maximum size of 15 MB (" + file.getSize() + " bytes received)");
+      }
+      return "IMAGE";
     }
+    if (ct != null && ALLOWED_VIDEO_TYPES.contains(ct)) {
+      if (file.getSize() > MAX_VIDEO_SIZE_BYTES) {
+        throw new EquipGridException(
+            EquipGridExceptionEnum.EG_400,
+            "Video exceeds maximum size of 100 MB (" + file.getSize() + " bytes received)");
+      }
+      return "VIDEO";
+    }
+    throw new EquipGridException(
+        EquipGridExceptionEnum.EG_400,
+        "Unsupported content type: " + ct + ". Allowed: jpeg, png, webp, gif, mp4, webm, mov");
   }
 
   private String appName() {

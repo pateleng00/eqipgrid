@@ -500,11 +500,27 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
     if (unit.getCode() == null || unit.getCode().isBlank()) {
       throw new Exceptions.BusinessRuleViolationException("Billing unit code is required");
     }
+    if (unit.getName() == null || unit.getName().isBlank()) {
+      throw new Exceptions.BusinessRuleViolationException("Billing unit name is required");
+    }
     if (billingUnitMasterRepository.existsByCodeIgnoreCase(unit.getCode().trim())) {
       throw new Exceptions.DuplicateResourceException(
           "Billing unit with code already exists: " + unit.getCode());
     }
     unit.setCode(unit.getCode().trim().toUpperCase());
+    unit.setName(unit.getName().trim());
+    if (unit.getHindiName() == null || unit.getHindiName().isBlank()) {
+      unit.setHindiName(unit.getName());
+    }
+    if (unit.getUnitLabel() == null || unit.getUnitLabel().isBlank()) {
+      unit.setUnitLabel(unit.getName());
+    }
+    if (unit.getHindiUnitLabel() == null || unit.getHindiUnitLabel().isBlank()) {
+      unit.setHindiUnitLabel(unit.getUnitLabel());
+    }
+    if (unit.getDisplayOrder() == null) {
+      unit.setDisplayOrder(0);
+    }
     if (unit.getActive() == null) {
       unit.setActive(true);
     }
