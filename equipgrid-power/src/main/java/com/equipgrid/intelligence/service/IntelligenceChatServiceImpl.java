@@ -392,39 +392,162 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
       String query, List<Asset> assets, List<Hub> hubs, List<EquipmentCardDto> matched) {
     String lower = query.toLowerCase();
 
+    List<Hub> activeHubs =
+        hubs != null
+            ? hubs.stream()
+                .filter(h -> h.getActive() == null || Boolean.TRUE.equals(h.getActive()))
+                .toList()
+            : Collections.emptyList();
+
+    // 1. Dynamic check: does the user mention or ask about specific hubs / locations?
+    List<Hub> userMatchedHubs = new ArrayList<>();
+    for (Hub h : activeHubs) {
+      String hName = h.getName() != null ? h.getName().toLowerCase() : "";
+      String hCity =
+          h.getCity() != null && h.getCity().getName() != null
+              ? h.getCity().getName().toLowerCase()
+              : "";
+      String hCode = h.getCode() != null ? h.getCode().toLowerCase() : "";
+
+      boolean cityMatch = !hCity.isBlank() && lower.contains(hCity);
+      boolean codeMatch = !hCode.isBlank() && lower.contains(hCode);
+      boolean nameMatch = !hName.isBlank() && lower.contains(hName);
+
+      boolean wordMatch = false;
+      for (String part : hName.split("\\s+")) {
+        if (part.length() > 3
+            && !part.equalsIgnoreCase("yard")
+            && !part.equalsIgnoreCase("hub")
+            && !part.equalsIgnoreCase("central")
+            && !part.equalsIgnoreCase("agro")
+            && !part.equalsIgnoreCase("industrial")) {
+          if (lower.contains(part)) {
+            wordMatch = true;
+            break;
+          }
+        }
+      }
+
+      if (cityMatch || codeMatch || nameMatch || wordMatch) {
+        userMatchedHubs.add(h);
+      }
+    }
+
+    boolean isAskingHubOrLocation =
+        lower.contains("hub")
+            || lower.contains("yard")
+            || lower.contains("location")
+            || lower.contains("kahan")
+            || lower.contains("where")
+            || lower.contains("address")
+            || lower.contains("pata")
+            || lower.contains("station")
+            || lower.contains("depot")
+            || lower.contains("centre")
+            || lower.contains("center")
+            || lower.contains("city")
+            || lower.contains("district")
+            || lower.contains("near")
+            || lower.contains("nearby")
+            || !userMatchedHubs.isEmpty();
+
+    if (isAskingHubOrLocation) {
+      StringBuilder sb = new StringBuilder();
+      if (!userMatchedHubs.isEmpty()) {
+        sb.append("### 📍 Operational Hubs Matching Your Location\n\n");
+        sb.append("Here are the EquipGrid station details for your requested location:\n\n");
+        for (Hub h : userMatchedHubs) {
+          String cityName = h.getCity() != null ? h.getCity().getName() : "Regional";
+          String stateName =
+              (h.getCity() != null && h.getCity().getState() != null)
+                  ? h.getCity().getState().getName()
+                  : "Uttar Pradesh";
+          sb.append("• **").append(h.getName()).append("** (").append(cityName).append(", ").append(stateName).append(")\n");
+          sb.append("  - 🏢 **Address**: ").append(h.getAddress() != null ? h.getAddress() : "Station Yard").append("\n");
+          if (h.getOperatingRadiusKm() != null) {
+            sb.append("  - 🚚 **Delivery Coverage**: Within **")
+                .append(h.getOperatingRadiusKm())
+                .append(" km** direct farm/site delivery\n");
+          }
+          if (h.getContactPhone() != null && !h.getContactPhone().isBlank()) {
+            sb.append("  - 📞 **Yard Contact**: `").append(h.getContactPhone()).append("`\n");
+          }
+          sb.append("\n");
+        }
+
+        List<Hub> otherHubs = activeHubs.stream().filter(h -> !userMatchedHubs.contains(h)).toList();
+        if (!otherHubs.isEmpty()) {
+          sb.append("**Other Regional Hubs in Network:**\n");
+          for (Hub oh : otherHubs) {
+            String cName = oh.getCity() != null ? oh.getCity().getName() : "Regional";
+            sb.append("- **").append(oh.getName()).append("** (").append(cName).append(")");
+            if (oh.getContactPhone() != null && !oh.getContactPhone().isBlank()) {
+              sb.append(" • `").append(oh.getContactPhone()).append("`");
+            }
+            sb.append("\n");
+          }
+          sb.append("\n");
+        }
+      } else {
+        sb.append("### 📍 EquipGrid Operational Hubs & Delivery Network\n\n");
+        if (!activeHubs.isEmpty()) {
+          sb.append("We operate ").append(activeHubs.size()).append(" regional equipment hub(s) with direct field delivery:\n\n");
+          int i = 1;
+          for (Hub h : activeHubs) {
+            String cityName = h.getCity() != null ? h.getCity().getName() : "Regional";
+            sb.append(i++).append(". **").append(h.getName()).append("**");
+            if (!cityName.isBlank()) {
+              sb.append(" (").append(cityName).append(")");
+            }
+            sb.append(": ").append(h.getAddress() != null ? h.getAddress() : "Station Yard");
+            if (h.getOperatingRadiusKm() != null) {
+              sb.append(" (Serving ").append(h.getOperatingRadiusKm()).append(" km radius)");
+            }
+            if (h.getContactPhone() != null && !h.getContactPhone().isBlank()) {
+              sb.append(" • Phone: `").append(h.getContactPhone()).append("`");
+            }
+            sb.append("\n");
+          }
+        } else {
+          sb.append("EquipGrid operates regional equipment hubs with direct field delivery across Uttar Pradesh.\n");
+        }
+      }
+      sb.append("\n🚚 **Doorstep & Field Delivery**: We drop machinery right at your farm GPS headland or construction plot via our tractor-trailer fleet.");
+      return sb.toString();
+    }
+
     if (lower.contains("refund") || lower.contains("deposit") || lower.contains("security")) {
+      String contactPhone =
+          !activeHubs.isEmpty() && activeHubs.get(0).getContactPhone() != null
+              ? activeHubs.get(0).getContactPhone()
+              : "+91 94674 79922";
       return "### 💰 2-Hour Security Deposit Refund Guarantee\n\n"
           + "At EquipGrid, your security deposit is **100% safe and hassle-free**:\n\n"
           + "- **Instant UPI Return**: As soon as your rental period ends, our yard technician completes a rapid 2-minute visual check.\n"
           + "- **120-Minute Direct Credit**: The full deposit amount is credited back directly to your original UPI ID or bank account within **2 hours (120 minutes)**.\n"
           + "- **Zero Hidden Deductions**: Transparent billing with no paperwork hassles.\n\n"
-          + "Need assistance with an existing deposit? Our billing desk is on standby at **+91 94674 79922**.";
+          + "Need assistance with an existing deposit? Our billing desk is on standby at **"
+          + contactPhone
+          + "**.";
     }
 
     if (lower.contains("breakdown")
         || lower.contains("repair")
         || lower.contains("stopped")
         || lower.contains("sla")
-        || lower.contains("service")) {
+        || lower.contains("service")
+        || lower.contains("kharab")) {
+      String contactPhone =
+          !activeHubs.isEmpty() && activeHubs.get(0).getContactPhone() != null
+              ? activeHubs.get(0).getContactPhone()
+              : "+91 94674 79922";
       return "### 🚨 90-Minute Zero-Breakdown Guarantee\n\n"
           + "We understand that field downtime means lost harvest windows or construction delays:\n\n"
-          + "- **Rapid Mobile Response**: In the rare event of mechanical failure, call **+91 94674 79922**.\n"
+          + "- **Rapid Mobile Response**: In the rare event of mechanical failure, call **"
+          + contactPhone
+          + "**.\n"
           + "- **90-Min Resolution SLA**: A certified field technician or a fresh replacement machine will arrive on site within **90 minutes** from our nearest operational hub.\n"
           + "- **Downtime Credit**: Lost operational hours are automatically credited back to your rental invoice.";
-    }
-
-    if (lower.contains("hub")
-        || lower.contains("location")
-        || lower.contains("hardoi")
-        || lower.contains("sandila")
-        || lower.contains("bilgram")
-        || lower.contains("yard")) {
-      return "### 📍 EquipGrid Operational Hubs & Delivery Network\n\n"
-          + "We operate 3 regional equipment hubs across Uttar Pradesh with direct field delivery:\n\n"
-          + "1. **Hardoi Central Yard**: Bilgram Road Industrial Area (Serving 30km radius - Shahabad, Tadiyawan) • Phone: `+91 94674 79922`\n"
-          + "2. **Sandila Industrial Hub**: UPSIDC Phase 2, Lucknow-Hardoi Highway (Serving 25km radius - Beniganj, UPSIDC) • Phone: `+91 94674 79922`\n"
-          + "3. **Bilgram Agro Yard**: Near Mandi Parishad (Serving 20km radius - Mallawan, Madhoganj) • Phone: `+91 94674 79922`\n\n"
-          + "🚚 **Doorstep & Field Delivery**: We drop machinery right at your farm GPS headland or construction plot via our tractor-trailer fleet.";
     }
 
     if (lower.contains("book")
@@ -437,31 +560,63 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
       if (!matched.isEmpty()) {
         sb.append("Here is the equipment matching your request from our verified fleet:\n\n");
         for (EquipmentCardDto c : matched) {
-          sb.append("- **")
-              .append(c.getName())
-              .append("** (")
-              .append(c.getHindiName())
-              .append(")\n");
-          sb.append("  - **Daily Rent**: ₹").append(c.getDailyRate()).append(" / day\n");
-          sb.append("  - **Security Deposit**: ₹")
-              .append(c.getDepositAmount())
-              .append(" *(Refunded in 2 hours)*\n");
+          sb.append("- **").append(c.getName()).append("**");
+          if (c.getHindiName() != null && !c.getHindiName().isBlank()) {
+            sb.append(" (").append(c.getHindiName()).append(")");
+          }
+          sb.append("\n");
+          if (c.getDailyRate() != null && c.getDailyRate().compareTo(BigDecimal.ZERO) > 0) {
+            sb.append("  - **Daily Rent**: ₹").append(c.getDailyRate()).append(" / day\n");
+          } else {
+            sb.append("  - **Daily Rent**: Rate configured in Rental Tariff Master\n");
+          }
+          if (c.getDepositAmount() != null) {
+            sb.append("  - **Security Deposit**: ₹")
+                .append(c.getDepositAmount())
+                .append(" *(Refunded in 2 hours)*\n");
+          }
           sb.append("  - **Hub**: ")
-              .append(c.getHubName())
-              .append(" • Status: **")
-              .append(c.getStatus())
-              .append("**\n");
+              .append(c.getHubName() != null ? c.getHubName() : "Operational Yard");
+          if (c.getStatus() != null) {
+            sb.append(" • Status: **").append(c.getStatus()).append("**");
+          }
+          sb.append("\n");
         }
-        sb.append(
-            "\n👉 You can click **Book Machine Now** below to reserve instantly with dynamic UPI QR code!");
+        sb.append("\n👉 You can click **Book Machine Now** below to reserve instantly with dynamic UPI QR code!");
       } else {
-        sb.append("We offer a complete fleet of agricultural and construction machinery:\n\n");
-        sb.append(
-            "- **Agricultural Fleet**: Heavy-duty 7HP Rotary Power Weeders, Walk-Behind Crop Reapers (Paddy/Wheat), Post-Hole Earth Augers.\n");
-        sb.append(
-            "- **Construction Fleet**: 10/7 Tilting Concrete Mixers (Diesel), Plate Compactors, Concrete Vibrators, Demolition Jackhammers, Dewatering Pumps, Diesel Generators.\n\n");
-        sb.append(
-            "All rentals include **doorstep farm/site delivery** and a **2-Hour Deposit Refund Guarantee**.");
+        sb.append("We offer a complete fleet of verified agricultural and construction machinery:\n\n");
+        List<String> agri =
+            assets.stream()
+                .filter(a -> a.getCategory() == AssetCategory.AGRICULTURE)
+                .map(Asset::getName)
+                .distinct()
+                .limit(4)
+                .toList();
+        List<String> civil =
+            assets.stream()
+                .filter(a -> a.getCategory() == AssetCategory.CONSTRUCTION)
+                .map(Asset::getName)
+                .distinct()
+                .limit(4)
+                .toList();
+        List<String> multi =
+            assets.stream()
+                .filter(a -> a.getCategory() == AssetCategory.MULTIPURPOSE_FLEET)
+                .map(Asset::getName)
+                .distinct()
+                .limit(4)
+                .toList();
+
+        if (!agri.isEmpty()) {
+          sb.append("- **🌾 Agricultural Fleet**: ").append(String.join(", ", agri)).append("\n");
+        }
+        if (!civil.isEmpty()) {
+          sb.append("- **🏗️ Construction Fleet**: ").append(String.join(", ", civil)).append("\n");
+        }
+        if (!multi.isEmpty()) {
+          sb.append("- **🚚 Multipurpose Fleet**: ").append(String.join(", ", multi)).append("\n");
+        }
+        sb.append("\nAll rentals include **doorstep farm/site delivery** and a **2-Hour Deposit Refund Guarantee**.");
       }
       return sb.toString();
     }
@@ -470,13 +625,39 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         || lower.contains("transport")
         || lower.contains("doorstep")
         || lower.contains("gps")
-        || lower.contains("field")) {
-      return "### 🚚 Farm Field GPS & Site Delivery\n\n"
-          + "EquipGrid delivers machinery directly to your farm gate, field headland, or construction site:\n\n"
-          + "- **GPS Pinpoint Delivery**: Share your location via WhatsApp or web booking, and our transport trailer brings the equipment directly.\n"
-          + "- **Operating Radius**: 20–30 km coverage around Hardoi Central Yard, Sandila Industrial Hub, and Bilgram Agro Yard.\n"
-          + "- **Transparent Logistics**: Base delivery is calculated at ₹15/km with zero surprise charges.\n\n"
-          + "Ready to book delivery? Tell us your nearest village or town in Uttar Pradesh!";
+        || lower.contains("field")
+        || lower.contains("khet")
+        || lower.contains("pahuch")) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("### 🚚 Farm Field GPS & Site Delivery\n\n");
+      sb.append("EquipGrid delivers machinery directly to your farm gate, field headland, or construction site:\n\n");
+      sb.append("- **GPS Pinpoint Delivery**: Share your location via WhatsApp or web booking, and our transport trailer brings the equipment directly.\n");
+
+      if (!activeHubs.isEmpty()) {
+        String hubNames = activeHubs.stream().map(Hub::getName).collect(Collectors.joining(", "));
+        double minRadius =
+            activeHubs.stream()
+                .mapToDouble(h -> h.getOperatingRadiusKm() != null ? h.getOperatingRadiusKm().doubleValue() : 25.0)
+                .min()
+                .orElse(20.0);
+        double maxRadius =
+            activeHubs.stream()
+                .mapToDouble(h -> h.getOperatingRadiusKm() != null ? h.getOperatingRadiusKm().doubleValue() : 25.0)
+                .max()
+                .orElse(30.0);
+        sb.append("- **Operating Coverage**: ")
+            .append((int) minRadius)
+            .append("–")
+            .append((int) maxRadius)
+            .append(" km delivery radius around ")
+            .append(hubNames)
+            .append(".\n");
+      } else {
+        sb.append("- **Operating Coverage**: Direct field delivery from our nearest regional hub.\n");
+      }
+      sb.append("- **Transparent Logistics**: Base delivery is calculated with zero surprise charges.\n\n");
+      sb.append("Ready to book delivery? Tell us your nearest village, town, or GPS pin!");
+      return sb.toString();
     }
 
     if (lower.contains("contact")
@@ -484,12 +665,22 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         || lower.contains("call")
         || lower.contains("help")
         || lower.contains("support")
-        || lower.contains("whatsapp")) {
+        || lower.contains("whatsapp")
+        || lower.contains("number")) {
+      String contactNumber =
+          !activeHubs.isEmpty() && activeHubs.get(0).getContactPhone() != null
+              ? activeHubs.get(0).getContactPhone()
+              : "+91 94674 79922";
+      String primaryHubAddress =
+          !activeHubs.isEmpty() && activeHubs.get(0).getAddress() != null
+              ? activeHubs.get(0).getAddress()
+              : "Regional Operations Yard";
+
       return "### 📞 Contact EquipGrid 24/7 Operations Desk\n\n"
           + "We are here round the clock to support farmers and construction teams:\n\n"
-          + "- **24/7 Helpline**: 📞 `+91 94674 79922`\n"
-          + "- **Instant WhatsApp Bot**: 💬 `+91 94674 79922`\n"
-          + "- **Billing & Refund Desk**: Bilgram Road Industrial Area, Hardoi\n\n"
+          + "- **24/7 Helpline**: 📞 `" + contactNumber + "`\n"
+          + "- **Instant WhatsApp Bot**: 💬 `" + contactNumber + "`\n"
+          + "- **Central Operations Desk**: " + primaryHubAddress + "\n\n"
           + "You can also search or book machinery directly through this chat window!";
     }
 
@@ -498,21 +689,40 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         || lower.contains("namaste")
         || lower.contains("hey")
         || lower.contains("pranam")) {
-      return "### Namaste! Welcome to EquipGrid 🙏\n\n"
-          + "I am your EquipBot Assistant. Here is what I can do for you:\n\n"
-          + "1. **🚜 Browse & Book Machinery**: Power weeders, reapers, earth augers, concrete mixers, plate compactors.\n"
-          + "2. **💰 Check Rental Rates**: Daily/weekly rent, refundable deposits, and our **2-Hour UPI Refund Guarantee**.\n"
-          + "3. **🚚 Field Delivery**: Instant machine drop-off to your farm GPS location.\n"
-          + "4. **🚨 90-Min Zero-Breakdown SLA**: On-site technician support or immediate replacement.\n\n"
-          + "Which equipment or project do you need assistance with today?";
+      StringBuilder sb = new StringBuilder();
+      sb.append("### Namaste! Welcome to EquipGrid 🙏\n\n");
+      sb.append("I am your EquipBot Assistant. Here is what I can do for you:\n\n");
+      sb.append("1. **🚜 Browse & Book Machinery**: Agriculture, Construction & Multipurpose equipment.\n");
+      sb.append("2. **💰 Check Rental Rates**: Transparent tariffs, refundable deposits, and our **2-Hour UPI Refund Guarantee**.\n");
+      if (!activeHubs.isEmpty()) {
+        String hubCities = activeHubs.stream()
+            .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
+            .distinct()
+            .collect(Collectors.joining(", "));
+        sb.append("3. **🚚 Field Delivery**: Direct machine drop-off across ").append(hubCities).append(".\n");
+      } else {
+        sb.append("3. **🚚 Field Delivery**: Instant machine drop-off to your farm GPS location.\n");
+      }
+      sb.append("4. **🚨 90-Min Zero-Breakdown SLA**: On-site technician support or immediate replacement.\n\n");
+      sb.append("Which equipment, location, or project do you need assistance with today?");
+      return sb.toString();
     }
 
-    return "### EquipGrid AI Assistant 🙏\n\n"
-        + "I can help you check machinery availability, calculate rental costs, verify delivery to your field GPS, and reserve equipment.\n\n"
-        + "- **🌾 Agriculture**: Power Weeders, Crop Reapers, Earth Augers\n"
-        + "- **🏗️ Construction**: Concrete Mixers, Vibrators, Plate Compactors, Demolition Jackhammers\n"
-        + "- **⚡ Guarantees**: 2-Hour Deposit Refund & 90-Min Breakdown SLA\n\n"
-        + "Ask me about any machine name, rental pricing, or delivery details!";
+    // Default dynamic summary
+    StringBuilder sb = new StringBuilder();
+    sb.append("### EquipGrid AI Assistant 🙏\n\n");
+    sb.append("I can help you check machinery availability, verify delivery to your field GPS, and reserve equipment.\n\n");
+    if (!activeHubs.isEmpty()) {
+      String hubCities = activeHubs.stream()
+          .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
+          .distinct()
+          .collect(Collectors.joining(", "));
+      sb.append("- **📍 Operational Network**: Active yards serving **").append(hubCities).append("**\n");
+    }
+    sb.append("- **🌾 Agriculture & 🏗️ Construction & 🚚 Multipurpose**: Complete verified fleet\n");
+    sb.append("- **⚡ Guarantees**: 2-Hour Deposit Refund & 90-Min Breakdown SLA\n\n");
+    sb.append("Ask me about any machine name, your nearest hub location, or rental details!");
+    return sb.toString();
   }
 
   private List<EquipmentCardDto> matchEquipmentToQuery(String query, List<Asset> assets) {

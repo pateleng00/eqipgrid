@@ -44,7 +44,7 @@ public class Asset extends BaseEntity {
   @JoinColumn(name = "hub_id")
   private Hub hub;
 
-  @Column(name = "category")
+  @Column(name = "category", nullable = false)
   private AssetCategory category;
 
   @Column(name = "name")
@@ -53,8 +53,9 @@ public class Asset extends BaseEntity {
   @Column(name = "model_name")
   private String modelName;
 
+  @Builder.Default
   @Column(name = "image_url", nullable = false, length = 512)
-  private String imageUrl;
+  private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
 
   @Column(name = "serial_number", length = 128)
   private String serialNumber;

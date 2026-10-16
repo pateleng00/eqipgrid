@@ -7,6 +7,7 @@ import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.asset.enums.BillingUnit;
+import com.equipgrid.asset.repository.AssetMediaRepository;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.audit.service.IAuditService;
@@ -17,6 +18,13 @@ import com.equipgrid.common.storage.service.StorageService;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
+
+import com.equipgrid.location.repository.HubRepository;
+import com.equipgrid.master.repository.BillingUnitMasterRepository;
+import com.equipgrid.master.repository.EquipmentTypeRepository;
+import com.equipgrid.master.repository.MachineModelRepository;
+import com.equipgrid.master.repository.ManufacturerRepository;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,17 +38,15 @@ public class AssetServiceImpl implements IAssetService {
 
   private final AssetRepository assetRepository;
   private final AssetQueryRepository assetQueryRepository;
-  private final com.equipgrid.asset.repository.AssetMediaRepository assetMediaRepository;
+  private final AssetMediaRepository assetMediaRepository;
   private final IAuditService auditService;
   private final StorageService storageService;
-  private final com.equipgrid.master.repository.EquipmentTypeRepository equipmentTypeRepository;
-  private final com.equipgrid.master.repository.ManufacturerRepository manufacturerRepository;
-  private final com.equipgrid.master.repository.MachineModelRepository machineModelRepository;
-  private final com.equipgrid.location.repository.HubRepository hubRepository;
-  private final com.equipgrid.master.repository.BillingUnitMasterRepository
-      billingUnitMasterRepository;
-  private final com.equipgrid.rentalconfig.repository.RentalConfigurationRepository
-      rentalConfigurationRepository;
+  private final EquipmentTypeRepository equipmentTypeRepository;
+  private final ManufacturerRepository manufacturerRepository;
+  private final MachineModelRepository machineModelRepository;
+  private final HubRepository hubRepository;
+  private final BillingUnitMasterRepository billingUnitMasterRepository;
+  private final RentalConfigurationRepository rentalConfigurationRepository;
 
   @Override
   public List<Asset> getAllAssets(AssetCategory category, AssetStatus status) {

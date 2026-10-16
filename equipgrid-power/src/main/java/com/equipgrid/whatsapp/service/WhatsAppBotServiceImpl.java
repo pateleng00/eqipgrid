@@ -350,7 +350,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
                 Please select an option (विकल्प चुनें):
                 *1* 🚜 *Browse Machinery & Rent* (मशीनें देखें और बुक करें)
-                *2* 🏙️ *Select / Change Station Hub* (हब स्टेशन चुनें - Hardoi, Lucknow, Kanpur)
+                *2* 🏙️ *Select / Change Station Hub* (हब स्टेशन चुनें - %s)
                 *3* 💳 *Pay Rent / Security via UPI QR* (यूपीआई क्यूआर से भुगतान)
                 *4* 📍 *Track Equipment & Outward Challan* (ऑर्डर व मशीन ट्रैक करें)
                 *5* 🔄 *Instant Machine Return & Deposit Refund* (मशीन वापसी व रिफंड)
@@ -358,7 +358,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
                 💡 _Reply with 1, 2, 3, 4, 5, or 6. Type *MENU* anytime to return here._
                 """,
-            greeting, hubInfo);
+            greeting, hubInfo, getActiveHubCitiesSummary());
 
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
@@ -1852,8 +1852,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       } else {
         String guidance =
             "FARM".equalsIgnoreCase(context.getDeliveryDestinationType())
-                ? "⚠️ Please share your Farm's WhatsApp location pin 📍 or type the village and field approach landmark (minimum 3 characters)."
-                : "⚠️ Please share your WhatsApp location pin 📍 or type the delivery address / landmark (minimum 3 characters).";
+                ? "⚠️ Please share your Farm's WhatsApp location pin 📍 or type the village and field approach landmark (minimum 3 words)."
+                : "⚠️ Please share your WhatsApp location pin 📍 or type the delivery address / landmark (atleast 3 words).";
         return WhatsAppMessageResponse.builder()
             .to(conv.getPhoneNumber())
             .message(guidance)
@@ -2589,12 +2589,13 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
   private WhatsAppMessageResponse showHelplineResponse(WhatsAppConversation conv) {
     String helpline =
-        """
+        String.format(
+            """
                 📞 *EquipGrid Kisan & Civil Sahayata Helpline*
                 ━━━━━━━━━━━━━━━━━━━━━━
                 • 24x7 Support & Booking: *+91 94674 79922*
                 • WhatsApp Support: *+91 94674 79922*
-                • Active Stations: Hardoi, Lucknow, Kanpur
+                • Active Stations: %s
 
                 Services Provided:
                 1. On-field breakdown mechanic dispatch
@@ -2602,7 +2603,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
                 3. Return audit & instant UPI refund queries
 
                 👉 Reply *MENU* to return to main options.
-                """;
+                """,
+            getActiveHubCitiesSummary());
 
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
@@ -2610,6 +2612,23 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         .state(WhatsAppState.MAIN_MENU)
         .suggestedOptions(List.of("MENU"))
         .build();
+  }
+
+  private String getActiveHubCitiesSummary() {
+    try {
+      List<String> cities =
+          hubRepository.findByActiveTrueOrderByNameAsc().stream()
+              .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
+              .filter(name -> name != null && !name.isBlank())
+              .distinct()
+              .toList();
+      if (!cities.isEmpty()) {
+        return String.join(", ", cities);
+      }
+    } catch (Exception e) {
+      log.warn("Could not fetch active hub cities: {}", e.getMessage());
+    }
+    return "Hardoi, Sandila, Bilgram";
   }
 
   // ─── Voice Note Handler ────────────────────────────────────────────────────

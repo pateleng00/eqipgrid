@@ -22,6 +22,7 @@ public class CreateAssetRequest {
 
   private String name;
 
+  @NotNull(message = "Equipment category is required (1: Construction, 2: Agriculture, 3: Multipurpose)")
   private AssetCategory category;
 
   @NotNull(message = "Equipment Type selection is required from DB master")

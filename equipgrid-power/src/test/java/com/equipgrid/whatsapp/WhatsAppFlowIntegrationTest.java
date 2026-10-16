@@ -414,6 +414,7 @@ class WhatsAppFlowIntegrationTest {
             .assetTag("C-MIX-099")
             .model(model2)
             .type(type2)
+            .category(AssetCategory.CONSTRUCTION)
             .manufacturer(mfg2)
             .serialNumber("SN-MIX-099")
             .dailyRate(new BigDecimal("1200.00"))
