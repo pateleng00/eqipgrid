@@ -98,17 +98,17 @@ To get a **Permanent Access Token** that never expires (recommended for both san
 
 ---
 
-### Setting in Server Environment (`.env.prod` on EC2)
+### Setting in Server Environment (`application-prod.properties` on EC2)
 
-Add these to `/opt/equipgrid/config/.env.prod`:
-```ini
-META_PHONE_NUMBER_ID=***************
-META_BUSINESS_ACCOUNT_ID=****************
-META_ACCESS_TOKEN=****************
-META_VERIFY_TOKEN=****************
-META_APP_SECRET=****************
-META_API_VERSION=v21.0
-META_VERIFY_SIGNATURE=false
+Add these to `/opt/equipgrid/config/application-prod.properties`:
+```properties
+equipgrid.whatsapp.meta.phone-number-id=***************
+equipgrid.whatsapp.meta.business-account-id=****************
+equipgrid.whatsapp.meta.access-token=****************
+equipgrid.whatsapp.meta.verify-token=****************
+equipgrid.whatsapp.meta.app-secret=****************
+equipgrid.whatsapp.meta.api-version=v21.0
+equipgrid.whatsapp.meta.verify-signature=false
 ```
 
 Restart backend:
@@ -254,10 +254,10 @@ Temporary sandbox tokens expire after 24 hours. Production requires a **Permanen
 4. Copy the new **Phone Number ID**.
 
 ### 4. Update Server Configuration
-Update `/opt/equipgrid/config/.env.prod`:
-```ini
-META_PHONE_NUMBER_ID=<NEW_PERMANENT_PHONE_NUMBER_ID>
-META_ACCESS_TOKEN=<NEW_PERMANENT_SYSTEM_USER_TOKEN>
+Update `/opt/equipgrid/config/application-prod.properties`:
+```properties
+equipgrid.whatsapp.meta.phone-number-id=<NEW_PERMANENT_PHONE_NUMBER_ID>
+equipgrid.whatsapp.meta.access-token=<NEW_PERMANENT_SYSTEM_USER_TOKEN>
 ```
 Restart backend:
 ```bash
@@ -283,7 +283,7 @@ docker compose -f docker-compose.prod.yml logs --tail=50 station-frontend
 | Code / Message | Root Cause | Fix |
 |---|---|---|
 | `(#131030) Recipient phone number not in allowed list` | Sandbox mode: Outbound reply attempted to a number not in your "To" whitelist. | Add recipient number to whitelist in API Setup or test from verified number. |
-| `401 Unauthorized / Error validating access token` | Temporary 24-hr sandbox token expired. | Refresh access token in Meta API Setup and update `META_ACCESS_TOKEN` in `.env.prod`. |
+| `401 Unauthorized / Error validating access token` | Temporary 24-hr sandbox token expired. | Refresh access token in Meta API Setup and update `equipgrid.whatsapp.meta.access-token` in `application-prod.properties`. |
 | Double checkmarks on WhatsApp, but zero server logs | WABA is not subscribed to the App. | Run `POST /{WABA_ID}/subscribed_apps` via Graph API Explorer. |
 | Yellow banner: *"Apps will only be able to receive test webhooks..."* | Meta App is Unpublished (Development mode). | Add Privacy Policy URL in App Settings and click **Publish**. |
 | `403 Forbidden: Invalid or missing X-Hub-Signature-256` | Payload signature mismatch. | Ensure `META_VERIFY_SIGNATURE=false` in dev or `META_APP_SECRET` matches Meta App Secret in prod. |
