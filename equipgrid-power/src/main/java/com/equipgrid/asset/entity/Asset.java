@@ -44,7 +44,7 @@ public class Asset extends BaseEntity {
   @JoinColumn(name = "hub_id")
   private Hub hub;
 
-  @Column(name = "category", nullable = false)
+  @Column(name = "category")
   private AssetCategory category;
 
   @Column(name = "name")
@@ -59,10 +59,10 @@ public class Asset extends BaseEntity {
   @Column(name = "serial_number", length = 128)
   private String serialNumber;
 
-  @Column(name = "daily_rate", nullable = false, precision = 10, scale = 2)
+  @Column(name = "daily_rate", precision = 10, scale = 2)
   private BigDecimal dailyRate;
 
-  @Column(name = "deposit_amount", nullable = false, precision = 10, scale = 2)
+  @Column(name = "deposit_amount", precision = 10, scale = 2)
   private BigDecimal depositAmount;
 
   @Column(name = "purchase_cost", precision = 10, scale = 2)

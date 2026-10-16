@@ -307,12 +307,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
           badgeColor = 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30';
         }
 
+        const rc = api.getRentalConfigForAsset(asset);
+        const rateText = rc?.baseDailyRate ? `${formatINR(rc.baseDailyRate)}/${rc.unitLabel || 'day'}` : (asset.dailyRate ? `${formatINR(asset.dailyRate)}/day` : 'Rate Unconfigured');
+        const shiftText = rc?.shiftTerms || asset.shiftTerms || 'Standard Terms';
         return {
           id: `asset-${asset.id}`,
           type: 'asset' as const,
           title: asset.name,
-          subtitle: `${asset.assetTag} • Rate: ${formatINR(asset.dailyRate)}/day • Shift: ${asset.shiftTerms || 'Full Day'}`,
-          badge: asset.status === 'AVAILABLE' ? 'READY' : asset.status,
+          subtitle: `${asset.assetTag} • ${rateText} • Shift: ${shiftText}`,
+          badge: asset.status === 'AVAILABLE' ? (rc ? 'READY' : 'UNCONFIGURED') : asset.status,
           badgeColor,
           imageUrl: asset.imageUrl,
           icon: <Truck className="h-4 w-4 text-teal-600 dark:text-teal-400" />,

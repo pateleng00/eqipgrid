@@ -48,7 +48,7 @@ public class ReportingServiceImpl implements IReportingService {
         paymentQueryRepository.sumAmountByModeAndDateRange(PaymentMode.BANK_TRANSFER, start, end);
 
     BigDecimal totalIn = cash.add(upi).add(bank);
-    BigDecimal opening = new BigDecimal("10000.00");
+    BigDecimal opening = new BigDecimal("0.0");
     BigDecimal expenses = BigDecimal.ZERO;
     BigDecimal refunds = BigDecimal.ZERO;
 

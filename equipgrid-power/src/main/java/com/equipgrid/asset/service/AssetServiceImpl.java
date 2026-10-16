@@ -39,11 +39,17 @@ public class AssetServiceImpl implements IAssetService {
   private final com.equipgrid.location.repository.HubRepository hubRepository;
   private final com.equipgrid.master.repository.BillingUnitMasterRepository
       billingUnitMasterRepository;
+  private final com.equipgrid.rentalconfig.repository.RentalConfigurationRepository
+      rentalConfigurationRepository;
 
   @Override
   public List<Asset> getAllAssets(AssetCategory category, AssetStatus status) {
     List<Asset> assets = assetQueryRepository.fetchAssets(category, status);
-    assets.forEach(this::populateMedia);
+    assets.forEach(
+        a -> {
+          populateMedia(a);
+          populateRentalPricing(a);
+        });
     return assets;
   }
 
@@ -55,6 +61,7 @@ public class AssetServiceImpl implements IAssetService {
             .orElseThrow(
                 () -> new Exceptions.ResourceNotFoundException("Asset not found with ID: " + id));
     populateMedia(asset);
+    populateRentalPricing(asset);
     return asset;
   }
 
@@ -66,7 +73,51 @@ public class AssetServiceImpl implements IAssetService {
             .orElseThrow(
                 () -> new Exceptions.ResourceNotFoundException("Asset not found with tag: " + tag));
     populateMedia(asset);
+    populateRentalPricing(asset);
     return asset;
+  }
+
+  private void populateRentalPricing(Asset asset) {
+    if (asset == null || asset.getId() == null) return;
+    Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
+    var configs =
+        rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+    if (!configs.isEmpty()) {
+      var cfg = configs.get(0);
+      asset.setDailyRate(cfg.getBaseDailyRate());
+      asset.setDepositAmount(cfg.getDepositAmount());
+      if (cfg.getBillingUnit() != null) asset.setBillingUnit(cfg.getBillingUnit());
+      if (cfg.getBillingUnitMaster() != null) asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
+      if (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) {
+        asset.setShiftTerms(cfg.getShiftTerms());
+      }
+      if (cfg.getWorkingHoursLimit() != null) {
+        asset.setWorkingHoursLimit(cfg.getWorkingHoursLimit());
+      }
+    } else if (asset.getType() != null && asset.getHub() != null) {
+      configs =
+          rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+              asset.getType().getId(), asset.getHub().getId());
+      if (!configs.isEmpty()) {
+        var cfg = configs.get(0);
+        asset.setDailyRate(cfg.getBaseDailyRate());
+        asset.setDepositAmount(cfg.getDepositAmount());
+        if (cfg.getBillingUnit() != null) asset.setBillingUnit(cfg.getBillingUnit());
+        if (cfg.getBillingUnitMaster() != null) asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
+        if (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) {
+          asset.setShiftTerms(cfg.getShiftTerms());
+        }
+        if (cfg.getWorkingHoursLimit() != null) {
+          asset.setWorkingHoursLimit(cfg.getWorkingHoursLimit());
+        }
+      } else {
+        asset.setDailyRate(null);
+        asset.setDepositAmount(null);
+      }
+    } else {
+      asset.setDailyRate(null);
+      asset.setDepositAmount(null);
+    }
   }
 
   private void populateMedia(Asset asset) {
@@ -256,6 +307,7 @@ public class AssetServiceImpl implements IAssetService {
     }
 
     populateMedia(saved);
+    populateRentalPricing(saved);
 
     auditService.log(
         "ASSET",
@@ -426,7 +478,11 @@ public class AssetServiceImpl implements IAssetService {
   @Override
   public List<WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId) {
     List<Asset> all = assetQueryRepository.fetchAssets(category, null);
-    all.forEach(this::populateMedia);
+    all.forEach(
+        a -> {
+          populateMedia(a);
+          populateRentalPricing(a);
+        });
 
     // Group by distinct machine model name
     Map<String, List<Asset>> grouped =

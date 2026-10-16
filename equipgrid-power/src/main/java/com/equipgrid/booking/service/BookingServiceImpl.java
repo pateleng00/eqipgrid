@@ -107,9 +107,13 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     BigDecimal dailyRate =
-        rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+        rentalConfig != null
+            ? rentalConfig.getBaseDailyRate()
+            : (asset.getDailyRate() != null ? asset.getDailyRate() : BigDecimal.ZERO);
     BigDecimal depositAmount =
-        rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+        rentalConfig != null
+            ? rentalConfig.getDepositAmount()
+            : (asset.getDepositAmount() != null ? asset.getDepositAmount() : BigDecimal.ZERO);
     BigDecimal opRate =
         rentalConfig != null
             ? rentalConfig.getOperatorDailyRate()
@@ -288,9 +292,13 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     BigDecimal dailyRate =
-        rentalConfig != null ? rentalConfig.getBaseDailyRate() : asset.getDailyRate();
+        rentalConfig != null
+            ? rentalConfig.getBaseDailyRate()
+            : (asset.getDailyRate() != null ? asset.getDailyRate() : BigDecimal.ZERO);
     BigDecimal depositAmount =
-        rentalConfig != null ? rentalConfig.getDepositAmount() : asset.getDepositAmount();
+        rentalConfig != null
+            ? rentalConfig.getDepositAmount()
+            : (asset.getDepositAmount() != null ? asset.getDepositAmount() : BigDecimal.ZERO);
     BigDecimal opRate =
         rentalConfig != null
             ? rentalConfig.getOperatorDailyRate()

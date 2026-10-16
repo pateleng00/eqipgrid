@@ -263,8 +263,8 @@ public class FleetIntelligenceTools {
     LocalDate end = start.plusDays(durationDays - 1);
     PricingEngine.CommercialQuote quote =
         pricingEngine.calculate(
-            matched.getDailyRate(),
-            matched.getDepositAmount(),
+            matched.getDailyRate() != null ? matched.getDailyRate() : BigDecimal.ZERO,
+            matched.getDepositAmount() != null ? matched.getDepositAmount() : BigDecimal.ZERO,
             start,
             end,
             BigDecimal.valueOf(distanceKm),

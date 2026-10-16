@@ -1919,7 +1919,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     String depositLine =
         quote.getDepositAmount().compareTo(BigDecimal.ZERO) == 0
-            ? "• *Security Deposit*: ✨ *₹0 (Zero-Deposit Scheme / किसान सहायता योजना)*\n"
+            ? "• *Security Deposit (100% Refundable)*: ✨ *₹0 (Zero-Deposit Scheme / किसान सहायता योजना)*\n"
             : String.format(
                 "• *Security Deposit (100%% Refundable)*: ₹%,.2f\n", quote.getDepositAmount());
 

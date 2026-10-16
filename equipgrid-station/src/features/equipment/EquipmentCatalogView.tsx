@@ -23,6 +23,7 @@ import {
   Trash2,
   Layers,
   Cpu,
+  AlertCircle,
 } from 'lucide-react';
 import { StatusBadge } from '../../components/StatusBadge';
 import { SearchSelect } from '../../components/SearchSelect';
@@ -471,6 +472,13 @@ const MachineCard: React.FC<{
   const { isDaylight } = useTheme();
   const isAvail = asset.status === 'AVAILABLE';
 
+  const rentalConfig = api.getRentalConfigForAsset(asset);
+  const resolvedRate = rentalConfig?.baseDailyRate ?? null;
+  const resolvedDeposit = rentalConfig?.depositAmount ?? null;
+  const resolvedBillingUnit = rentalConfig?.billingUnit || asset.billingUnit;
+  const resolvedUnitLabel = rentalConfig?.unitLabel || asset.unitLabel || getBillingUnitLabel(resolvedBillingUnit);
+  const hasConfig = resolvedRate != null && resolvedRate > 0;
+
   return (
     <div
       className={`rounded-2xl overflow-hidden border flex flex-col transition-all hover:shadow-xl hover:-translate-y-0.5 duration-200 ${
@@ -556,21 +564,35 @@ const MachineCard: React.FC<{
         <div
           className={`rounded-xl p-3 mt-auto ${isDaylight ? 'bg-slate-50 border border-slate-100' : 'bg-slate-800/60 border border-slate-700/40'}`}
         >
-          <div className="flex items-end justify-between">
+          <div className="flex items-end justify-between gap-2">
             <div>
-              <div className={`text-xl font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
-                {formatINR(asset.dailyRate)}
-                <span className={`text-xs font-normal ml-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
-                  /{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}
-                </span>
-              </div>
-              <div
-                className={`text-[11px] mt-0.5 ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
-              >
-                Deposit: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}
-              </div>
+              {hasConfig ? (
+                <>
+                  <div className={`text-xl font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
+                    {formatINR(resolvedRate)}
+                    <span className={`text-xs font-normal ml-1 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
+                      /{resolvedUnitLabel}
+                    </span>
+                  </div>
+                  <div
+                    className={`text-[11px] mt-0.5 ${resolvedDeposit === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
+                  >
+                    Deposit: {resolvedDeposit === 0 ? '₹0 (Zero Deposit)' : formatINR(resolvedDeposit ?? 0)}
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <div className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                    <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+                    <span>Rate Not Configured</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    Set in Rental Rates Master
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               {isRoot && onDelete && (
                 <button
                   type="button"
@@ -585,21 +607,26 @@ const MachineCard: React.FC<{
                   <Trash2 className="h-4 w-4" />
                 </button>
               )}
-              <button
-                onClick={onBook}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  isAvail
-                    ? isDaylight
-                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm shadow-amber-200'
-                      : 'bg-amber-500 hover:bg-amber-400 text-black'
-                    : isDaylight
-                      ? 'bg-slate-200 text-slate-500 cursor-default'
-                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
-                }`}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                {isAvail ? 'Book Now' : 'Unavailable'}
-              </button>
+              {hasConfig ? (
+                <button
+                  onClick={onBook}
+                  disabled={!isAvail}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isAvail
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/30'
+                      : isDaylight
+                        ? 'bg-slate-200 text-slate-500 cursor-default'
+                        : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-default'
+                  }`}
+                >
+                  <Zap className="h-3.5 w-3.5" />
+                  {isAvail ? 'Book Now' : 'Unavailable'}
+                </button>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 px-2 py-1.5 rounded-lg border border-amber-300 dark:border-amber-700/60 bg-amber-50 dark:bg-amber-950/40 select-none">
+                  Unconfigured
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -1110,6 +1137,12 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                       const isAvail = asset.status === 'AVAILABLE';
                       const thumb = asset.mediaItems?.find((m) => m.mediaType === 'IMAGE')?.url ?? asset.imageUrl;
                       const hasVideo = asset.mediaItems?.some((m) => m.mediaType === 'VIDEO');
+                      const rentalConfig = api.getRentalConfigForAsset(asset);
+                      const resolvedRate = rentalConfig?.baseDailyRate ?? null;
+                      const resolvedDeposit = rentalConfig?.depositAmount ?? null;
+                      const resolvedBillingUnit = rentalConfig?.billingUnit || asset.billingUnit;
+                      const resolvedUnitLabel = rentalConfig?.unitLabel || asset.unitLabel || getBillingUnitLabel(resolvedBillingUnit);
+                      const hasConfig = resolvedRate != null && resolvedRate > 0;
                       return (
                         <tr
                           key={asset.id}
@@ -1174,20 +1207,34 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                             <div className="text-slate-500 text-[10px] ml-4">{asset.cityName}</div>
                           </td>
                           <td className="py-3 px-4">
-                            <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
-                              {formatINR(asset.dailyRate)}
-                              <span className="text-[10px] font-normal text-slate-500">
-                                /{asset.unitLabel || getBillingUnitLabel(asset.billingUnit)}
-                              </span>
-                            </div>
-                            <div
-                              className={`text-[11px] ${asset.depositAmount === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
-                            >
-                              Dep: {asset.depositAmount === 0 ? '₹0 (Zero Deposit)' : formatINR(asset.depositAmount)}
-                            </div>
-                            <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold truncate max-w-[200px]">
-                              {asset.shiftTerms || getBillingUnitShiftTerms(asset.billingUnit)}
-                            </div>
+                            {hasConfig ? (
+                              <>
+                                <div className={`font-black ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
+                                  {formatINR(resolvedRate)}
+                                  <span className="text-[10px] font-normal text-slate-500">
+                                    /{resolvedUnitLabel}
+                                  </span>
+                                </div>
+                                <div
+                                  className={`text-[11px] ${resolvedDeposit === 0 ? 'text-emerald-600 dark:text-emerald-400 font-bold' : isDaylight ? 'text-amber-900 font-bold' : 'text-slate-400'}`}
+                                >
+                                  Dep: {resolvedDeposit === 0 ? '₹0 (Zero Deposit)' : formatINR(resolvedDeposit ?? 0)}
+                                </div>
+                                <div className="text-[10px] text-amber-900 dark:text-amber-400 font-bold truncate max-w-[200px]">
+                                  {rentalConfig?.shiftTerms || asset.shiftTerms || getBillingUnitShiftTerms(resolvedBillingUnit)}
+                                </div>
+                              </>
+                            ) : (
+                              <div>
+                                <div className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                                  <AlertCircle className="h-3 w-3 shrink-0" />
+                                  <span>Rate Not Configured</span>
+                                </div>
+                                <div className="text-[10px] text-slate-500">
+                                  Set in Rental Rates Master
+                                </div>
+                              </div>
+                            )}
                           </td>
                           <td className="py-3 px-4">
                             <StatusBadge status={asset.status} size="sm" />
@@ -1205,11 +1252,20 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                                 </button>
                               )}
                               <button
-                                onClick={() => onSelectForBooking(asset)}
-                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${isAvail ? (isDaylight ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm' : 'bg-amber-500 hover:bg-amber-400 text-black') : isDaylight ? 'bg-slate-200 text-slate-500' : 'bg-slate-800 text-slate-500 border border-slate-700'}`}
+                                onClick={() => hasConfig && onSelectForBooking(asset)}
+                                disabled={!isAvail || !hasConfig}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                  hasConfig && isAvail
+                                    ? isDaylight
+                                      ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-sm cursor-pointer'
+                                      : 'bg-amber-500 hover:bg-amber-400 text-black cursor-pointer'
+                                    : isDaylight
+                                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                                      : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed'
+                                }`}
                               >
                                 <Zap className="h-3.5 w-3.5" />
-                                {isAvail ? 'Book' : 'Unavailable'}
+                                {!hasConfig ? 'Unconfigured' : isAvail ? 'Book' : 'Unavailable'}
                               </button>
                             </div>
                           </td>

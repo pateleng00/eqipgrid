@@ -423,8 +423,8 @@ function mapAsset(a: any): Asset {
     stateName: a.hub?.city?.state?.name || 'Uttar Pradesh',
     imageUrl: cleanImg,
     serialNumber: a.serialNumber || '',
-    dailyRate: Number(a.dailyRate || 0),
-    depositAmount: Number(a.depositAmount || 0),
+    dailyRate: a.dailyRate != null ? Number(a.dailyRate) : undefined,
+    depositAmount: a.depositAmount != null ? Number(a.depositAmount) : undefined,
     purchaseCost: a.purchaseCost ? Number(a.purchaseCost) : undefined,
     operatorRequired: Boolean(a.operatorRequired),
     status: mapStatus(a.status),
@@ -681,6 +681,8 @@ export class ApiStore {
   set rentalConfigs(v) {
     this._rentalConfigs = v;
   }
+
+
 
   private _customers: Customer[] = [];
   private _customersLoading = false;
@@ -1425,9 +1427,21 @@ export class ApiStore {
     return hubConfigs;
   }
 
-  getRentalConfigForAsset(assetId: number, hubId?: number): RentalConfiguration | undefined {
-    const all = this.getRentalConfigsForAsset(assetId, hubId);
-    return all.length > 0 ? all[0] : undefined;
+  getRentalConfigForAsset(assetOrId: Asset | number, hubId?: number): RentalConfiguration | undefined {
+    if (!assetOrId) return undefined;
+    const assetId = typeof assetOrId === 'number' ? assetOrId : assetOrId.id;
+    const resolvedHubId = hubId || (typeof assetOrId === 'object' ? assetOrId.hubId : undefined);
+    const asset = typeof assetOrId === 'object' ? assetOrId : this.assets.find((a) => a.id === assetId);
+    const configs = this.rentalConfigs || [];
+    if (configs.length === 0) return undefined;
+
+    return (
+      configs.find((rc) => rc.assetId === assetId && rc.active) ||
+      (asset?.typeId && resolvedHubId
+        ? configs.find((rc) => rc.typeId === asset.typeId && rc.hubId === resolvedHubId && rc.active)
+        : undefined) ||
+      (asset?.typeId ? configs.find((rc) => rc.typeId === asset.typeId && rc.active) : undefined)
+    );
   }
 
   addRentalConfig(data: {
@@ -1589,16 +1603,11 @@ export class ApiStore {
     const state = city ? this.states.find((s) => s.id === city.stateId) : undefined;
 
     const matchingConfig =
-      this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId) ||
-      this.rentalConfigs.find((rc) => rc.typeId === data.typeId) ||
-      this.rentalConfigs.find((rc) => rc.hubId === data.hubId);
-    const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : matchingConfig?.baseDailyRate || 1000;
+      this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId && rc.active) ||
+      this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.active);
+    const resolvedDailyRate = data.dailyRate !== undefined ? data.dailyRate : matchingConfig?.baseDailyRate;
     const resolvedDepositAmount =
-      data.depositAmount !== undefined
-        ? data.depositAmount
-        : matchingConfig?.depositAmount != null
-          ? matchingConfig.depositAmount
-          : 3000;
+      data.depositAmount !== undefined ? data.depositAmount : matchingConfig?.depositAmount;
 
     const resolvedCategory: AssetCategory =
       data.category ||
@@ -1704,8 +1713,8 @@ export class ApiStore {
           imageUrl: effectiveImageUrl,
           galleryImageUrls: data.galleryImageUrls,
           videoUrl: data.videoUrl,
-          dailyRate: resolvedDailyRate > 0 ? resolvedDailyRate : 1000,
-          depositAmount: resolvedDepositAmount >= 0 ? resolvedDepositAmount : 3000,
+          dailyRate: resolvedDailyRate,
+          depositAmount: resolvedDepositAmount,
           purchaseCost: data.purchaseCost,
           operatorRequired: data.operatorRequired,
           serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
@@ -1885,8 +1894,8 @@ export class ApiStore {
       const diffDays = Math.round((date2.getTime() - date1.getTime()) / (1000 * 60 * 60 * 24));
       const days = Math.max(1, diffDays + 1);
 
-      const rate = rc ? rc.baseDailyRate : asset.dailyRate;
-      const deposit = rc ? rc.depositAmount : asset.depositAmount;
+      const rate = rc ? rc.baseDailyRate : (asset.dailyRate ?? 0);
+      const deposit = rc ? rc.depositAmount : (asset.depositAmount ?? 0);
       const opRate = rc ? (rc.operatorDailyRate ?? 500) : 500;
       const freeKm = rc ? (rc.freeDeliveryDistanceKm ?? 5.0) : 5.0;
       const ratePerKm = rc ? (rc.ratePerKmAfterFree ?? 10.0) : 10.0;
@@ -2531,14 +2540,17 @@ export class ApiStore {
     scored.sort((a, b) => b.matchScore - a.matchScore);
     const top = scored.slice(0, 2);
 
-    return top.map(({ asset, reason }) => ({
-      assetId: asset.id,
-      assetName: asset.name,
-      assetTag: asset.assetTag,
-      reason,
-      dailyRate: asset.dailyRate,
-      depositAmount: asset.depositAmount,
-    }));
+    return top.map(({ asset, reason }) => {
+      const rc = this.getRentalConfigForAsset(asset);
+      return {
+        assetId: asset.id,
+        assetName: asset.name,
+        assetTag: asset.assetTag,
+        reason,
+        dailyRate: rc ? rc.baseDailyRate : asset.dailyRate,
+        depositAmount: rc ? rc.depositAmount : asset.depositAmount,
+      };
+    });
   }
 
   // --- DISPATCH OPERATIONS ---

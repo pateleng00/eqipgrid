@@ -332,8 +332,8 @@ export interface Asset {
   category: AssetCategory;
   modelName: string;
   serialNumber: string;
-  dailyRate: number;
-  depositAmount: number;
+  dailyRate?: number;
+  depositAmount?: number;
   purchaseCost?: number;
   operatorRequired: boolean;
   status: AssetStatus;
@@ -727,8 +727,8 @@ export interface EquipmentRecommendationResponse {
   assetName: string;
   assetTag: string;
   reason: string;
-  dailyRate: number;
-  depositAmount: number;
+  dailyRate?: number;
+  depositAmount?: number;
 }
 
 export interface FarmerFriendlyStatusInfo {

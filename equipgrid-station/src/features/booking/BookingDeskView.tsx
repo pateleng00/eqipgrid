@@ -5,6 +5,7 @@ import {
   Calculator,
   UserCheck,
   ShieldAlert,
+  AlertCircle,
   MapPin,
   CheckCircle,
   Truck,
@@ -642,7 +643,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
         rentalConfigId: selectedRentalConfigId ? Number(selectedRentalConfigId) : undefined,
         billingUnit: currentTariff?.billingUnit || currentAsset.billingUnit,
         shiftTerms: currentTariff?.shiftTerms || currentAsset.shiftTerms,
-        dailyRate: currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate,
+        dailyRate: currentTariff?.baseDailyRate ?? currentAsset.dailyRate,
       });
 
       setSelectedRentalConfigId('');
@@ -1911,15 +1912,19 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                       ) : availableMachines.length ? (
                         <SearchSelect
                           options={availableMachines.map((a) => {
-                            const unitSuffix = `/${a.unitLabel || getBillingUnitLabel(a.billingUnit)}`;
+                            const rc = api.getRentalConfigForAsset(a);
+                            const rate = rc?.baseDailyRate;
+                            const deposit = rc?.depositAmount;
+                            const unitSuffix = `/${rc?.unitLabel || a.unitLabel || getBillingUnitLabel(rc?.billingUnit || a.billingUnit)}`;
+                            const rateText = rate != null ? `${formatINR(rate)}${unitSuffix}` : 'Rate Unconfigured';
                             const depText =
-                              a.depositAmount === 0 ? 'Zero-Dep Scheme (₹0)' : `Dep: ${formatINR(a.depositAmount)}`;
-                            const shiftPolicy = a.shiftTerms || getBillingUnitShiftTerms(a.billingUnit);
+                              deposit === 0 ? 'Zero-Dep (₹0)' : deposit != null ? `Dep: ${formatINR(deposit)}` : 'Dep: —';
+                            const shiftPolicy = rc?.shiftTerms || a.shiftTerms || getBillingUnitShiftTerms(rc?.billingUnit || a.billingUnit);
                             return {
                               value: a.id,
                               label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,
-                              subLabel: `${formatINR(a.dailyRate)}${unitSuffix} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
-                              badge: 'AVAILABLE',
+                              subLabel: `${rateText} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
+                              badge: rate != null ? 'AVAILABLE' : 'UNCONFIGURED',
                             };
                           })}
                           value={selectedAssetId}
@@ -1963,14 +1968,27 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">
-                            Base: {formatINR(currentAsset.dailyRate)}/{getBillingUnitLabel(currentAsset.billingUnit)}
-                          </div>
-                          <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
-                            {currentAsset.depositAmount === 0
-                              ? '✨ ₹0 Zero Deposit Scheme'
-                              : `Security Deposit: ${formatINR(currentAsset.depositAmount)}`}
-                          </div>
+                          {currentTariff ? (
+                            <>
+                              <div className="text-xs font-mono font-black text-emerald-600 dark:text-emerald-400">
+                                Base: {formatINR(currentTariff.baseDailyRate)}/{currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}
+                              </div>
+                              <div className="text-[10px] text-slate-500 font-semibold mt-0.5">
+                                {currentTariff.depositAmount === 0
+                                  ? '✨ ₹0 Zero Deposit Scheme'
+                                  : `Security Deposit: ${formatINR(currentTariff.depositAmount)}`}
+                              </div>
+                            </>
+                          ) : (
+                            <div>
+                              <div className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                                Rate Not Configured
+                              </div>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                Set in Rental Rates Master
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}
@@ -2067,15 +2085,15 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
                         ) : (
                           <div
-                            className={`p-2.5 rounded-xl border text-xs flex items-center justify-between ${
+                            className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 ${
                               isDaylight
-                                ? 'bg-slate-50 border-slate-200 text-slate-700'
-                                : 'bg-slate-900/50 border-slate-800 text-slate-300'
+                                ? 'bg-amber-50 border-amber-200 text-amber-900'
+                                : 'bg-amber-950/30 border-amber-800 text-amber-200'
                             }`}
                           >
+                            <AlertCircle className="h-4 w-4 shrink-0 text-amber-600" />
                             <span>
-                              Default machine tariff applied: {formatINR(currentAsset.dailyRate)}/
-                              {getBillingUnitLabel(currentAsset.billingUnit)}
+                              No rental rate configured for this machinery. Please configure rates in <strong>Rental Rates Master</strong> before creating a booking.
                             </span>
                           </div>
                         )}
@@ -2103,9 +2121,16 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             });
                             return;
                           }
+                          if (!currentTariff) {
+                            setErrorModal({
+                              isOpen: true,
+                              message: 'This machinery has no rental tariff configured. Please set up rates in Rental Rates Master first.',
+                            });
+                            return;
+                          }
                           setReservationStep('CUSTOMER_LOGISTICS');
                         }}
-                        disabled={!currentAsset}
+                        disabled={!currentAsset || !currentTariff}
                         className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs cursor-pointer disabled:opacity-50 transition-all shadow-sm"
                       >
                         <span>Continue to Customer & Delivery (Step 2)</span>
@@ -2131,8 +2156,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                               ({currentAsset.assetTag})
                             </span>
                             <span className="text-emerald-600 dark:text-emerald-400 font-bold ml-2">
-                              {formatINR(currentTariff ? currentTariff.baseDailyRate : currentAsset.dailyRate)}/
-                              {getBillingUnitLabel(currentTariff?.billingUnit || currentAsset.billingUnit)}
+                              {currentTariff
+                                ? `${formatINR(currentTariff.baseDailyRate)}/${currentTariff.unitLabel || getBillingUnitLabel(currentTariff.billingUnit)}`
+                                : 'Rate Unconfigured'}
                             </span>
                           </div>
                         </div>
@@ -2428,7 +2454,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           {currentAsset?.name}
                         </div>
                         <div className="text-[11px] text-amber-600 dark:text-amber-400 font-mono mt-0.5">
-                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset?.dailyRate)} /{' '}
+                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || 0)} /{' '}
                           {getBillingUnitLabel(
                             quote?.billingUnit || currentTariff?.billingUnit || currentAsset?.billingUnit,
                           )}
@@ -2691,7 +2717,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                         </div>
                         <div>
                           <strong>दर / प्लान:</strong>{' '}
-                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || currentAsset.dailyRate)} /{' '}
+                          {formatINR(quote?.dailyRate || currentTariff?.baseDailyRate || 0)} /{' '}
                           {getBillingUnitLabel(
                             quote?.billingUnit || currentTariff?.billingUnit || currentAsset.billingUnit,
                           )}

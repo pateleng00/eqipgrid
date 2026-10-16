@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -639,113 +640,6 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
     } catch (Exception e) {
       log.warn("Could not fetch assets from DB: {}", e.getMessage());
     }
-    return buildFallbackAssets();
-  }
-
-  private List<Asset> buildFallbackAssets() {
-    List<Asset> list = new ArrayList<>();
-    list.add(
-        Asset.builder()
-            .id(1L)
-            .assetTag("C-MIX-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("10/7 Tilting Concrete Mixer (Diesel)")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.CONSTRUCTION)
-                    .build())
-            .dailyRate(new BigDecimal("1200.00"))
-            .depositAmount(new BigDecimal("5000.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1581094288338-2314dddb7ece?w=800")
-            .build());
-    list.add(
-        Asset.builder()
-            .id(7L)
-            .assetTag("A-WED-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("Heavy-Duty 7HP Rotary Power Weeder")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.AGRICULTURE)
-                    .build())
-            .dailyRate(new BigDecimal("1000.00"))
-            .depositAmount(new BigDecimal("3500.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=800")
-            .build());
-    list.add(
-        Asset.builder()
-            .id(8L)
-            .assetTag("A-REP-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("Walk-Behind Power Reaper (Paddy/Wheat)")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.AGRICULTURE)
-                    .build())
-            .dailyRate(new BigDecimal("2500.00"))
-            .depositAmount(new BigDecimal("8000.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=800")
-            .build());
-    list.add(
-        Asset.builder()
-            .id(9L)
-            .assetTag("A-AUG-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("Portable Post-Hole Earth Auger 68cc")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.AGRICULTURE)
-                    .build())
-            .dailyRate(new BigDecimal("600.00"))
-            .depositAmount(new BigDecimal("2000.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=800")
-            .build());
-    list.add(
-        Asset.builder()
-            .id(3L)
-            .assetTag("C-VIB-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("Petrol Engine Concrete Vibrator")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.CONSTRUCTION)
-                    .build())
-            .dailyRate(new BigDecimal("400.00"))
-            .depositAmount(new BigDecimal("2000.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1541888946425-d0fbb186c5f7?w=800")
-            .build());
-    list.add(
-        Asset.builder()
-            .id(5L)
-            .assetTag("C-CMP-001")
-            .model(
-                com.equipgrid.master.entity.MachineModel.builder()
-                    .name("Forward Plate Compactor 5.5HP")
-                    .build())
-            .type(
-                com.equipgrid.master.entity.EquipmentType.builder()
-                    .category(AssetCategory.CONSTRUCTION)
-                    .build())
-            .dailyRate(new BigDecimal("800.00"))
-            .depositAmount(new BigDecimal("4000.00"))
-            .status(AssetStatus.AVAILABLE)
-            .imageUrl("https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800")
-            .build());
-    return list;
+    return Collections.emptyList();
   }
 }

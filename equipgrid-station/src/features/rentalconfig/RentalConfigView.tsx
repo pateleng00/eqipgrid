@@ -273,7 +273,7 @@ export const RentalConfigView: React.FC = () => {
       hubId: Number(formHubId),
       assetId: formAssetId ? Number(formAssetId) : undefined,
       typeId: resolvedTypeId,
-      baseDailyRate: !isNaN(parsedRate) ? parsedRate : 1000,
+      baseDailyRate: !isNaN(parsedRate) ? parsedRate : 0,
       depositAmount: formDeposit !== '' && !isNaN(parseFloat(formDeposit)) ? parseFloat(formDeposit) : 0,
       operatorDailyRate:
         formOperatorRate !== '' && !isNaN(parseFloat(formOperatorRate)) ? parseFloat(formOperatorRate) : 0,
@@ -336,8 +336,8 @@ export const RentalConfigView: React.FC = () => {
   const simFree = activeSimConfig?.freeDeliveryDistanceKm ?? 5.0;
   const simRateKm = activeSimConfig?.ratePerKmAfterFree ?? 10.0;
   const simDeliveryFee = simDistanceKm <= simFree ? 0 : Math.round((simDistanceKm - simFree) * simRateKm);
-  const simRent = (activeSimConfig?.baseDailyRate || 1000) * simDays;
-  const simOperator = (activeSimConfig?.operatorDailyRate || 500) * simDays;
+  const simRent = (activeSimConfig?.baseDailyRate || 0) * simDays;
+  const simOperator = (activeSimConfig?.operatorDailyRate || 0) * simDays;
   const simTotal = simRent + simOperator + simDeliveryFee + (activeSimConfig?.depositAmount || 0);
 
   return (
@@ -1076,8 +1076,8 @@ export const RentalConfigView: React.FC = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => setFormDeposit('1000')}
-                            className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '1000' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                            onClick={() => setFormDeposit('0')}
+                            className={`px-1.5 py-0.5 rounded font-bold transition-colors ${formDeposit === '0' ? 'bg-emerald-600 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
                           >
                             ₹1k
                           </button>

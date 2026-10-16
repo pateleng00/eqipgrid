@@ -2,6 +2,7 @@ package com.equipgrid.asset.controller;
 
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
 import com.equipgrid.asset.dto.request.UpdateStatusRequest;
+import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
@@ -32,23 +33,15 @@ public class AssetController {
 
   @GetMapping
   @Operation(summary = "List all equipment with optional category and status filters")
-  public ResponseEntity<ApiResponse<List<Asset>>> listAssets(
-      @RequestParam(required = false) AssetCategory category,
-      @RequestParam(required = false) AssetStatus status) {
+  public ResponseEntity<ApiResponse<List<Asset>>> listAssets(@RequestParam(required = false) AssetCategory category, @RequestParam(required = false) AssetStatus status) {
     List<Asset> assets = assetService.getAllAssets(category, status);
     return ResponseEntity.ok(ApiResponse.buildSuccess(assets));
   }
 
   @GetMapping("/website-catalog")
-  @Operation(
-      summary = "Get distinct machine models for website catalog with inventory counts and hubs")
-  public ResponseEntity<
-          ApiResponse<List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse>>>
-      getWebsiteCatalog(
-          @RequestParam(required = false) AssetCategory category,
-          @RequestParam(required = false) Long hubId) {
-    List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> catalog =
-        assetService.getWebsiteCatalog(category, hubId);
+  @Operation(summary = "Get distinct machine models for website catalog with inventory counts and hubs")
+  public ResponseEntity<ApiResponse<List<WebsiteMachineModelResponse>>> getWebsiteCatalog(@RequestParam(required = false) AssetCategory category, @RequestParam(required = false) Long hubId) {
+    List<WebsiteMachineModelResponse> catalog = assetService.getWebsiteCatalog(category, hubId);
     return ResponseEntity.ok(ApiResponse.buildSuccess(catalog));
   }
 
@@ -66,8 +59,7 @@ public class AssetController {
 
   @PostMapping
   @Operation(summary = "Register new machinery into fleet")
-  public ResponseEntity<ApiResponse<Asset>> createAsset(
-      @Valid @RequestBody CreateAssetRequest request, Principal principal) {
+  public ResponseEntity<ApiResponse<Asset>> createAsset(@Valid @RequestBody CreateAssetRequest request, Principal principal) {
     String actor = principal != null ? principal.getName() : "ADMIN";
     Asset created = assetService.createAsset(request, actor);
     return ResponseEntity.ok(ApiResponse.buildSuccess("Asset created successfully", created));
