@@ -107,25 +107,24 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     BigDecimal dailyRate =
-        rentalConfig != null
+        rentalConfig != null && rentalConfig.getBaseDailyRate() != null
             ? rentalConfig.getBaseDailyRate()
-            : (asset.getDailyRate() != null ? asset.getDailyRate() : BigDecimal.ZERO);
+            : asset.getDailyRate();
+    if (dailyRate == null) {
+      throw new Exceptions.BusinessRuleViolationException(
+          "Rental pricing is not configured for equipment: " + asset.getAssetTag());
+    }
     BigDecimal depositAmount =
-        rentalConfig != null
+        rentalConfig != null && rentalConfig.getDepositAmount() != null
             ? rentalConfig.getDepositAmount()
             : (asset.getDepositAmount() != null ? asset.getDepositAmount() : BigDecimal.ZERO);
-    BigDecimal opRate =
-        rentalConfig != null
-            ? rentalConfig.getOperatorDailyRate()
-            : PricingEngine.OPERATOR_DAILY_RATE;
-    BigDecimal freeKm =
-        rentalConfig != null
-            ? rentalConfig.getFreeDeliveryDistanceKm()
-            : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
-    BigDecimal ratePerKm =
-        rentalConfig != null
-            ? rentalConfig.getRatePerKmAfterFree()
-            : PricingEngine.DEFAULT_RATE_PER_KM;
+    BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : null;
+    if (opRequired && (opRate == null || opRate.compareTo(BigDecimal.ZERO) <= 0)) {
+      throw new Exceptions.BusinessRuleViolationException(
+          "Operator service rate is not configured for equipment: " + asset.getAssetTag());
+    }
+    BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : null;
+    BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : null;
 
     PricingEngine.CommercialQuote quote =
         pricingEngine.calculate(
@@ -292,25 +291,24 @@ public class BookingServiceImpl implements IBookingService {
     }
 
     BigDecimal dailyRate =
-        rentalConfig != null
+        rentalConfig != null && rentalConfig.getBaseDailyRate() != null
             ? rentalConfig.getBaseDailyRate()
-            : (asset.getDailyRate() != null ? asset.getDailyRate() : BigDecimal.ZERO);
+            : asset.getDailyRate();
+    if (dailyRate == null) {
+      throw new Exceptions.BusinessRuleViolationException(
+          "Rental pricing is not configured for equipment: " + asset.getAssetTag());
+    }
     BigDecimal depositAmount =
-        rentalConfig != null
+        rentalConfig != null && rentalConfig.getDepositAmount() != null
             ? rentalConfig.getDepositAmount()
             : (asset.getDepositAmount() != null ? asset.getDepositAmount() : BigDecimal.ZERO);
-    BigDecimal opRate =
-        rentalConfig != null
-            ? rentalConfig.getOperatorDailyRate()
-            : PricingEngine.OPERATOR_DAILY_RATE;
-    BigDecimal freeKm =
-        rentalConfig != null
-            ? rentalConfig.getFreeDeliveryDistanceKm()
-            : PricingEngine.DEFAULT_FREE_DISTANCE_KM;
-    BigDecimal ratePerKm =
-        rentalConfig != null
-            ? rentalConfig.getRatePerKmAfterFree()
-            : PricingEngine.DEFAULT_RATE_PER_KM;
+    BigDecimal opRate = rentalConfig != null ? rentalConfig.getOperatorDailyRate() : null;
+    if (opRequired && (opRate == null || opRate.compareTo(BigDecimal.ZERO) <= 0)) {
+      throw new Exceptions.BusinessRuleViolationException(
+          "Operator service rate is not configured for equipment: " + asset.getAssetTag());
+    }
+    BigDecimal freeKm = rentalConfig != null ? rentalConfig.getFreeDeliveryDistanceKm() : null;
+    BigDecimal ratePerKm = rentalConfig != null ? rentalConfig.getRatePerKmAfterFree() : null;
 
     BigDecimal calculatedDistance = resolveDistance(request.getDistanceKm(), asset, farmLocation);
     PricingEngine.CommercialQuote quote =

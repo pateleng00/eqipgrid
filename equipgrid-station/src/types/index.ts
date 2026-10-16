@@ -258,11 +258,11 @@ export interface Hub {
   code: string;
   address: string;
   contactPhone?: string;
-  operatingRadiusKm: number;
-  /** GPS latitude of the hub yard — mandatory for distance calculations. */
-  latitude: number;
-  /** GPS longitude of the hub yard — mandatory for distance calculations. */
-  longitude: number;
+  operatingRadiusKm?: number;
+  /** GPS latitude of the hub yard. */
+  latitude?: number;
+  /** GPS longitude of the hub yard. */
+  longitude?: number;
   active: boolean;
 }
 
@@ -308,9 +308,9 @@ export interface RentalConfiguration {
   typeName?: string;
   baseDailyRate: number;
   depositAmount: number;
-  operatorDailyRate: number;
-  freeDeliveryDistanceKm: number; // 5.0 km
-  ratePerKmAfterFree: number; // 10.00 Rs/km
+  operatorDailyRate?: number;
+  freeDeliveryDistanceKm?: number;
+  ratePerKmAfterFree?: number;
   active: boolean;
   notes?: string;
   billingUnit?: BillingUnit;
@@ -330,7 +330,7 @@ export interface Asset {
   localLanguageName?: string;
   hindiDescription?: string;
   category: AssetCategory;
-  modelName: string;
+  modelName?: string;
   serialNumber: string;
   dailyRate?: number;
   depositAmount?: number;
@@ -340,7 +340,7 @@ export interface Asset {
   conditionNotes?: string;
   engineHours: number;
   accessoriesIncluded?: string;
-  imageUrl: string;
+  imageUrl?: string;
   typeId?: number;
   typeName?: string;
   manufacturerId?: number;

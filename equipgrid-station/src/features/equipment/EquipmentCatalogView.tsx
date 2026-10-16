@@ -539,7 +539,7 @@ const MachineCard: React.FC<{
           <div className="flex items-center gap-1.5 col-span-2">
             <MapPin className="h-3 w-3 shrink-0 text-emerald-500" />
             <span className="truncate font-medium">
-              {asset.hubName || 'Hardoi Central Yard'}
+              {asset.hubName || '—'}
               {asset.cityName && (
                 <span className={isDaylight ? 'text-slate-400' : 'text-slate-500'}>, {asset.cityName}</span>
               )}
@@ -556,7 +556,7 @@ const MachineCard: React.FC<{
           {/* Shift Allowance (In short) */}
           <div className="flex items-center gap-1.5 col-span-2 text-[11px] font-semibold rounded-lg px-2 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-400">
             <Clock className="h-3 w-3 shrink-0 text-amber-700 dark:text-amber-500" />
-            <span className="truncate">{asset.shiftTerms || 'Standard Shift Terms'}</span>
+            <span className="truncate">{asset.shiftTerms || '—'}</span>
           </div>
         </div>
 

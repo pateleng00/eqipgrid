@@ -209,7 +209,7 @@ public class FleetIntelligenceTools {
           "isZeroDeposit",
           a.getDepositAmount() != null && a.getDepositAmount().compareTo(BigDecimal.ZERO) == 0);
       item.put("status", a.getStatus().name());
-      item.put("hubName", a.getHub() != null ? a.getHub().getName() : "Hardoi Central Yard");
+      item.put("hubName", a.getHub() != null ? a.getHub().getName() : null);
       item.put("bookingUrl", "/booking?equipmentId=" + a.getId());
     }
 
@@ -398,7 +398,10 @@ public class FleetIntelligenceTools {
   }
 
   public EquipmentCardDto mapToCardDto(Asset asset) {
-    String hindiName = resolveHindiName(asset.getName());
+    String hindiName =
+        asset.getType() != null && asset.getType().getHindiName() != null
+            ? asset.getType().getHindiName()
+            : null;
     return EquipmentCardDto.builder()
         .id(asset.getId())
         .assetTag(asset.getAssetTag())
@@ -408,31 +411,15 @@ public class FleetIntelligenceTools {
         .dailyRate(asset.getDailyRate())
         .depositAmount(asset.getDepositAmount())
         .status(asset.getStatus().name())
-        .hubName(asset.getHub() != null ? asset.getHub().getName() : "Hardoi Central Yard")
+        .hubName(asset.getHub() != null ? asset.getHub().getName() : null)
         .cityName(
             asset.getHub() != null && asset.getHub().getCity() != null
                 ? asset.getHub().getCity().getName()
-                : "Hardoi")
+                : null)
         .imageUrl(asset.getImageUrl())
         .bookingUrl("/booking?equipmentId=" + asset.getId())
         .keyFeatures(
             List.of("Zero-Downtime Guarantee", "2-Hour Deposit Refund", "Doorstep Farm Delivery"))
         .build();
-  }
-
-  private String resolveHindiName(String englishName) {
-    if (englishName.contains("Mixer")) return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
-    if (englishName.contains("Weeder")) return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
-    if (englishName.contains("Reaper")) return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
-    if (englishName.contains("Auger"))
-      return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
-    if (englishName.contains("Vibrator")) return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
-    if (englishName.contains("Compactor"))
-      return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
-    if (englishName.contains("Jackhammer"))
-      return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
-    if (englishName.contains("Pump")) return "पानी व कीचड़ निकालने का पम्प (Trash Pump)";
-    if (englishName.contains("Generator")) return "बिजली जनरेटर (Portable Generator)";
-    return englishName;
   }
 }

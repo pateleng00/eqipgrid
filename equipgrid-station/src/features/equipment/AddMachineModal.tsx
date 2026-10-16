@@ -346,7 +346,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
       const effectiveVideoUrl = videoItem?.url || videoUrlInput.trim() || undefined;
 
       const newAsset = await api.addAsset({
-        name: machineName.trim() || selectedModel?.name || 'New Machine',
+        name: machineName.trim() || selectedModel?.name || '',
         category: (selectedCategory as AssetCategory) || undefined,
         assetTag: assetTag.trim() || undefined,
         typeId: Number(selectedTypeId),
@@ -356,7 +356,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
         imageUrl: validImages[0].url,
         galleryImageUrls: validImages.map((img) => img.url),
         videoUrl: effectiveVideoUrl,
-        purchaseCost: parseFloat(purchaseCost) || 50000,
+        purchaseCost: purchaseCost ? parseFloat(purchaseCost) : undefined,
         operatorRequired,
         serialNumber: serialNumber.trim() || undefined,
         conditionNotes: conditionNotes.trim() || undefined,
@@ -986,7 +986,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
                   Chassis / Tag
                 </span>
                 <span className="font-mono font-bold text-amber-600">
-                  {serialNumber || 'Auto-Tag'}
+                  {serialNumber || '—'}
                 </span>
               </div>
               <div>

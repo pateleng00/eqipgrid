@@ -841,7 +841,7 @@ export const ReturnAuditView: React.FC = () => {
             inspectorName: currentUser?.name || '—',
             hasDamage: false,
             damageCost: 0,
-            damageDescription: 'Satisfactory return condition.',
+            damageDescription: '',
             nextAction: 'AVAILABLE',
           };
 
@@ -850,7 +850,7 @@ export const ReturnAuditView: React.FC = () => {
             fuelDeltaCharge: fuelDelta,
             damageCost: damage,
             netRefund: net,
-            damageDescription: realInspection?.damageDescription || 'Clean return, no mechanical damage observed.',
+            damageDescription: realInspection?.damageDescription || (damage > 0 ? 'Damage noted during audit' : ''),
           };
 
           return (

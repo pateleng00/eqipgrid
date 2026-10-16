@@ -40,21 +40,17 @@ public class RentalConfiguration extends BaseEntity {
   @Column(name = "deposit_amount", nullable = false, precision = 10, scale = 2)
   private BigDecimal depositAmount;
 
-  @Builder.Default
   @Column(name = "operator_daily_rate", precision = 10, scale = 2)
-  private BigDecimal operatorDailyRate = new BigDecimal("500.00");
+  private BigDecimal operatorDailyRate;
 
-  @Builder.Default
-  @Column(name = "free_delivery_distance_km", nullable = false, precision = 6, scale = 2)
-  private BigDecimal freeDeliveryDistanceKm = new BigDecimal("5.00");
+  @Column(name = "free_delivery_distance_km", precision = 6, scale = 2)
+  private BigDecimal freeDeliveryDistanceKm;
 
-  @Builder.Default
-  @Column(name = "rate_per_km_after_free", nullable = false, precision = 10, scale = 2)
-  private BigDecimal ratePerKmAfterFree = new BigDecimal("10.00");
+  @Column(name = "rate_per_km_after_free", precision = 10, scale = 2)
+  private BigDecimal ratePerKmAfterFree;
 
-  @Builder.Default
   @Column(name = "billing_unit")
-  private BillingUnit billingUnit = BillingUnit.DAILY;
+  private BillingUnit billingUnit;
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "billing_unit_id")

@@ -719,9 +719,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ onNavigate }) => {
 
                           {/* Station Location */}
                           <td className="py-3.5 px-4">
-                            <div className="font-bold text-xs">{b.asset.hubName || 'Hardoi Central Yard'}</div>
+                            <div className="font-bold text-xs">{b.asset.hubName || '—'}</div>
                             <div className="text-[10px] text-slate-500 font-mono">
-                              {b.asset.cityName ? `${b.asset.cityName}, ${b.asset.stateName || 'UP'}` : 'Uttar Pradesh'}
+                              {b.asset.cityName ? `${b.asset.cityName}${b.asset.stateName ? `, ${b.asset.stateName}` : ''}` : (b.asset.stateName || '—')}
                             </div>
                           </td>
 

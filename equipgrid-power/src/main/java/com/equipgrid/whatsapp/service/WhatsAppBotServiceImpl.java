@@ -90,46 +90,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private final ChallanDocumentService challanDocumentService;
   private final RentalConfigurationRepository rentalConfigurationRepository;
 
-  public static String getEquipmentHindiName(String name, String tag) {
-    if (name == null) return "उपकरण (Equipment)";
-    String lower = name.toLowerCase();
-    String upperTag = tag != null ? tag.toUpperCase() : "";
-
-    if (lower.contains("concrete mixer") || upperTag.contains("MIX")) {
-      return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
-    } else if (lower.contains("vibrator") || upperTag.contains("VIB")) {
-      return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
-    } else if (lower.contains("compactor")
-        || lower.contains("rammer")
-        || upperTag.contains("CMP")) {
-      return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
-    } else if (lower.contains("jackhammer")
-        || lower.contains("demolition")
-        || upperTag.contains("JKH")) {
-      return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
-    } else if (lower.contains("trash pump") || lower.contains("pump") || upperTag.contains("PMP")) {
-      return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
-    } else if (lower.contains("generator") || upperTag.contains("GEN")) {
-      return "बिजली जनरेटर (Portable Power Generator)";
-    } else if (lower.contains("weeder") || upperTag.contains("WED")) {
-      return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
-    } else if (lower.contains("reaper")
-        || lower.contains("harvester")
-        || upperTag.contains("REP")) {
-      return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
-    } else if (lower.contains("auger") || lower.contains("post-hole") || upperTag.contains("AUG")) {
-      return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
-    } else if (lower.contains("tractor") || upperTag.contains("TRAC")) {
-      return "खेत जुताई ट्रैक्टर (Farm Tractor)";
-    } else if (lower.contains("rotavator")) {
-      return "रोटावेटर (Rotavator)";
-    } else if (lower.contains("sprayer")) {
-      return "कीटनाशक छिड़कने की मशीन (Power Sprayer)";
-    } else if (lower.contains("thresher")) {
-      return "अनाज निकालने का थ्रेशर (Crop Thresher)";
-    } else {
-      return name;
+  public String getEquipmentHindiName(String name, String tag) {
+    if (tag != null && !tag.isBlank()) {
+      var opt = assetQueryRepository.fetchByAssetTag(tag);
+      if (opt.isPresent()) {
+        Asset a = opt.get();
+        if (a.getType() != null && a.getType().getHindiName() != null && !a.getType().getHindiName().isBlank()) {
+          return a.getType().getHindiName();
+        }
+      }
     }
+    return name != null ? name : "";
   }
 
   @Override
@@ -138,7 +109,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String rawPhone = request.getFrom();
     String normalizedPhone = normalizePhoneNumber(rawPhone);
     String messageText = request.getMessage() != null ? request.getMessage().trim() : "";
-    String senderName = request.getUserName() != null ? request.getUserName().trim() : "Farmer";
+    String senderName = request.getUserName() != null ? request.getUserName().trim() : "";
 
     log.info(
         "[WhatsApp Bot] Processing message from phone: {} (raw: {}), mediaType: '{}', text: '{}'",
@@ -671,7 +642,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       context.setSelectedHubId(chosen.getId());
       context.setSelectedHubName(chosen.getName());
       context.setSelectedCityName(
-          chosen.getCity() != null ? chosen.getCity().getName() : "Uttar Pradesh");
+          chosen.getCity() != null ? chosen.getCity().getName() : null);
     } else if (choice == 0 || choice == hubs.size() + 1 || input.toUpperCase().contains("ALL")) {
       context.setSelectedHubId(null);
       context.setSelectedHubName("All Hubs");
@@ -692,7 +663,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         context.setSelectedHubId(matched.getId());
         context.setSelectedHubName(matched.getName());
         context.setSelectedCityName(
-            matched.getCity() != null ? matched.getCity().getName() : "Uttar Pradesh");
+            matched.getCity() != null ? matched.getCity().getName() : null);
       } else {
         return WhatsAppMessageResponse.builder()
             .to(conv.getPhoneNumber())
@@ -886,7 +857,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         RentalConfiguration singleCfg = assetConfigs.get(0);
         String uLabel =
             formatBillingUnitLabel(
-                singleCfg.getBillingUnit() != null ? singleCfg.getBillingUnit().name() : "DAILY");
+                singleCfg.getBillingUnit() != null ? singleCfg.getBillingUnit().name() : null);
         sb.append(
             String.format("   • 💰 Rate: ₹%,.0f / %s\n", singleCfg.getBaseDailyRate(), uLabel));
       } else {
@@ -894,7 +865,11 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       }
       sb.append(
           String.format("   • 🛡️ Deposit: ₹%,.0f (100%% Refundable)\n", asset.getDepositAmount()));
-      sb.append("   • 📸 4 Photos & 🎥 10-sec Demo Video Available\n\n");
+      if (asset.getImageUrl() != null && !asset.getImageUrl().isBlank()) {
+        sb.append("   • 📸 Photo Available\n\n");
+      } else {
+        sb.append("\n");
+      }
 
       options.add(String.format("%d. %s", index, asset.getName()));
       index++;
@@ -1124,7 +1099,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         RentalConfiguration cfg = configs.get(i);
         String unitLabel =
             formatBillingUnitLabel(
-                cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : "DAILY");
+                cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : null);
         String terms =
             (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank())
                 ? " • " + cfg.getShiftTerms()
@@ -1154,7 +1129,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       RentalConfiguration single = configs.get(0);
       context.setSelectedRentalConfigId(single.getId());
       context.setSelectedBillingUnit(
-          single.getBillingUnit() != null ? single.getBillingUnit().name() : "DAILY");
+          single.getBillingUnit() != null ? single.getBillingUnit().name() : null);
       context.setSelectedShiftTerms(single.getShiftTerms());
       context.setDailyRate(single.getBaseDailyRate());
       context.setSecurityDeposit(single.getDepositAmount());
@@ -1275,7 +1250,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         RentalConfiguration cfg = configs.get(i);
         String unitLabel =
             formatBillingUnitLabel(
-                cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : "DAILY");
+                cfg.getBillingUnit() != null ? cfg.getBillingUnit().name() : null);
         String terms =
             (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank())
                 ? " • " + cfg.getShiftTerms()
@@ -1297,7 +1272,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     // Apply selected tariff configuration
     context.setSelectedRentalConfigId(selected.getId());
     context.setSelectedBillingUnit(
-        selected.getBillingUnit() != null ? selected.getBillingUnit().name() : "DAILY");
+        selected.getBillingUnit() != null ? selected.getBillingUnit().name() : null);
     context.setSelectedShiftTerms(selected.getShiftTerms());
     context.setDailyRate(selected.getBaseDailyRate());
     context.setSecurityDeposit(selected.getDepositAmount());
@@ -3252,10 +3227,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
               boolean hasPlaceholderName =
                   existing.getFullName() == null
                       || existing.getFullName().isBlank()
+                      || existing.getFullName().equals(phone)
                       || existing.getFullName().startsWith("Farmer");
               boolean incomingHasRealName =
                   name != null
                       && !name.isBlank()
+                      && !name.equals(phone)
                       && !name.equalsIgnoreCase("Farmer")
                       && !name.startsWith("Farmer");
               if (hasPlaceholderName && incomingHasRealName) {
@@ -3275,8 +3252,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
               Customer newCust =
                   Customer.builder()
                       .phone(phone)
-                      .fullName(name != null && !name.isBlank() ? name : "Farmer (" + phone + ")")
-                      .address("Rural Farm Location (via WhatsApp)")
+                      .fullName(name != null && !name.isBlank() ? name : phone)
+                      .address(null)
                       .tier(CustomerTier.TIER_1_BASIC)
                       .verified(false)
                       .notes("Self-registered via WhatsApp service")
@@ -3382,7 +3359,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   }
 
   private String formatBookingStatus(BookingStatus status) {
-    if (status == null) return "Unknown";
+    if (status == null) return "—";
     return switch (status) {
       case QUOTED -> "Quote Prepared";
       case PENDING_PAYMENT -> "Payment verification in progress";
@@ -3401,8 +3378,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   }
 
   private String formatBillingUnitLabel(String code) {
-    if (code == null) return "प्रति दिन (Per Day)";
+    if (code == null || code.isBlank()) return "—";
     return switch (code.toUpperCase()) {
+      case "DAILY" -> "प्रति दिन (Per Day)";
       case "PER_ACRE" -> "प्रति एकड़ (Per Acre)";
       case "PER_TRIP" -> "प्रति चक्कर/ट्रिप (Per Trip)";
       case "HOURLY" -> "प्रति घंटा (Per Hour)";
@@ -3410,7 +3388,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       case "PER_HOLE" -> "प्रति गड्ढा (Per Hole)";
       case "PER_TON" -> "प्रति टन (Per Ton)";
       case "MONTHLY" -> "मासिक (Monthly)";
-      default -> "प्रति दिन (Per Day)";
+      default -> code;
     };
   }
 

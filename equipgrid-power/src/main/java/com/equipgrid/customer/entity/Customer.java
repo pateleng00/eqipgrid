@@ -28,7 +28,7 @@ public class Customer extends BaseEntity {
   @Column(length = 128)
   private String email;
 
-  @Column(nullable = false, columnDefinition = "TEXT")
+  @Column(columnDefinition = "TEXT")
   private String address;
 
   @Column(name = "aadhaar_number", length = 20)

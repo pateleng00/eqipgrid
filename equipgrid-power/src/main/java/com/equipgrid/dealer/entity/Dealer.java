@@ -30,9 +30,8 @@ public class Dealer extends BaseEntity {
   @Column(nullable = false, length = 128)
   private String location;
 
-  @Builder.Default
   @Column(name = "commission_rate", precision = 5, scale = 4)
-  private BigDecimal commissionRate = new BigDecimal("0.0600");
+  private BigDecimal commissionRate;
 
   @Builder.Default
   @Column(nullable = false)

@@ -1213,9 +1213,9 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
 
                     {/* Stationed Hub */}
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-xs">{b.asset.hubName || 'Hardoi Central Yard'}</div>
+                      <div className="font-bold text-xs">{b.asset.hubName || '—'}</div>
                       <div className="text-[10px] text-slate-500 font-mono">
-                        {b.asset.cityName ? `${b.asset.cityName}, ${b.asset.stateName || 'UP'}` : 'Uttar Pradesh'}
+                        {b.asset.cityName ? `${b.asset.cityName}${b.asset.stateName ? `, ${b.asset.stateName}` : ''}` : (b.asset.stateName || '—')}
                       </div>
                     </td>
 
@@ -1549,8 +1549,8 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                     )}
                   >
                     {selectedCustomerId
-                      ? scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Farmer Set'
-                      : 'Farmer & Location'}
+                      ? scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Customer Selected'
+                      : 'Customer & Location'}
                   </div>
                 </div>
               </button>
@@ -1959,7 +1959,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           </div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
                             <span>
-                              📍 Yard: <strong>{currentAsset.hubName || 'Dispatched Yard'}</strong>
+                              📍 Yard: <strong>{currentAsset.hubName || '—'}</strong>
                             </span>
                             <span>•</span>
                             <span>
@@ -2025,7 +2025,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                                   t.freeDeliveryDistanceKm === 0 && t.ratePerKmAfterFree === 0
                                     ? 'Delivery: ₹0 (Per-Trip)'
                                     : `${t.freeDeliveryDistanceKm}km free, then ₹${t.ratePerKmAfterFree}/km`;
-                                const terms = t.shiftTerms || 'Standard operational terms';
+                                const terms = t.shiftTerms || '—';
                                 return {
                                   value: t.id,
                                   label: `${formatINR(t.baseDailyRate)} / ${unit} (${t.billingUnit || 'DAILY'})`,
@@ -2710,7 +2710,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                           {scopedCustomers.find((c) => c.id === selectedCustomerId)?.fullName || 'Selected Farmer'}
                         </div>
                         <div>
-                          <strong>खेत स्थल:</strong> {deliveryAddress || 'Standard Delivery'}
+                          <strong>खेत स्थल:</strong> {deliveryAddress || '—'}
                         </div>
                         <div>
                           <strong>मशीन:</strong> {currentAsset.name} ({currentAsset.assetTag})

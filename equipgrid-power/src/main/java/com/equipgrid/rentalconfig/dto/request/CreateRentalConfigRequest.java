@@ -27,13 +27,13 @@ public class CreateRentalConfigRequest {
   @NotNull(message = "Deposit amount is required")
   private BigDecimal depositAmount;
 
-  @Builder.Default private BigDecimal operatorDailyRate = new BigDecimal("500.00");
+  private BigDecimal operatorDailyRate;
 
-  @Builder.Default private BigDecimal freeDeliveryDistanceKm = new BigDecimal("5.00");
+  private BigDecimal freeDeliveryDistanceKm;
 
-  @Builder.Default private BigDecimal ratePerKmAfterFree = new BigDecimal("10.00");
+  private BigDecimal ratePerKmAfterFree;
 
-  @Builder.Default private BillingUnit billingUnit = BillingUnit.DAILY;
+  private BillingUnit billingUnit;
 
   private Long billingUnitId;
 

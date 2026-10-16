@@ -129,6 +129,14 @@ class WhatsAppFlowIntegrationTest {
           equipmentTypeRepository.findAll().stream()
               .filter(t -> "TRAC-HEAVY".equalsIgnoreCase(t.getCode()))
               .findFirst()
+              .map(
+                  t -> {
+                    if (t.getHindiName() == null) {
+                      t.setHindiName("खेत जुताई ट्रैक्टर (Farm Tractor)");
+                      return equipmentTypeRepository.save(t);
+                    }
+                    return t;
+                  })
               .orElseGet(
                   () ->
                       equipmentTypeRepository.save(
@@ -136,6 +144,7 @@ class WhatsAppFlowIntegrationTest {
                               .name("Heavy Tractor")
                               .code("TRAC-HEAVY")
                               .category(AssetCategory.AGRICULTURE)
+                              .hindiName("खेत जुताई ट्रैक्टर (Farm Tractor)")
                               .build()));
 
       com.equipgrid.master.entity.Manufacturer mfg =
@@ -391,6 +400,7 @@ class WhatsAppFlowIntegrationTest {
                 .name("Concrete Mixer")
                 .code("MIX-10-7")
                 .category(AssetCategory.CONSTRUCTION)
+                .hindiName("कंक्रीट मिलाने की मशीन (Concrete Mixer)")
                 .build());
 
     com.equipgrid.master.entity.Manufacturer mfg2 =

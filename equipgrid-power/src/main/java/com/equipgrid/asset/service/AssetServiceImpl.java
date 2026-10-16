@@ -116,13 +116,7 @@ public class AssetServiceImpl implements IAssetService {
         if (cfg.getWorkingHoursLimit() != null) {
           asset.setWorkingHoursLimit(cfg.getWorkingHoursLimit());
         }
-      } else {
-        asset.setDailyRate(null);
-        asset.setDepositAmount(null);
       }
-    } else {
-      asset.setDailyRate(null);
-      asset.setDepositAmount(null);
     }
   }
 
@@ -162,7 +156,7 @@ public class AssetServiceImpl implements IAssetService {
             ? request.getImageUrl()
             : (request.getGalleryImageUrls() != null && !request.getGalleryImageUrls().isEmpty()
                 ? request.getGalleryImageUrls().get(0)
-                : "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800");
+                : null);
 
     String resolvedName =
         request.getName() != null && !request.getName().isBlank()
@@ -549,28 +543,39 @@ public class AssetServiceImpl implements IAssetService {
       }
 
       BillingUnit effectiveUnit = rep.getBillingUnit();
-      if (effectiveUnit == null) {
-        effectiveUnit = resolveDefaultBillingUnit(rep.getName(), rep.getAssetTag());
-      }
-
       String effectiveShift = rep.getShiftTerms();
-      if (effectiveShift == null || effectiveShift.isBlank()) {
-        effectiveShift =
-            resolveDefaultShiftTerms(
-                rep.getName(), rep.getAssetTag(), effectiveUnit, rep.getDepositAmount());
-      }
-
       String effectiveHindiName =
-          rep.getType() != null
-                  && rep.getType().getHindiName() != null
-                  && !rep.getType().getHindiName().isBlank()
-              ? rep.getType().getHindiName()
-              : getHindiName(rep.getName());
+          rep.getType() != null ? rep.getType().getHindiName() : null;
       String effectiveLocalLang =
           rep.getType() != null ? rep.getType().getLocalLanguageName() : null;
       String effectiveDesc = rep.getType() != null ? rep.getType().getDescription() : null;
       String effectiveHindiDesc =
           rep.getType() != null ? rep.getType().getHindiDescription() : null;
+
+      Long bUnitId = null;
+      String uLabel = null;
+      String hUnitLabel = null;
+      String uLabelLong = null;
+      String bUnitCode = null;
+      String bUnitName = null;
+      String bUnitHindiName = null;
+
+      if (rep.getBillingUnitMaster() != null) {
+        bUnitId = rep.getBillingUnitMaster().getId();
+        uLabel = rep.getBillingUnitMaster().getUnitLabel();
+        hUnitLabel = rep.getBillingUnitMaster().getHindiUnitLabel();
+        uLabelLong = rep.getBillingUnitMaster().getUnitLabelLong();
+        bUnitCode = rep.getBillingUnitMaster().getCode();
+        bUnitName = rep.getBillingUnitMaster().getName();
+        bUnitHindiName = rep.getBillingUnitMaster().getHindiName();
+      } else if (effectiveUnit != null) {
+        bUnitId = effectiveUnit.getValue() != null ? effectiveUnit.getValue().longValue() : null;
+        uLabel = effectiveUnit.getUnitLabel();
+        hUnitLabel = null;
+        uLabelLong = effectiveUnit.getUnitLabelLong();
+        bUnitCode = effectiveUnit.getCode();
+        bUnitName = effectiveUnit.getDisplayName();
+      }
 
       result.add(
           WebsiteMachineModelResponse.builder()
@@ -610,108 +615,20 @@ public class AssetServiceImpl implements IAssetService {
               .billingUnit(effectiveUnit)
               .workingHoursLimit(rep.getWorkingHoursLimit())
               .shiftTerms(effectiveShift)
-              .billingUnitId(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getId()
-                      : (effectiveUnit != null ? effectiveUnit.getValue().longValue() : 1L))
-              .unitLabel(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getUnitLabel()
-                      : (effectiveUnit != null ? effectiveUnit.getUnitLabel() : "day"))
-              .hindiUnitLabel(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getHindiUnitLabel()
-                      : "दिन")
-              .unitLabelLong(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getUnitLabelLong()
-                      : (effectiveUnit != null ? effectiveUnit.getUnitLabelLong() : "24-hr day"))
-              .billingUnitCode(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getCode()
-                      : (effectiveUnit != null ? effectiveUnit.getCode() : "DAILY"))
-              .billingUnitName(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getName()
-                      : (effectiveUnit != null ? effectiveUnit.getDisplayName() : "Per Day"))
-              .billingUnitHindiName(
-                  rep.getBillingUnitMaster() != null
-                      ? rep.getBillingUnitMaster().getHindiName()
-                      : "प्रति दिन")
+              .billingUnitId(bUnitId)
+              .unitLabel(uLabel)
+              .hindiUnitLabel(hUnitLabel)
+              .unitLabelLong(uLabelLong)
+              .billingUnitCode(bUnitCode)
+              .billingUnitName(bUnitName)
+              .billingUnitHindiName(bUnitHindiName)
               .build());
     }
 
     return result;
   }
 
-  private BillingUnit resolveDefaultBillingUnit(String name, String tag) {
-    String upper = ((name != null ? name : "") + " " + (tag != null ? tag : "")).toUpperCase();
-    if (upper.contains("AUGER")
-        || upper.contains("HOLE")
-        || upper.contains("DIGGER")
-        || upper.contains("AUG")) {
-      return BillingUnit.PER_HOLE;
-    }
-    if (upper.contains("PUMP")
-        || upper.contains("TRASH")
-        || upper.contains("DEWATER")
-        || upper.contains("PMP")) {
-      return BillingUnit.HOURLY;
-    }
-    if (upper.contains("TROLLEY") || upper.contains("TRIP")) {
-      return BillingUnit.PER_TRIP;
-    }
-    if (upper.contains("ACRE") || upper.contains("SPRAYER")) {
-      return BillingUnit.PER_ACRE;
-    }
-    return BillingUnit.DAILY;
-  }
 
-  private String resolveDefaultShiftTerms(
-      String name, String tag, BillingUnit billingUnit, BigDecimal deposit) {
-    if (billingUnit == BillingUnit.PER_HOLE) {
-      return "Per hole drilled • Includes 6\" & 8\" bits • Zero time boundation";
-    }
-    if (billingUnit == BillingUnit.HOURLY) {
-      return "Hourly metered operation • Pay for actual run time";
-    }
-    if (billingUnit == BillingUnit.PER_TRIP) {
-      return "Per transport trip • No daily shift restriction";
-    }
-    if (billingUnit == BillingUnit.PER_ACRE) {
-      return "Per acre worked • Rate based on land area covered";
-    }
-    if (deposit != null && deposit.compareTo(BigDecimal.ZERO) == 0) {
-      return "Full 24-hr day site deployment • Zero security deposit required";
-    }
-    return "Full 24-hr day site deployment • Flexible field usage";
-  }
-
-  private String getHindiName(String name) {
-    if (name == null) return "";
-    String upper = name.toUpperCase();
-    if (upper.contains("MIX")) return "कंक्रीट मिलाने की मशीन (Concrete Mixer)";
-    if (upper.contains("VIBRAT")) return "कंक्रीट बैठाने/कंपन की मशीन (Concrete Vibrator)";
-    if (upper.contains("COMPACT") || upper.contains("RAMMER"))
-      return "मिट्टी व रोड़ी कुटाई/दबाने की मशीन (Plate Compactor)";
-    if (upper.contains("JACKHAMMER") || upper.contains("BREAKER"))
-      return "कंक्रीट व पत्थर तोड़ने की मशीन (Demolition Jackhammer)";
-    if (upper.contains("PUMP") || upper.contains("TRASH"))
-      return "पानी व कीचड़ निकालने का पम्प (Dewatering Trash Pump)";
-    if (upper.contains("GEN") || upper.contains("POWER"))
-      return "बिजली जनरेटर (Portable Power Generator)";
-    if (upper.contains("WEED") || upper.contains("ROTARY"))
-      return "खेत की जुताई व निराई-गुड़ाई की मशीन (Power Weeder)";
-    if (upper.contains("REAP") || upper.contains("HARVEST"))
-      return "फसल/धान व गेहूँ काटने की मशीन (Crop Power Reaper)";
-    if (upper.contains("AUGER") || upper.contains("HOLE"))
-      return "जमीन में गड्ढा खोदने की मशीन (Post-Hole Earth Auger)";
-    if (upper.contains("TROLLEY") || upper.contains("TIPPER") || upper.contains("TRL"))
-      return "हाइड्रोलिक ट्रैक्टर ट्रॉली (Tractor Tipper Trailer)";
-    if (upper.contains("TANKER") || upper.contains("SPRAYER") || upper.contains("TNK"))
-      return "वाटर टैंकर व स्प्रेयर (Mobile Water Tanker)";
-    return name;
-  }
 
   @Override
   @Transactional

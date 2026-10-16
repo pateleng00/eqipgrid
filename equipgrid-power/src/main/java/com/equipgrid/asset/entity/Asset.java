@@ -53,9 +53,8 @@ public class Asset extends BaseEntity {
   @Column(name = "model_name")
   private String modelName;
 
-  @Builder.Default
-  @Column(name = "image_url", nullable = false, length = 512)
-  private String imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
+  @Column(name = "image_url", length = 512)
+  private String imageUrl;
 
   @Column(name = "serial_number", length = 128)
   private String serialNumber;
@@ -168,9 +167,6 @@ public class Asset extends BaseEntity {
       if (this.model != null && this.model.getName() != null) {
         this.modelName = this.model.getName();
       }
-    }
-    if (this.imageUrl == null || this.imageUrl.isBlank()) {
-      this.imageUrl = "https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=800";
     }
   }
 }

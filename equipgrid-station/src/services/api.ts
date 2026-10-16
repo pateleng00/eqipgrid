@@ -122,38 +122,18 @@ export function resolveAssetS3Key(assetTag: string): string {
   if (raw.includes('wed') || raw.includes('wee')) return 'a_wed_001';
   if (raw.includes('aug')) return 'a_aug_001';
 
-  return 'c_mix_001';
+  return '';
 }
 
-// Helper to build 4 photos and 1 10-second demo video from AWS S3 per machine
+// Return empty list if asset has no real media in database (do not fabricate fake photos/videos)
 export function buildMachineMedia(
-  assetId: number,
-  assetTag: string,
+  _assetId: number,
+  _assetTag: string,
   _category: 'CONSTRUCTION' | 'AGRICULTURE' | 'MULTIPURPOSE_FLEET' = 'CONSTRUCTION',
   _typeName: string = '',
   _baseImageUrl?: string,
 ): AssetMedia[] {
-  const s3Prefix = resolveAssetS3Key(assetTag);
-
-  const mediaList: AssetMedia[] = [1, 2, 3, 4].map((num, idx) => ({
-    id: assetId * 100 + num,
-    mediaType: 'IMAGE',
-    url: `${S3_ASSETS_BASE}/asset/images/${s3Prefix}/photo_${num}.jpg`,
-    s3Key: `asset/images/${s3Prefix}/photo_${num}.jpg`,
-    displayOrder: idx,
-  }));
-
-  mediaList.push({
-    id: assetId * 100 + 5,
-    mediaType: 'VIDEO',
-    url: `${S3_ASSETS_BASE}/asset/videos/${s3Prefix}/demo_10s.mp4`,
-    s3Key: `asset/videos/${s3Prefix}/demo_10s.mp4`,
-    displayOrder: 0,
-    durationSeconds: 10,
-    contentType: 'video/mp4',
-  });
-
-  return mediaList;
+  return [];
 }
 
 // REST API Base URL (proxied by Vite to http://localhost:8081)
@@ -380,9 +360,6 @@ function mapVerificationStatus(status: any): VerificationStatus {
 }
 
 function mapAsset(a: any): Asset {
-  const s3Prefix = resolveAssetS3Key(a.assetTag || 'c_mix_001');
-  const defaultImg = `${S3_ASSETS_BASE}/asset/images/${s3Prefix}/photo_1.jpg`;
-
   let media: AssetMedia[] = [];
   if (Array.isArray(a.mediaItems) && a.mediaItems.length > 0) {
     media = a.mediaItems.map((m: any, idx: number) => {
@@ -399,12 +376,10 @@ function mapAsset(a: any): Asset {
         durationSeconds: m.durationSeconds,
       };
     });
-  } else {
-    media = buildMachineMedia(a.id, a.assetTag, mapCategory(a.category), a.type?.name);
   }
 
-  const rawImg = a.imageUrl && !a.imageUrl.includes('unsplash') ? a.imageUrl : defaultImg;
-  const cleanImg = sanitizeMediaUrl(rawImg);
+  const rawImg = a.imageUrl && !a.imageUrl.includes('unsplash') ? a.imageUrl : undefined;
+  const cleanImg = rawImg ? sanitizeMediaUrl(rawImg) : undefined;
 
   return {
     id: a.id,
@@ -416,11 +391,11 @@ function mapAsset(a: any): Asset {
     manufacturerId: a.manufacturer?.id,
     manufacturerName: a.manufacturer?.name,
     modelId: a.model?.id,
-    modelName: a.model?.name || a.modelName || 'Standard Heavy Duty',
+    modelName: a.model?.name || a.modelName || undefined,
     hubId: a.hub?.id,
     hubName: a.hub?.name,
-    cityName: a.hub?.city?.name || 'Hardoi',
-    stateName: a.hub?.city?.state?.name || 'Uttar Pradesh',
+    cityName: a.hub?.city?.name,
+    stateName: a.hub?.city?.state?.name,
     imageUrl: cleanImg,
     serialNumber: a.serialNumber || '',
     dailyRate: a.dailyRate != null ? Number(a.dailyRate) : undefined,
@@ -455,9 +430,9 @@ function mapRentalConfig(rc: any): RentalConfiguration {
     typeName: rc.type?.name || rc.typeName,
     baseDailyRate: Number(rc.baseDailyRate || 0),
     depositAmount: Number(rc.depositAmount != null ? rc.depositAmount : 0),
-    operatorDailyRate: Number(rc.operatorDailyRate || 500),
-    freeDeliveryDistanceKm: Number(rc.freeDeliveryDistanceKm || 5.0),
-    ratePerKmAfterFree: Number(rc.ratePerKmAfterFree || 10.0),
+    operatorDailyRate: rc.operatorDailyRate != null ? Number(rc.operatorDailyRate) : undefined,
+    freeDeliveryDistanceKm: rc.freeDeliveryDistanceKm != null ? Number(rc.freeDeliveryDistanceKm) : undefined,
+    ratePerKmAfterFree: rc.ratePerKmAfterFree != null ? Number(rc.ratePerKmAfterFree) : undefined,
     active: Boolean(rc.active ?? true),
     notes: rc.notes,
     billingUnit: resolveBillingUnitCode(rc.billingUnitMaster?.code || rc.billingUnit),
@@ -476,7 +451,7 @@ function mapBooking(b: any): Booking {
     bookingNumber: b.bookingNumber,
     customer: {
       id: b.customer?.id,
-      fullName: b.customer?.fullName || 'Walk-in Customer',
+      fullName: b.customer?.fullName || b.customer?.phone || 'Customer',
       phone: b.customer?.phone || '',
       email: b.customer?.email,
       address: b.customer?.address || '',
@@ -513,7 +488,7 @@ function mapBooking(b: any): Booking {
     status: mapBookingStatus(b.status),
     dealerId: b.dealerId,
     notes: b.notes,
-    createdAt: b.createdAt || new Date().toISOString(),
+    createdAt: b.createdAt || '',
   };
 }
 
@@ -528,7 +503,7 @@ function mapPayment(p: any): Payment {
     paymentMode: mapPaymentMode(p.paymentMode),
     transactionRef: p.transactionRef,
     notes: p.notes,
-    createdAt: p.createdAt || new Date().toISOString(),
+    createdAt: p.createdAt || '',
   };
 }
 
@@ -634,17 +609,17 @@ export class ApiStore {
               displayOrder: Number(u.displayOrder || u.id),
             }));
           } else {
-            this._billingUnits = [...DEFAULT_BILLING_UNITS];
+            this._billingUnits = [];
           }
           this.notify();
         })
         .catch((err) => {
-          console.warn('Failed to fetch billing units from backend, using defaults:', err);
-          this._billingUnits = [...DEFAULT_BILLING_UNITS];
+          console.warn('Failed to fetch billing units from backend:', err);
+          this._billingUnits = [];
           this.notify();
         });
     }
-    return this._billingUnits.length > 0 ? this._billingUnits : DEFAULT_BILLING_UNITS;
+    return this._billingUnits;
   }
   set billingUnits(v) {
     this._billingUnits = v;
@@ -726,7 +701,7 @@ export class ApiStore {
           tradeName: d.tradeName,
           phone: d.phone,
           location: d.location,
-          commissionRate: Number(d.commissionRate || 0.06),
+          commissionRate: d.commissionRate != null ? Number(d.commissionRate) : 0,
           totalCommissionEarned: Number(d.totalCommissionEarned || 0),
           totalReferrals: Number(d.totalReferrals || 0),
           active: Boolean(d.active ?? true),
@@ -847,10 +822,10 @@ export class ApiStore {
           name: h.name,
           code: h.code,
           address: h.address,
-          contactPhone: h.contactPhone,
-          operatingRadiusKm: Number(h.operatingRadiusKm || 25),
-          latitude: Number(h.latitude || 0),
-          longitude: Number(h.longitude || 0),
+          contactPhone: h.contactPhone || '+91 94674 79922',
+          operatingRadiusKm: h.operatingRadiusKm != null ? Number(h.operatingRadiusKm) : undefined,
+          latitude: h.latitude != null ? Number(h.latitude) : undefined,
+          longitude: h.longitude != null ? Number(h.longitude) : undefined,
           active: Boolean(h.active ?? true),
         }));
       }
@@ -1684,7 +1659,7 @@ export class ApiStore {
       operatorRequired: data.operatorRequired,
       status: 'AVAILABLE',
       engineHours: 0.0,
-      conditionNotes: data.conditionNotes || 'Pre-commissioned at yard',
+      conditionNotes: data.conditionNotes || '',
       accessoriesIncluded: data.accessoriesIncluded,
       billingUnit: resolveBillingUnitCode(data.billingUnit),
       billingUnitId: data.billingUnitId || resolveBillingUnitInt(data.billingUnit),
@@ -1692,7 +1667,7 @@ export class ApiStore {
       hindiUnitLabel: getBillingUnitHindiLabel(data.billingUnit),
       workingHoursLimit: data.workingHoursLimit,
       shiftTerms: data.shiftTerms,
-      mediaItems: customMedia.length > 0 ? customMedia : buildMachineMedia(Date.now(), tag, resolvedCategory, type?.name, effectiveImageUrl),
+      mediaItems: customMedia,
     };
 
     this.assets.unshift(newAsset);
@@ -1717,7 +1692,7 @@ export class ApiStore {
           depositAmount: resolvedDepositAmount,
           purchaseCost: data.purchaseCost,
           operatorRequired: data.operatorRequired,
-          serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
+          serialNumber: data.serialNumber || '',
           conditionNotes: data.conditionNotes,
           accessoriesIncluded: data.accessoriesIncluded,
           billingUnit: resolveBillingUnitInt(data.billingUnit),
@@ -2584,11 +2559,11 @@ export class ApiStore {
     this.notify();
 
     return {
-      id: raw.id || Date.now(),
-      challanNumber: raw.challanNumber || `CH-2026-${String(data.bookingId).padStart(4, '0')}`,
+      id: raw.id,
+      challanNumber: raw.challanNumber || '',
       bookingId: data.bookingId,
       assetTag: raw.asset?.assetTag || b?.asset.assetTag || '',
-      dispatchTimestamp: raw.dispatchTimestamp || new Date().toISOString(),
+      dispatchTimestamp: raw.dispatchTimestamp || '',
       fuelLevel: data.fuelLevel,
       engineHoursOut: data.engineHoursOut,
       accessoriesVerified: true,
@@ -2605,7 +2580,7 @@ export class ApiStore {
       challanNumber: raw.challanNumber,
       bookingId: raw.booking?.id || bookingId,
       assetTag: raw.asset?.assetTag || '',
-      dispatchTimestamp: raw.dispatchTimestamp || new Date().toISOString(),
+      dispatchTimestamp: raw.dispatchTimestamp || '',
       fuelLevel: raw.fuelLevel || '—',
       engineHoursOut: raw.engineHoursOut !== undefined && raw.engineHoursOut !== null ? Number(raw.engineHoursOut) : 0,
       accessoriesVerified: raw.accessoriesVerified ?? true,
@@ -2659,7 +2634,7 @@ export class ApiStore {
       id: raw.id || Date.now(),
       bookingId: data.bookingId,
       assetTag: raw.asset?.assetTag || b?.asset.assetTag || '',
-      returnTimestamp: raw.returnTimestamp || new Date().toISOString(),
+      returnTimestamp: raw.returnTimestamp || '',
       fuelLevelReturn: raw.fuelLevelReturn || data.fuelLevelReturn || '—',
       fuelDeltaCharge: Number(raw.fuelDeltaCharge !== undefined ? raw.fuelDeltaCharge : data.fuelDeltaCharge),
       engineHoursIn: Number(
@@ -2681,7 +2656,7 @@ export class ApiStore {
       id: raw.id,
       bookingId: raw.booking?.id || bookingId,
       assetTag: raw.asset?.assetTag || '',
-      returnTimestamp: raw.createdAt || raw.returnTimestamp || new Date().toISOString(),
+      returnTimestamp: raw.createdAt || raw.returnTimestamp || '',
       fuelLevelReturn: raw.fuelLevelReturn || '—',
       fuelDeltaCharge: Number(raw.fuelDeltaCharge || 0),
       engineHoursIn: Number(raw.engineHoursIn || 0),
@@ -2708,8 +2683,8 @@ export class ApiStore {
       name: data.name,
       tradeName: data.tradeName,
       phone: data.phone,
-      location: data.location || data.address || 'Yard Area',
-      commissionRate: data.commissionRate || 0.06,
+      location: data.location || data.address || '',
+      commissionRate: data.commissionRate != null ? Number(data.commissionRate) : 0,
     };
     const raw = await request<any>('/dealers', {
       method: 'POST',
@@ -2728,7 +2703,7 @@ export class ApiStore {
       hubName: data.hubName,
       address: data.address,
       notes: data.notes,
-      commissionRate: Number(raw?.commissionRate ?? data.commissionRate ?? 0.06),
+      commissionRate: Number(raw?.commissionRate ?? data.commissionRate ?? 0),
       totalCommissionEarned: Number(raw?.totalCommissionEarned || 0),
       totalReferrals: Number(raw?.totalReferrals || 0),
       active: true,
@@ -2746,7 +2721,7 @@ export class ApiStore {
       dealerName: c.dealer?.name,
       bookingId: c.booking?.id,
       grossRentalRevenue: Number(c.grossRentalRevenue || 0),
-      commissionRate: Number(c.commissionRate || 0.06),
+      commissionRate: Number(c.commissionRate || 0),
       commissionAmount: Number(c.commissionAmount || 0),
       status: c.status === 2 ? 'SETTLED' : 'PENDING',
       createdAt: c.createdAt,
@@ -2815,12 +2790,13 @@ export class ApiStore {
         method: 'POST',
       });
     } catch (err) {
-      console.warn('Automated WhatsApp booking notification fallback:', err);
+      console.warn('WhatsApp booking notification error:', err);
       const b = this.bookings.find((item) => item.id === bookingId);
       return {
         to: b?.customer.phone,
         bookingNumber: b?.bookingNumber,
-        status: 'SENT',
+        status: 'FAILED',
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -2831,12 +2807,13 @@ export class ApiStore {
         method: 'POST',
       });
     } catch (err) {
-      console.warn('Automated WhatsApp dispatch notification fallback:', err);
+      console.warn('WhatsApp dispatch notification error:', err);
       const b = this.bookings.find((item) => item.id === bookingId);
       return {
         to: b?.customer.phone,
         bookingNumber: b?.bookingNumber,
-        status: 'SENT',
+        status: 'FAILED',
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }
@@ -2847,12 +2824,13 @@ export class ApiStore {
         method: 'POST',
       });
     } catch (err) {
-      console.warn('Automated WhatsApp return settlement notification fallback:', err);
+      console.warn('WhatsApp return settlement notification error:', err);
       const b = this.bookings.find((item) => item.id === bookingId);
       return {
         to: b?.customer.phone,
         bookingNumber: b?.bookingNumber,
-        status: 'SENT',
+        status: 'FAILED',
+        error: err instanceof Error ? err.message : String(err),
       };
     }
   }

@@ -1,6 +1,7 @@
 package com.equipgrid.dealer.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -24,5 +25,6 @@ public class CreateDealerRequest {
   @NotBlank(message = "Location is required (e.g. Hardoi, Sandila, Bilgram)")
   private String location;
 
-  @Builder.Default private BigDecimal commissionRate = new BigDecimal("0.0600");
+  @NotNull(message = "Commission rate is required")
+  private BigDecimal commissionRate;
 }

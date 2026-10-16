@@ -75,7 +75,7 @@ public class WhatsAppWebhookServiceImpl implements IWhatsAppWebhookService {
     String from =
         formParams.getOrDefault("From", "").replace("whatsapp:", "").replace("+", "").trim();
     String body = formParams.getOrDefault("Body", "").trim();
-    String profileName = formParams.getOrDefault("ProfileName", "Farmer");
+    String profileName = formParams.getOrDefault("ProfileName", "");
 
     if (from.isBlank()) {
       throw new IllegalArgumentException("Missing 'From' parameter in Twilio webhook");
