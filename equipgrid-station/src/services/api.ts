@@ -50,6 +50,7 @@ import {
   EquipmentRecommendationRequest,
   EquipmentRecommendationResponse,
   MaintenanceTicket,
+  MaintenanceDamageComponent,
   CreateMaintenanceTicketPayload,
   UpdateMaintenanceProgressPayload,
   CompleteMaintenancePayload,
@@ -2967,7 +2968,7 @@ export class ApiStore {
     // Update local asset status
     const asset = this.assets.find((a) => a.id === payload.assetId);
     if (asset) {
-      asset.status = payload.serviceType === 'BREAKDOWN_REPAIR' ? 'DAMAGED' : 'MAINTENANCE';
+      asset.status = payload.serviceType === 'REPAIR_WORK' ? 'DAMAGED' : 'MAINTENANCE';
     }
     this.notify();
     return ticket;
@@ -3048,6 +3049,52 @@ export class ApiStore {
 
   async fetchAssetMaintenanceHistory(assetId: number): Promise<MaintenanceTicket[]> {
     return request<MaintenanceTicket[]>(`/maintenance/assets/${assetId}/history`);
+  }
+
+  async fetchDamageComponents(): Promise<MaintenanceDamageComponent[]> {
+    return request<MaintenanceDamageComponent[]>('/maintenance/damage-components');
+  }
+
+  async uploadDamagePhoto(file: File): Promise<string> {
+    const url = `${API_BASE}/maintenance/damage-photos`;
+    let token = '';
+    try {
+      const authStored = localStorage.getItem('equipgrid_auth_user');
+      if (authStored) {
+        const parsed = JSON.parse(authStored);
+        if (parsed?.token) token = parsed.token;
+      }
+    } catch {}
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errMsg = `Damage photo upload failed: ${res.status} ${res.statusText}`;
+      try {
+        const errBody = await res.json();
+        if (errBody?.message?.text) errMsg = errBody.message.text;
+        else if (errBody?.message)
+          errMsg =
+            typeof errBody.message === 'string'
+              ? errBody.message
+              : JSON.stringify(errBody.message);
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    const json = await res.json();
+    return (json?.data !== undefined ? json.data : json) as string;
   }
 }
 

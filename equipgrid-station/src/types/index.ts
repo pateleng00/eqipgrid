@@ -890,10 +890,20 @@ export function getFarmerFriendlyStatus(status: BookingStatus | string): FarmerF
 // ── Maintenance & Servicing Types ──────────────────────────────────────────
 
 export type MaintenanceServiceType =
-  | 'ROUTINE_SERVICE'
-  | 'BREAKDOWN_REPAIR'
-  | 'MAJOR_OVERHAUL'
-  | 'PREVENTIVE_CHECK';
+  | 'PERIODIC_SERVICE'
+  | 'REPAIR_WORK'
+  | 'SERVICE_AND_REPAIR';
+
+export interface MaintenanceDamageComponent {
+  id: number;
+  partCode: string;
+  name: string;
+  hindiName?: string;
+  category?: string;
+  description?: string;
+  active: boolean;
+  displayOrder?: number;
+}
 
 export type MaintenanceLocationType = 'IN_HOUSE' | 'EXTERNAL_SERVICE_CENTER';
 
@@ -927,6 +937,12 @@ export interface MaintenanceTicket {
   status: MaintenanceStatus;
   issueDescription: string;
   workScope?: string;
+  serviceNumber?: string;
+  isFreeService?: boolean;
+  periodicServiceNotes?: string;
+  damagedComponents?: string[];
+  otherDamageDescription?: string;
+  damageImageUrls?: string[];
   estimatedCost?: number;
   actualPartsCost?: number;
   actualLaborCost?: number;
@@ -957,6 +973,12 @@ export interface CreateMaintenanceTicketPayload {
   priority?: MaintenancePriority;
   issueDescription: string;
   workScope?: string;
+  serviceNumber?: string;
+  isFreeService?: boolean;
+  periodicServiceNotes?: string;
+  damagedComponents?: string[];
+  otherDamageDescription?: string;
+  damageImageUrls?: string[];
   estimatedCost?: number;
   expectedCompletionDate?: string;
   meterHoursAtService?: number;

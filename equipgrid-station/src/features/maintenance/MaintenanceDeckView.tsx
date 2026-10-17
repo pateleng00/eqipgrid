@@ -26,6 +26,12 @@ import {
   Calendar,
   Layers,
   History,
+  Camera,
+  Image as ImageIcon,
+  Tag,
+  Info,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { api, resolveAssetS3Key, sanitizeMediaUrl } from '../../services/api';
 import { useTheme } from '../../lib/ThemeContext';
@@ -35,6 +41,7 @@ import {
   AssetStatus,
   MaintenanceTicket,
   MaintenanceServiceType,
+  MaintenanceDamageComponent,
   MaintenanceLocationType,
   MaintenancePriority,
   CreateMaintenanceTicketPayload,
@@ -66,9 +73,13 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Damage Components Master from DB
+  const [damageComponents, setDamageComponents] = useState<MaintenanceDamageComponent[]>([]);
+  const [loadingComponents, setLoadingComponents] = useState(false);
+
   // Create Ticket Form State
   const [selectedAssetId, setSelectedAssetId] = useState<number | ''>('');
-  const [serviceType, setServiceType] = useState<MaintenanceServiceType>('ROUTINE_SERVICE');
+  const [serviceType, setServiceType] = useState<MaintenanceServiceType>('PERIODIC_SERVICE');
   const [locationType, setLocationType] = useState<MaintenanceLocationType>('IN_HOUSE');
   const [serviceCenterName, setServiceCenterName] = useState('');
   const [serviceCenterContact, setServiceCenterContact] = useState('');
@@ -80,6 +91,23 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   const [expectedCompletionDate, setExpectedCompletionDate] = useState<string>('');
   const [meterHoursAtService, setMeterHoursAtService] = useState<string>('');
   const [assignedTechnician, setAssignedTechnician] = useState('');
+
+  // Periodic Service specific fields
+  const [serviceNumber, setServiceNumber] = useState<string>('1st Service (50 Hours)');
+  const [isFreeService, setIsFreeService] = useState<boolean>(true);
+  const [periodicServiceNotes, setPeriodicServiceNotes] = useState<string>(
+    'Engine oil renewal, oil & fuel filter replacement, air cleaner blowout, battery check, full chassis lubrication & torque inspection.',
+  );
+
+  // Repair Work specific fields
+  const [selectedDamagedComponents, setSelectedDamagedComponents] = useState<string[]>([]);
+  const [otherDamageDescription, setOtherDamageDescription] = useState<string>('');
+  const [damageImageUrls, setDamageImageUrls] = useState<string[]>([]);
+  const [uploadingDamagePhoto, setUploadingDamagePhoto] = useState(false);
+  const damageFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Lightbox preview for damage photos
+  const [lightboxImageUrl, setLightboxImageUrl] = useState<string | null>(null);
 
   // Complete Ticket Form State
   const [actualPartsCost, setActualPartsCost] = useState<string>('');
@@ -103,7 +131,8 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   const [uploadedInvoiceFileName, setUploadedInvoiceFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Fetch tickets from backend
+
+  // Fetch tickets & damage components from backend
   const loadTickets = async () => {
     setLoadingTickets(true);
     try {
@@ -116,8 +145,21 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     }
   };
 
+  const loadDamageComponents = async () => {
+    setLoadingComponents(true);
+    try {
+      const data = await api.fetchDamageComponents();
+      setDamageComponents(data || []);
+    } catch (err) {
+      console.error('Failed to load damage components:', err);
+    } finally {
+      setLoadingComponents(false);
+    }
+  };
+
   useEffect(() => {
     loadTickets();
+    loadDamageComponents();
   }, []);
 
   // Filtered tickets based on active tab and search
@@ -149,7 +191,9 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
           t.assetSerialNumber?.toLowerCase().includes(q) ||
           t.serviceCenterName?.toLowerCase().includes(q) ||
           t.issueDescription?.toLowerCase().includes(q) ||
-          t.assignedTechnician?.toLowerCase().includes(q)
+          t.assignedTechnician?.toLowerCase().includes(q) ||
+          t.serviceNumber?.toLowerCase().includes(q) ||
+          (t.damagedComponents && t.damagedComponents.some((c) => c.toLowerCase().includes(q)))
         );
       }
       return true;
@@ -201,7 +245,7 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   // Open Create Modal
   const handleOpenCreateModal = (preselectedAssetId?: number) => {
     setSelectedAssetId(preselectedAssetId || (eligibleAssets[0]?.id ?? ''));
-    setServiceType('ROUTINE_SERVICE');
+    setServiceType('PERIODIC_SERVICE');
     setLocationType('IN_HOUSE');
     setServiceCenterName('');
     setServiceCenterContact('');
@@ -213,16 +257,80 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     setExpectedCompletionDate('');
     setMeterHoursAtService('');
     setAssignedTechnician('');
+    setServiceNumber('1st Service (50 Hours)');
+    setIsFreeService(true);
+    setPeriodicServiceNotes(
+      'Engine oil renewal, oil & fuel filter replacement, air cleaner blowout, battery check, full chassis lubrication & torque inspection.',
+    );
+    setSelectedDamagedComponents([]);
+    setOtherDamageDescription('');
+    setDamageImageUrls([]);
     setIsCreateModalOpen(true);
+  };
+
+  // Toggle damaged component selection
+  const handleToggleDamagedComponent = (code: string) => {
+    setSelectedDamagedComponents((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    );
+  };
+
+  // Upload external damaged part photo to S3
+  const handleDamagePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingDamagePhoto(true);
+    try {
+      const url = await api.uploadDamagePhoto(file);
+      setDamageImageUrls((prev) => [...prev, url]);
+    } catch (err: any) {
+      alert(`Damage photo upload failed: ${err?.message || 'Server error'}`);
+    } finally {
+      setUploadingDamagePhoto(false);
+      if (damageFileInputRef.current) {
+        damageFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveDamagePhoto = (index: number) => {
+    setDamageImageUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Submit Create Ticket
   const handleCreateTicketSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAssetId) return;
+    if (!selectedAssetId) {
+      alert('Please select an asset (कृपया मशीन चुनें).');
+      return;
+    }
+
+    // Validation for Repair Work / Service & Repair
+    const isRepair = serviceType === 'REPAIR_WORK' || serviceType === 'SERVICE_AND_REPAIR';
+    const isService = serviceType === 'PERIODIC_SERVICE' || serviceType === 'SERVICE_AND_REPAIR';
+
+    if (isRepair) {
+      if (selectedDamagedComponents.length === 0) {
+        alert('Please select at least one damaged component (कम से कम एक क्षतिग्रस्त कंपोनेंट चुनें).');
+        return;
+      }
+      if (selectedDamagedComponents.includes('OTHER') && !otherDamageDescription.trim()) {
+        alert(
+          "Please provide a description/explanation for 'Other' damaged component ('Other' विकल्प चुनने पर विवरण अनिवार्य है).",
+        );
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
+      const defaultDesc = isService && !isRepair
+        ? `${serviceNumber} - Scheduled Periodic Maintenance`
+        : isRepair && !isService
+        ? `Repair Work: ${selectedDamagedComponents.join(', ')}`
+        : `${serviceNumber} & Repair Work: ${selectedDamagedComponents.join(', ')}`;
+
       const payload: CreateMaintenanceTicketPayload = {
         assetId: Number(selectedAssetId),
         serviceType,
@@ -233,8 +341,17 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
         serviceCenterAddress:
           locationType === 'EXTERNAL_SERVICE_CENTER' ? serviceCenterAddress : undefined,
         priority,
-        issueDescription,
+        issueDescription: issueDescription.trim() ? issueDescription.trim() : defaultDesc,
         workScope: workScope.trim() ? workScope : undefined,
+        serviceNumber: isService ? serviceNumber : undefined,
+        isFreeService: isService ? isFreeService : undefined,
+        periodicServiceNotes: isService ? periodicServiceNotes : undefined,
+        damagedComponents: isRepair ? selectedDamagedComponents : undefined,
+        otherDamageDescription:
+          isRepair && selectedDamagedComponents.includes('OTHER')
+            ? otherDamageDescription.trim()
+            : undefined,
+        damageImageUrls: isRepair && damageImageUrls.length > 0 ? damageImageUrls : undefined,
         estimatedCost: estimatedCost ? Number(estimatedCost) : undefined,
         expectedCompletionDate: expectedCompletionDate || undefined,
         meterHoursAtService: meterHoursAtService ? Number(meterHoursAtService) : undefined,
@@ -658,11 +775,117 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
 
                       <div className="flex justify-between items-center text-[10px] pt-1 border-t border-slate-200/50 dark:border-slate-800/80">
                         <span className="text-slate-500">Service Type:</span>
-                        <strong className="text-slate-900 dark:text-white">{ticket.serviceType}</strong>
+                        <span
+                          className={cn(
+                            'font-black px-1.5 py-0.5 rounded border text-[10px]',
+                            ticket.serviceType === 'PERIODIC_SERVICE'
+                              ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                              : ticket.serviceType === 'REPAIR_WORK'
+                              ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                              : 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+                          )}
+                        >
+                          {ticket.serviceType === 'PERIODIC_SERVICE'
+                            ? 'Periodic Service (आवधिक सर्विस)'
+                            : ticket.serviceType === 'REPAIR_WORK'
+                            ? 'Repair Work (मरम्मत कार्य)'
+                            : 'Service & Repair (सर्विस व मरम्मत दोनों)'}
+                        </span>
                       </div>
 
+                      {/* Periodic Service Info (Service Number & Free/Paid) */}
+                      {(ticket.serviceNumber || ticket.isFreeService !== undefined) && (
+                        <div className="flex items-center justify-between text-[10px] pt-1 border-t border-slate-200/40 dark:border-slate-800/60">
+                          <span className="text-slate-500">Service Plan:</span>
+                          <div className="flex items-center gap-1 font-mono">
+                            {ticket.serviceNumber && (
+                              <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold border border-blue-500/20 text-[9px]">
+                                {ticket.serviceNumber}
+                              </span>
+                            )}
+                            {ticket.isFreeService !== undefined && (
+                              <span
+                                className={cn(
+                                  'px-1.5 py-0.5 rounded text-[9px] font-black border',
+                                  ticket.isFreeService
+                                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+                                )}
+                              >
+                                {ticket.isFreeService ? 'FREE (फ्री)' : 'PAID (सशुल्क)'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Periodic Service Notes snippet */}
+                      {ticket.periodicServiceNotes && (
+                        <div className="text-[10px] text-slate-500 pt-0.5">
+                          <span className="font-semibold text-slate-600 dark:text-slate-400">Service Scope: </span>
+                          <span className="line-clamp-2">{ticket.periodicServiceNotes}</span>
+                        </div>
+                      )}
+
+                      {/* Damaged Components Badges */}
+                      {ticket.damagedComponents && ticket.damagedComponents.length > 0 && (
+                        <div className="pt-1.5 border-t border-slate-200/40 dark:border-slate-800/60 text-[10px] space-y-1">
+                          <span className="text-slate-500 font-semibold block">Damaged Parts (क्षतिग्रस्त पुर्जे):</span>
+                          <div className="flex flex-wrap gap-1">
+                            {ticket.damagedComponents.map((code, idx) => (
+                              <span
+                                key={idx}
+                                className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[9px] font-bold"
+                              >
+                                {code}
+                              </span>
+                            ))}
+                          </div>
+                          {ticket.otherDamageDescription && (
+                            <div className="text-[10px] text-rose-600 dark:text-rose-400 italic bg-rose-50/50 dark:bg-rose-950/30 p-1.5 rounded border border-rose-200/40 dark:border-rose-900/40">
+                              <strong>Other Note:</strong> {ticket.otherDamageDescription}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* External Damage Photos Strip */}
+                      {ticket.damageImageUrls && ticket.damageImageUrls.length > 0 && (
+                        <div className="pt-1.5 border-t border-slate-200/40 dark:border-slate-800/60 text-[10px] space-y-1">
+                          <div className="flex items-center justify-between text-slate-500">
+                            <span className="flex items-center gap-1 font-semibold text-slate-600 dark:text-slate-400">
+                              <Camera className="h-3 w-3 text-amber-500" />
+                              External Damage Photos:
+                            </span>
+                            <span className="font-mono text-[9px]">
+                              {ticket.damageImageUrls.length} photo{ticket.damageImageUrls.length > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                            {ticket.damageImageUrls.map((imgUrl, imgIdx) => (
+                              <button
+                                key={imgIdx}
+                                type="button"
+                                onClick={() => setLightboxImageUrl(imgUrl)}
+                                className="h-11 w-11 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 hover:scale-105 transition-transform cursor-pointer relative group"
+                                title="Click to view full photo"
+                              >
+                                <img
+                                  src={imgUrl}
+                                  alt={`Damage ${imgIdx + 1}`}
+                                  className="h-full w-full object-cover"
+                                />
+                                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <Eye className="h-3.5 w-3.5 text-white" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {ticket.expectedCompletionDate && (
-                        <div className="flex justify-between items-center text-[10px]">
+                        <div className="flex justify-between items-center text-[10px] pt-1 border-t border-slate-200/50 dark:border-slate-800/80">
                           <span className="text-slate-500">Expected Delivery:</span>
                           <span className="text-amber-500 font-bold">{ticket.expectedCompletionDate}</span>
                         </div>
@@ -900,20 +1123,19 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                    Service Type (काम का प्रकार) *
+                    Service Type (रखरखाव का प्रकार) *
                   </label>
                   <select
                     value={serviceType}
                     onChange={(e) => setServiceType(e.target.value as MaintenanceServiceType)}
                     className={cn(
-                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none',
+                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none font-bold',
                       isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
                     )}
                   >
-                    <option value="ROUTINE_SERVICE">ROUTINE_SERVICE (नियमित सर्विस / ऑइल बदलाव)</option>
-                    <option value="BREAKDOWN_REPAIR">BREAKDOWN_REPAIR (अचानक ब्रेकडाउन / खराबी)</option>
-                    <option value="MAJOR_OVERHAUL">MAJOR_OVERHAUL (बड़ा ओवरहाल / इंजन मरम्मत)</option>
-                    <option value="PREVENTIVE_CHECK">PREVENTIVE_CHECK (प्रिवेंटिव सुरक्षा जांच)</option>
+                    <option value="PERIODIC_SERVICE">आवधिक / नियमित सर्विस (Periodic Service)</option>
+                    <option value="REPAIR_WORK">मरम्मत का काम (Repair Work)</option>
+                    <option value="SERVICE_AND_REPAIR">सर्विस और मरम्मत दोनों (Service & Repair)</option>
                   </select>
                 </div>
 
@@ -934,6 +1156,254 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                   </select>
                 </div>
               </div>
+
+              {/* ── Section A: Periodic Service Details ── */}
+              {(serviceType === 'PERIODIC_SERVICE' || serviceType === 'SERVICE_AND_REPAIR') && (
+                <div
+                  className={cn(
+                    'p-3.5 rounded-xl border space-y-3 transition-all',
+                    isDaylight ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-950/20 border-blue-900/40',
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-black text-xs">
+                      <Sparkles className="h-4 w-4" />
+                      <span>Periodic Service Details (आवधिक सर्विस विवरण)</span>
+                    </div>
+                    <span className="text-[10px] text-blue-500 font-semibold">नियमित रखरखाव</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Service Number (सर्विस संख्या) *
+                      </label>
+                      <select
+                        value={serviceNumber}
+                        onChange={(e) => setServiceNumber(e.target.value)}
+                        className={cn(
+                          'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none font-semibold',
+                          isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                        )}
+                      >
+                        <option value="1st Service (50 Hours)">1st Service (50 Hours / 50 घंटे)</option>
+                        <option value="2nd Service (150 Hours)">2nd Service (150 Hours / 150 घंटे)</option>
+                        <option value="3rd Service (300 Hours)">3rd Service (300 Hours / 300 घंटे)</option>
+                        <option value="4th Service (500 Hours)">4th Service (500 Hours / 500 घंटे)</option>
+                        <option value="5th Service (750 Hours)">5th Service (750 Hours / 750 घंटे)</option>
+                        <option value="6th Service (1000 Hours)">6th Service (1000 Hours / 1000 घंटे)</option>
+                        <option value="7th Service (1250 Hours)">7th Service (1250 Hours / 1250 घंटे)</option>
+                        <option value="8th Service (1500 Hours)">8th Service (1500 Hours / 1500 घंटे)</option>
+                        <option value="Custom Periodic Service">Custom Periodic Service (अन्य नियमित सर्विस)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
+                        Billing Type (फ्री या सशुल्क) *
+                      </label>
+                      <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => setIsFreeService(true)}
+                          className={cn(
+                            'py-1.5 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 transition-all cursor-pointer',
+                            isFreeService
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-xs font-black'
+                              : isDaylight
+                              ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
+                          )}
+                        >
+                          <Check className={cn('h-3.5 w-3.5', isFreeService ? 'opacity-100' : 'opacity-0')} />
+                          <span>Free Service (फ्री)</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsFreeService(false)}
+                          className={cn(
+                            'py-1.5 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 transition-all cursor-pointer',
+                            !isFreeService
+                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-black'
+                              : isDaylight
+                              ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
+                          )}
+                        >
+                          <DollarSign className={cn('h-3.5 w-3.5', !isFreeService ? 'opacity-100' : 'opacity-0')} />
+                          <span>Paid Service (सशुल्क)</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1 flex items-center justify-between">
+                      <span>Standard Periodic Checklist & Scope (सर्विस कार्य विवरण)</span>
+                      <span className="text-[10px] text-slate-400 font-normal">Editable standard scope</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={periodicServiceNotes}
+                      onChange={(e) => setPeriodicServiceNotes(e.target.value)}
+                      placeholder="Oil filter replacement, fuel filter change, air filter cleaning, battery inspection..."
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none resize-none font-mono',
+                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ── Section B: Repair Work & Damaged Components ── */}
+              {(serviceType === 'REPAIR_WORK' || serviceType === 'SERVICE_AND_REPAIR') && (
+                <div
+                  className={cn(
+                    'p-3.5 rounded-xl border space-y-3 transition-all',
+                    isDaylight ? 'bg-amber-50/60 border-amber-200' : 'bg-amber-950/20 border-amber-900/40',
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-black text-xs">
+                      <Wrench className="h-4 w-4" />
+                      <span>Damaged Components & External Photos (क्षतिग्रस्त पार्ट्स व फ़ोटो)</span>
+                    </div>
+                    <span className="text-[10px] text-amber-500 font-semibold">खराबी व मरम्मत</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                      <span>Select Damaged Machine / Vehicle Components (क्षतिग्रस्त पुर्जे चुनें) *</span>
+                      <span className="text-[10px] text-slate-400">Database table list</span>
+                    </label>
+
+                    {loadingComponents ? (
+                      <div className="text-xs text-slate-400 py-2">Loading generic components list...</div>
+                    ) : (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                        {damageComponents.map((comp) => {
+                          const isSelected = selectedDamagedComponents.includes(comp.partCode);
+                          return (
+                            <button
+                              key={comp.id}
+                              type="button"
+                              onClick={() => handleToggleDamagedComponent(comp.partCode)}
+                              className={cn(
+                                'text-left px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all flex items-center justify-between gap-1 cursor-pointer select-none',
+                                isSelected
+                                  ? comp.partCode === 'OTHER'
+                                    ? 'bg-rose-500/15 border-rose-500 text-rose-700 dark:text-rose-300 font-black'
+                                    : 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 font-black'
+                                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900',
+                              )}
+                            >
+                              <span className="truncate">
+                                {comp.name} {comp.hindiName ? `(${comp.hindiName})` : ''}
+                              </span>
+                              {isSelected ? (
+                                <CheckSquare className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                              ) : (
+                                <Square className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mandatory explanation if OTHER is selected */}
+                  {selectedDamagedComponents.includes('OTHER') && (
+                    <div className="p-2.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 space-y-1">
+                      <label className="block text-[11px] font-black text-rose-700 dark:text-rose-300">
+                        Explain Specific Machine Repair Requirement (अन्य खराबी का अनिवार्य विवरण) *
+                      </label>
+                      <p className="text-[10px] text-rose-600/80 dark:text-rose-400/80">
+                        चूंकि आपने 'Other' चुना है, इस मशीन के विशेष खराबी या बदलाव का विवरण अनिवार्य रूप से दर्ज करें।
+                      </p>
+                      <textarea
+                        required
+                        rows={2}
+                        value={otherDamageDescription}
+                        onChange={(e) => setOtherDamageDescription(e.target.value)}
+                        placeholder="e.g. Starter motor solenoid burnt, radiator fan blade cracked, clutch pressure plate slipping..."
+                        className={cn(
+                          'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none resize-none font-mono',
+                          isDaylight
+                            ? 'border-rose-300 bg-white text-slate-900'
+                            : 'border-rose-800 bg-slate-950 text-white',
+                        )}
+                      />
+                    </div>
+                  )}
+
+                  {/* External Damaged Part Photos Upload */}
+                  <div className="space-y-1.5 pt-1 border-t border-amber-200/50 dark:border-amber-900/40">
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                        <Camera className="h-3.5 w-3.5 text-amber-500" />
+                        <span>External Damaged Part Images (बाहरी टूटे/क्षतिग्रस्त पार्ट्स की फ़ोटो - ऐच्छिक)</span>
+                      </label>
+                      <span className="text-[10px] text-slate-400">S3 Permanent Folder</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                      आंतरिक पार्ट्स नहीं दिखते इसलिए केवल बाहरी दिखने वाले टूटे या घिसे पुर्जों (जैसे टायर, ब्लेड, चेसिस, लीकेज) की स्थिति हेतु फ़ोटो अपलोड करें।
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-1">
+                      {/* Hidden file input */}
+                      <input
+                        ref={damageFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleDamagePhotoUpload}
+                        className="hidden"
+                      />
+                      <button
+                        type="button"
+                        disabled={uploadingDamagePhoto}
+                        onClick={() => damageFileInputRef.current?.click()}
+                        className={cn(
+                          'px-3 py-2 rounded-xl text-xs font-bold border border-dashed flex items-center gap-1.5 transition-all cursor-pointer',
+                          uploadingDamagePhoto
+                            ? 'opacity-60 cursor-not-allowed'
+                            : isDaylight
+                            ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800'
+                            : 'border-amber-700 bg-amber-950/40 hover:bg-amber-950/70 text-amber-300',
+                        )}
+                      >
+                        <UploadCloud className="h-4 w-4" />
+                        <span>{uploadingDamagePhoto ? 'Uploading to S3...' : '+ Upload Damage Photo (फ़ोटो जोड़ें)'}</span>
+                      </button>
+
+                      {/* Thumbnails of uploaded damage photos */}
+                      {damageImageUrls.map((url, idx) => (
+                        <div
+                          key={idx}
+                          className="relative h-14 w-14 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden group shrink-0"
+                        >
+                          <img
+                            src={url}
+                            alt={`Damage part ${idx + 1}`}
+                            className="h-full w-full object-cover cursor-pointer"
+                            onClick={() => setLightboxImageUrl(url)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDamagePhoto(idx)}
+                            className="absolute top-0.5 right-0.5 p-0.5 rounded-full bg-slate-950/80 text-white hover:bg-rose-600 transition-colors cursor-pointer"
+                            title="Remove Photo"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Issue Description & Work Scope */}
               <div>
@@ -1414,6 +1884,91 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                       <strong>Issue:</strong> {t.issueDescription}
                     </div>
 
+                    {/* Service Type & Plan Details */}
+                    <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                      <span
+                        className={cn(
+                          'font-bold px-1.5 py-0.5 rounded border',
+                          t.serviceType === 'PERIODIC_SERVICE'
+                            ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                            : t.serviceType === 'REPAIR_WORK'
+                            ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                            : 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/30',
+                        )}
+                      >
+                        {t.serviceType === 'PERIODIC_SERVICE'
+                          ? 'Periodic Service'
+                          : t.serviceType === 'REPAIR_WORK'
+                          ? 'Repair Work'
+                          : 'Service & Repair'}
+                      </span>
+
+                      {t.serviceNumber && (
+                        <span className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono font-bold border border-blue-500/20">
+                          {t.serviceNumber}
+                        </span>
+                      )}
+
+                      {t.isFreeService !== undefined && (
+                        <span
+                          className={cn(
+                            'px-1.5 py-0.5 rounded text-[9px] font-black border',
+                            t.isFreeService
+                              ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700',
+                          )}
+                        >
+                          {t.isFreeService ? 'FREE' : 'PAID'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Damaged Components */}
+                    {t.damagedComponents && t.damagedComponents.length > 0 && (
+                      <div className="space-y-1 text-[10px]">
+                        <span className="text-slate-500 font-semibold block">Damaged Parts:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {t.damagedComponents.map((c, i) => (
+                            <span
+                              key={i}
+                              className="px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[9px] font-bold"
+                            >
+                              {c}
+                            </span>
+                          ))}
+                        </div>
+                        {t.otherDamageDescription && (
+                          <div className="text-[10px] text-rose-600 dark:text-rose-400 italic">
+                            Other: {t.otherDamageDescription}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* External Damage Photos */}
+                    {t.damageImageUrls && t.damageImageUrls.length > 0 && (
+                      <div className="space-y-1 text-[10px]">
+                        <span className="text-slate-500 font-semibold block">External Damage Photos:</span>
+                        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                          {t.damageImageUrls.map((imgUrl, imgIdx) => (
+                            <button
+                              key={imgIdx}
+                              type="button"
+                              onClick={() => setLightboxImageUrl(imgUrl)}
+                              className="h-10 w-10 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shrink-0 hover:scale-105 transition-transform cursor-pointer"
+                              title="Click to view full photo"
+                            >
+                              <img
+                                src={imgUrl}
+                                alt="Damage detail"
+                                className="h-full w-full object-cover"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {t.completionNotes && (
                       <div className="text-[10px] text-slate-500">
                         <strong>Notes:</strong> {t.completionNotes}
@@ -1450,6 +2005,38 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
               >
                 Close (बंद करें)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          LIGHTBOX MODAL: FULL PREVIEW OF EXTERNAL DAMAGED PART IMAGE
+          ========================================================================= */}
+      {lightboxImageUrl && (
+        <div
+          className="fixed inset-0 z-60 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxImageUrl(null)}
+        >
+          <div
+            className="relative max-w-3xl max-h-[90vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setLightboxImageUrl(null)}
+              className="absolute -top-10 right-0 p-1.5 rounded-full bg-white/20 hover:bg-white/40 text-white cursor-pointer transition-colors"
+              title="Close Preview"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img
+              src={lightboxImageUrl}
+              alt="External Damaged Part Full View"
+              className="rounded-2xl max-w-full max-h-[80vh] object-contain shadow-2xl border border-slate-700"
+            />
+            <div className="mt-2 text-xs text-slate-300 font-mono flex items-center gap-1.5">
+              <Camera className="h-3.5 w-3.5 text-amber-500" />
+              <span>External Damaged Component Photo (Permanent S3 Storage)</span>
             </div>
           </div>
         </div>
