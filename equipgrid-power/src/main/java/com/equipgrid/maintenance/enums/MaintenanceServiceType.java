@@ -1,8 +1,7 @@
 package com.equipgrid.maintenance.enums;
 
 public enum MaintenanceServiceType {
-  ROUTINE_SERVICE,
-  BREAKDOWN_REPAIR,
-  MAJOR_OVERHAUL,
-  PREVENTIVE_CHECK
+  PERIODIC_SERVICE,
+  REPAIR_WORK,
+  SERVICE_AND_REPAIR
 }

@@ -40,6 +40,16 @@ public class CreateMaintenanceRequest {
 
   private String workScope;
 
+  // Periodic Service fields
+  private Integer serviceNumber;
+  private Boolean isFreeService;
+  private String periodicServiceNotes;
+
+  // Repair Work fields
+  private java.util.List<String> damagedComponents;
+  private String otherDamageDescription;
+  private java.util.List<String> damageImageUrls;
+
   private BigDecimal estimatedCost;
 
   private LocalDate expectedCompletionDate;

@@ -48,6 +48,16 @@ public class MaintenanceRecordResponse {
   private String issueDescription;
   private String workScope;
 
+  // Periodic Service fields
+  private Integer serviceNumber;
+  private Boolean isFreeService;
+  private String periodicServiceNotes;
+
+  // Repair Work fields
+  private java.util.List<String> damagedComponents;
+  private String otherDamageDescription;
+  private java.util.List<String> damageImageUrls;
+
   // Financials & Invoices
   private BigDecimal estimatedCost;
   private BigDecimal actualPartsCost;
@@ -95,6 +105,12 @@ public class MaintenanceRecordResponse {
         .status(record.getStatus())
         .issueDescription(record.getIssueDescription())
         .workScope(record.getWorkScope())
+        .serviceNumber(record.getServiceNumber())
+        .isFreeService(record.getIsFreeService())
+        .periodicServiceNotes(record.getPeriodicServiceNotes())
+        .damagedComponents(parseJsonList(record.getDamagedComponents()))
+        .otherDamageDescription(record.getOtherDamageDescription())
+        .damageImageUrls(parseJsonList(record.getDamageImageUrls()))
         .estimatedCost(record.getEstimatedCost())
         .actualPartsCost(record.getActualPartsCost())
         .actualLaborCost(record.getActualLaborCost())
@@ -114,5 +130,21 @@ public class MaintenanceRecordResponse {
         .createdAt(record.getCreatedAt())
         .updatedAt(record.getUpdatedAt())
         .build();
+  }
+
+  private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
+      new com.fasterxml.jackson.databind.ObjectMapper();
+
+  @SuppressWarnings("unchecked")
+  private static java.util.List<String> parseJsonList(String json) {
+    if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+    try {
+      return MAPPER.readValue(json, java.util.List.class);
+    } catch (Exception e) {
+      return java.util.Arrays.stream(json.split(","))
+          .map(String::trim)
+          .filter(s -> !s.isEmpty())
+          .toList();
+    }
   }
 }

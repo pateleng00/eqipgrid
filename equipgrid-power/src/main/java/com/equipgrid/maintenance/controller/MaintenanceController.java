@@ -7,6 +7,7 @@ import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
 import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
 import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
 import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
+import com.equipgrid.maintenance.entity.MaintenanceDamageComponent;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
 import com.equipgrid.maintenance.service.IMaintenanceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -116,5 +117,29 @@ public class MaintenanceController {
     List<MaintenanceRecordResponse> history =
         maintenanceService.getAssetMaintenanceHistory(assetId);
     return ResponseEntity.ok(ApiResponse.buildSuccess(history));
+  }
+
+  @GetMapping("/damage-components")
+  @Operation(
+      summary = "List standard machine damage components",
+      description =
+          "Fetches active generic vehicle and machinery damage components from the database.")
+  public ResponseEntity<ApiResponse<List<MaintenanceDamageComponent>>> listDamageComponents() {
+    List<MaintenanceDamageComponent> components = maintenanceService.getActiveDamageComponents();
+    return ResponseEntity.ok(ApiResponse.buildSuccess(components));
+  }
+
+  @PostMapping(value = "/damage-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+  @RateLimited(limit = 30, name = "maintenance_damage_photo_upload")
+  @Operation(
+      summary = "Upload external damaged part photo",
+      description =
+          "Uploads a photo of external damaged part to S3 permanent maintenance storage and returns URL.")
+  public ResponseEntity<ApiResponse<String>> uploadDamagePhoto(
+      @RequestPart("file") MultipartFile file, @AuthenticationPrincipal User currentUser) {
+    Long userId = currentUser != null ? currentUser.getId() : null;
+    String photoUrl = maintenanceService.uploadDamagePhoto(file, userId);
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess("Damage photo uploaded successfully", photoUrl));
   }
 }

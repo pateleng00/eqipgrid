@@ -13,16 +13,19 @@ import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
 import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
 import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
 import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
+import com.equipgrid.maintenance.entity.MaintenanceDamageComponent;
 import com.equipgrid.maintenance.entity.MaintenanceRecord;
 import com.equipgrid.maintenance.enums.MaintenancePriority;
 import com.equipgrid.maintenance.enums.MaintenanceServiceType;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
+import com.equipgrid.maintenance.repository.MaintenanceDamageComponentRepository;
 import com.equipgrid.maintenance.repository.MaintenanceRecordRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.CacheManager;
@@ -36,10 +39,14 @@ import org.springframework.web.multipart.MultipartFile;
 public class MaintenanceServiceImpl implements IMaintenanceService {
 
   private final MaintenanceRecordRepository maintenanceRecordRepository;
+  private final MaintenanceDamageComponentRepository damageComponentRepository;
   private final AssetRepository assetRepository;
   private final HubRepository hubRepository;
   private final StorageService storageService;
   private final org.springframework.beans.factory.ObjectProvider<CacheManager> cacheManagerProvider;
+
+  private static final com.fasterxml.jackson.databind.ObjectMapper JSON_MAPPER =
+      new com.fasterxml.jackson.databind.ObjectMapper();
 
   @Override
   @Transactional
@@ -68,11 +75,28 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
           "Asset must be assigned to an active hub before entering maintenance.");
     }
 
+    // Validation for REPAIR_WORK or SERVICE_AND_REPAIR with 'OTHER' damage component
+    if (request.getServiceType() == MaintenanceServiceType.REPAIR_WORK
+        || request.getServiceType() == MaintenanceServiceType.SERVICE_AND_REPAIR) {
+      if (request.getDamagedComponents() != null) {
+        boolean hasOther =
+            request.getDamagedComponents().stream()
+                .anyMatch(c -> c.equalsIgnoreCase("OTHER") || c.contains("OTHER"));
+        if (hasOther
+            && (request.getOtherDamageDescription() == null
+                || request.getOtherDamageDescription().isBlank())) {
+          throw new EquipGridException(
+              EquipGridExceptionEnum.EG_400,
+              "Please provide an explanation/description for the 'Other' damaged component.");
+        }
+      }
+    }
+
     String ticketNumber = generateUniqueTicketNumber();
 
     // Lock asset status out of website bookings and station availability
     AssetStatus targetStatus =
-        request.getServiceType() == MaintenanceServiceType.BREAKDOWN_REPAIR
+        request.getServiceType() == MaintenanceServiceType.REPAIR_WORK
             ? AssetStatus.DAMAGED
             : AssetStatus.MAINTENANCE;
 
@@ -105,6 +129,12 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
             .status(MaintenanceStatus.IN_PROGRESS)
             .issueDescription(request.getIssueDescription())
             .workScope(request.getWorkScope())
+            .serviceNumber(request.getServiceNumber())
+            .isFreeService(Boolean.TRUE.equals(request.getIsFreeService()))
+            .periodicServiceNotes(request.getPeriodicServiceNotes())
+            .damagedComponents(toJson(request.getDamagedComponents()))
+            .otherDamageDescription(request.getOtherDamageDescription())
+            .damageImageUrls(toJson(request.getDamageImageUrls()))
             .estimatedCost(request.getEstimatedCost())
             .expectedCompletionDate(request.getExpectedCompletionDate())
             .meterHoursAtService(request.getMeterHoursAtService())
@@ -284,7 +314,9 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
     // Promote to permanent S3 storage under assets/invoices
     String identifier = "inv_" + record.getTicketNumber() + "_" + System.currentTimeMillis();
-    StorageService.StoragePromotionResult promoResult = storageService.promoteToPermanentStorage(DocumentType.MAINTENANCE_INVOICE, tempUrl, identifier);
+    StorageService.StoragePromotionResult promoResult =
+        storageService.promoteToPermanentStorage(
+            DocumentType.MAINTENANCE_INVOICE, tempUrl, identifier);
 
     String finalUrl =
         (promoResult.url() != null && !promoResult.url().isBlank()) ? promoResult.url() : tempUrl;
@@ -361,6 +393,51 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
     return maintenanceRecordRepository.findByAssetIdOrderByCreatedAtDesc(assetId).stream()
         .map(MaintenanceRecordResponse::fromEntity)
         .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<MaintenanceDamageComponent> getActiveDamageComponents() {
+    return damageComponentRepository.findByActiveTrueOrderByDisplayOrderAsc();
+  }
+
+  @Override
+  public String uploadDamagePhoto(MultipartFile file, Long userId) {
+    if (file == null || file.isEmpty()) {
+      throw new EquipGridException(
+          EquipGridExceptionEnum.EG_400, "Damage image file is missing or empty.");
+    }
+
+    Map<String, Object> tempResult = storageService.uploadFileTemporary(file);
+    String tempUrl = (String) tempResult.get("url");
+
+    String identifier =
+        "damage_" + System.currentTimeMillis() + "_" + UUID.randomUUID().toString().substring(0, 8);
+    StorageService.StoragePromotionResult promoResult =
+        storageService.promoteToPermanentStorage(
+            DocumentType.MAINTENANCE_IMAGE, tempUrl, identifier);
+
+    String finalUrl =
+        (promoResult.url() != null && !promoResult.url().isBlank()) ? promoResult.url() : tempUrl;
+
+    log.info(
+        "[Maintenance] Damage photo uploaded by user {}: file={}, url={}",
+        userId,
+        file.getOriginalFilename(),
+        finalUrl);
+    return finalUrl;
+  }
+
+  private String toJson(Object obj) {
+    if (obj == null) {
+      return null;
+    }
+    try {
+      return JSON_MAPPER.writeValueAsString(obj);
+    } catch (Exception e) {
+      log.error("[Maintenance] Error converting object to JSON string", e);
+      return null;
+    }
   }
 
   private String generateUniqueTicketNumber() {

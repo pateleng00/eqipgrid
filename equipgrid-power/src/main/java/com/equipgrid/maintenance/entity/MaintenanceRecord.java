@@ -70,6 +70,25 @@ public class MaintenanceRecord extends BaseEntity {
   @Column(name = "work_scope", columnDefinition = "TEXT")
   private String workScope;
 
+  @Column(name = "service_number")
+  private Integer serviceNumber;
+
+  @Builder.Default
+  @Column(name = "is_free_service")
+  private Boolean isFreeService = false;
+
+  @Column(name = "periodic_service_notes", columnDefinition = "TEXT")
+  private String periodicServiceNotes;
+
+  @Column(name = "damaged_components", columnDefinition = "TEXT")
+  private String damagedComponents;
+
+  @Column(name = "other_damage_description", columnDefinition = "TEXT")
+  private String otherDamageDescription;
+
+  @Column(name = "damage_image_urls", columnDefinition = "TEXT")
+  private String damageImageUrls;
+
   @Column(name = "estimated_cost", precision = 10, scale = 2)
   private BigDecimal estimatedCost;
 
