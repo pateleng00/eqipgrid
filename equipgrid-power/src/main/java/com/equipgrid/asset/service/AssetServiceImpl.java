@@ -15,16 +15,14 @@ import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
-
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.master.repository.BillingUnitMasterRepository;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
+import java.util.List;
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -93,7 +91,8 @@ public class AssetServiceImpl implements IAssetService {
       asset.setDailyRate(cfg.getBaseDailyRate());
       asset.setDepositAmount(cfg.getDepositAmount());
       if (cfg.getBillingUnit() != null) asset.setBillingUnit(cfg.getBillingUnit());
-      if (cfg.getBillingUnitMaster() != null) asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
+      if (cfg.getBillingUnitMaster() != null)
+        asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
       if (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) {
         asset.setShiftTerms(cfg.getShiftTerms());
       }
@@ -109,7 +108,8 @@ public class AssetServiceImpl implements IAssetService {
         asset.setDailyRate(cfg.getBaseDailyRate());
         asset.setDepositAmount(cfg.getDepositAmount());
         if (cfg.getBillingUnit() != null) asset.setBillingUnit(cfg.getBillingUnit());
-        if (cfg.getBillingUnitMaster() != null) asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
+        if (cfg.getBillingUnitMaster() != null)
+          asset.setBillingUnitMaster(cfg.getBillingUnitMaster());
         if (cfg.getShiftTerms() != null && !cfg.getShiftTerms().isBlank()) {
           asset.setShiftTerms(cfg.getShiftTerms());
         }
@@ -544,8 +544,7 @@ public class AssetServiceImpl implements IAssetService {
 
       BillingUnit effectiveUnit = rep.getBillingUnit();
       String effectiveShift = rep.getShiftTerms();
-      String effectiveHindiName =
-          rep.getType() != null ? rep.getType().getHindiName() : null;
+      String effectiveHindiName = rep.getType() != null ? rep.getType().getHindiName() : null;
       String effectiveLocalLang =
           rep.getType() != null ? rep.getType().getLocalLanguageName() : null;
       String effectiveDesc = rep.getType() != null ? rep.getType().getDescription() : null;
@@ -627,8 +626,6 @@ public class AssetServiceImpl implements IAssetService {
 
     return result;
   }
-
-
 
   @Override
   @Transactional

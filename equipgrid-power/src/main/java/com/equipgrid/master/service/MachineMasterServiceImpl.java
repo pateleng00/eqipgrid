@@ -41,10 +41,23 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Override
   @Transactional(readOnly = true)
   public List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive) {
-    if (Boolean.TRUE.equals(includeInactive)) {
-      return equipmentTypeRepository.findAllByOrderByNameAsc();
+    return getAllEquipmentTypes(includeInactive, null);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<EquipmentType> getAllEquipmentTypes(
+      Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
+    List<EquipmentType> list =
+        Boolean.TRUE.equals(includeInactive)
+            ? equipmentTypeRepository.findAllByOrderByNameAsc()
+            : equipmentTypeRepository.findByActiveTrueOrderByNameAsc();
+    if (category != null) {
+      return list.stream()
+          .filter(t -> category.equals(t.getCategory()))
+          .collect(Collectors.toList());
     }
-    return equipmentTypeRepository.findByActiveTrueOrderByNameAsc();
+    return list;
   }
 
   @Override
@@ -85,6 +98,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
             .hindiName(request.getHindiName())
             .localLanguageName(request.getLocalLanguageName())
             .hindiDescription(request.getHindiDescription())
+            .imageUrl(request.getImageUrl())
             .active(request.getActive() != null ? request.getActive() : true)
             .build();
 
@@ -126,6 +140,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
     existing.setHindiName(request.getHindiName());
     existing.setLocalLanguageName(request.getLocalLanguageName());
     existing.setHindiDescription(request.getHindiDescription());
+    existing.setImageUrl(request.getImageUrl());
     if (request.getActive() != null) {
       existing.setActive(request.getActive());
     }

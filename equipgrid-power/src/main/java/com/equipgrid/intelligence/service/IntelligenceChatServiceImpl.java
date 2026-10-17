@@ -462,8 +462,16 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
               (h.getCity() != null && h.getCity().getState() != null)
                   ? h.getCity().getState().getName()
                   : "Uttar Pradesh";
-          sb.append("• **").append(h.getName()).append("** (").append(cityName).append(", ").append(stateName).append(")\n");
-          sb.append("  - 🏢 **Address**: ").append(h.getAddress() != null ? h.getAddress() : "Station Yard").append("\n");
+          sb.append("• **")
+              .append(h.getName())
+              .append("** (")
+              .append(cityName)
+              .append(", ")
+              .append(stateName)
+              .append(")\n");
+          sb.append("  - 🏢 **Address**: ")
+              .append(h.getAddress() != null ? h.getAddress() : "Station Yard")
+              .append("\n");
           if (h.getOperatingRadiusKm() != null) {
             sb.append("  - 🚚 **Delivery Coverage**: Within **")
                 .append(h.getOperatingRadiusKm())
@@ -475,7 +483,8 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
           sb.append("\n");
         }
 
-        List<Hub> otherHubs = activeHubs.stream().filter(h -> !userMatchedHubs.contains(h)).toList();
+        List<Hub> otherHubs =
+            activeHubs.stream().filter(h -> !userMatchedHubs.contains(h)).toList();
         if (!otherHubs.isEmpty()) {
           sb.append("**Other Regional Hubs in Network:**\n");
           for (Hub oh : otherHubs) {
@@ -491,7 +500,9 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
       } else {
         sb.append("### 📍 EquipGrid Operational Hubs & Delivery Network\n\n");
         if (!activeHubs.isEmpty()) {
-          sb.append("We operate ").append(activeHubs.size()).append(" regional equipment hub(s) with direct field delivery:\n\n");
+          sb.append("We operate ")
+              .append(activeHubs.size())
+              .append(" regional equipment hub(s) with direct field delivery:\n\n");
           int i = 1;
           for (Hub h : activeHubs) {
             String cityName = h.getCity() != null ? h.getCity().getName() : "Regional";
@@ -509,10 +520,12 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
             sb.append("\n");
           }
         } else {
-          sb.append("EquipGrid operates regional equipment hubs with direct field delivery across Uttar Pradesh.\n");
+          sb.append(
+              "EquipGrid operates regional equipment hubs with direct field delivery across Uttar Pradesh.\n");
         }
       }
-      sb.append("\n🚚 **Doorstep & Field Delivery**: We drop machinery right at your farm GPS headland or construction plot via our tractor-trailer fleet.");
+      sb.append(
+          "\n🚚 **Doorstep & Field Delivery**: We drop machinery right at your farm GPS headland or construction plot via our tractor-trailer fleet.");
       return sb.toString();
     }
 
@@ -582,9 +595,11 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
           }
           sb.append("\n");
         }
-        sb.append("\n👉 You can click **Book Machine Now** below to reserve instantly with dynamic UPI QR code!");
+        sb.append(
+            "\n👉 You can click **Book Machine Now** below to reserve instantly with dynamic UPI QR code!");
       } else {
-        sb.append("We offer a complete fleet of verified agricultural and construction machinery:\n\n");
+        sb.append(
+            "We offer a complete fleet of verified agricultural and construction machinery:\n\n");
         List<String> agri =
             assets.stream()
                 .filter(a -> a.getCategory() == AssetCategory.AGRICULTURE)
@@ -616,7 +631,8 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         if (!multi.isEmpty()) {
           sb.append("- **🚚 Multipurpose Fleet**: ").append(String.join(", ", multi)).append("\n");
         }
-        sb.append("\nAll rentals include **doorstep farm/site delivery** and a **2-Hour Deposit Refund Guarantee**.");
+        sb.append(
+            "\nAll rentals include **doorstep farm/site delivery** and a **2-Hour Deposit Refund Guarantee**.");
       }
       return sb.toString();
     }
@@ -630,19 +646,29 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         || lower.contains("pahuch")) {
       StringBuilder sb = new StringBuilder();
       sb.append("### 🚚 Farm Field GPS & Site Delivery\n\n");
-      sb.append("EquipGrid delivers machinery directly to your farm gate, field headland, or construction site:\n\n");
-      sb.append("- **GPS Pinpoint Delivery**: Share your location via WhatsApp or web booking, and our transport trailer brings the equipment directly.\n");
+      sb.append(
+          "EquipGrid delivers machinery directly to your farm gate, field headland, or construction site:\n\n");
+      sb.append(
+          "- **GPS Pinpoint Delivery**: Share your location via WhatsApp or web booking, and our transport trailer brings the equipment directly.\n");
 
       if (!activeHubs.isEmpty()) {
         String hubNames = activeHubs.stream().map(Hub::getName).collect(Collectors.joining(", "));
         double minRadius =
             activeHubs.stream()
-                .mapToDouble(h -> h.getOperatingRadiusKm() != null ? h.getOperatingRadiusKm().doubleValue() : 25.0)
+                .mapToDouble(
+                    h ->
+                        h.getOperatingRadiusKm() != null
+                            ? h.getOperatingRadiusKm().doubleValue()
+                            : 25.0)
                 .min()
                 .orElse(20.0);
         double maxRadius =
             activeHubs.stream()
-                .mapToDouble(h -> h.getOperatingRadiusKm() != null ? h.getOperatingRadiusKm().doubleValue() : 25.0)
+                .mapToDouble(
+                    h ->
+                        h.getOperatingRadiusKm() != null
+                            ? h.getOperatingRadiusKm().doubleValue()
+                            : 25.0)
                 .max()
                 .orElse(30.0);
         sb.append("- **Operating Coverage**: ")
@@ -653,9 +679,11 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
             .append(hubNames)
             .append(".\n");
       } else {
-        sb.append("- **Operating Coverage**: Direct field delivery from our nearest regional hub.\n");
+        sb.append(
+            "- **Operating Coverage**: Direct field delivery from our nearest regional hub.\n");
       }
-      sb.append("- **Transparent Logistics**: Base delivery is calculated with zero surprise charges.\n\n");
+      sb.append(
+          "- **Transparent Logistics**: Base delivery is calculated with zero surprise charges.\n\n");
       sb.append("Ready to book delivery? Tell us your nearest village, town, or GPS pin!");
       return sb.toString();
     }
@@ -678,9 +706,15 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
 
       return "### 📞 Contact EquipGrid 24/7 Operations Desk\n\n"
           + "We are here round the clock to support farmers and construction teams:\n\n"
-          + "- **24/7 Helpline**: 📞 `" + contactNumber + "`\n"
-          + "- **Instant WhatsApp Bot**: 💬 `" + contactNumber + "`\n"
-          + "- **Central Operations Desk**: " + primaryHubAddress + "\n\n"
+          + "- **24/7 Helpline**: 📞 `"
+          + contactNumber
+          + "`\n"
+          + "- **Instant WhatsApp Bot**: 💬 `"
+          + contactNumber
+          + "`\n"
+          + "- **Central Operations Desk**: "
+          + primaryHubAddress
+          + "\n\n"
           + "You can also search or book machinery directly through this chat window!";
     }
 
@@ -692,18 +726,25 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
       StringBuilder sb = new StringBuilder();
       sb.append("### Namaste! Welcome to EquipGrid 🙏\n\n");
       sb.append("I am your EquipBot Assistant. Here is what I can do for you:\n\n");
-      sb.append("1. **🚜 Browse & Book Machinery**: Agriculture, Construction & Multipurpose equipment.\n");
-      sb.append("2. **💰 Check Rental Rates**: Transparent tariffs, refundable deposits, and our **2-Hour UPI Refund Guarantee**.\n");
+      sb.append(
+          "1. **🚜 Browse & Book Machinery**: Agriculture, Construction & Multipurpose equipment.\n");
+      sb.append(
+          "2. **💰 Check Rental Rates**: Transparent tariffs, refundable deposits, and our **2-Hour UPI Refund Guarantee**.\n");
       if (!activeHubs.isEmpty()) {
-        String hubCities = activeHubs.stream()
-            .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
-            .distinct()
-            .collect(Collectors.joining(", "));
-        sb.append("3. **🚚 Field Delivery**: Direct machine drop-off across ").append(hubCities).append(".\n");
+        String hubCities =
+            activeHubs.stream()
+                .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
+                .distinct()
+                .collect(Collectors.joining(", "));
+        sb.append("3. **🚚 Field Delivery**: Direct machine drop-off across ")
+            .append(hubCities)
+            .append(".\n");
       } else {
-        sb.append("3. **🚚 Field Delivery**: Instant machine drop-off to your farm GPS location.\n");
+        sb.append(
+            "3. **🚚 Field Delivery**: Instant machine drop-off to your farm GPS location.\n");
       }
-      sb.append("4. **🚨 90-Min Zero-Breakdown SLA**: On-site technician support or immediate replacement.\n\n");
+      sb.append(
+          "4. **🚨 90-Min Zero-Breakdown SLA**: On-site technician support or immediate replacement.\n\n");
       sb.append("Which equipment, location, or project do you need assistance with today?");
       return sb.toString();
     }
@@ -711,15 +752,20 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
     // Default dynamic summary
     StringBuilder sb = new StringBuilder();
     sb.append("### EquipGrid AI Assistant 🙏\n\n");
-    sb.append("I can help you check machinery availability, verify delivery to your field GPS, and reserve equipment.\n\n");
+    sb.append(
+        "I can help you check machinery availability, verify delivery to your field GPS, and reserve equipment.\n\n");
     if (!activeHubs.isEmpty()) {
-      String hubCities = activeHubs.stream()
-          .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
-          .distinct()
-          .collect(Collectors.joining(", "));
-      sb.append("- **📍 Operational Network**: Active yards serving **").append(hubCities).append("**\n");
+      String hubCities =
+          activeHubs.stream()
+              .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
+              .distinct()
+              .collect(Collectors.joining(", "));
+      sb.append("- **📍 Operational Network**: Active yards serving **")
+          .append(hubCities)
+          .append("**\n");
     }
-    sb.append("- **🌾 Agriculture & 🏗️ Construction & 🚚 Multipurpose**: Complete verified fleet\n");
+    sb.append(
+        "- **🌾 Agriculture & 🏗️ Construction & 🚚 Multipurpose**: Complete verified fleet\n");
     sb.append("- **⚡ Guarantees**: 2-Hour Deposit Refund & 90-Min Breakdown SLA\n\n");
     sb.append("Ask me about any machine name, your nearest hub location, or rental details!");
     return sb.toString();

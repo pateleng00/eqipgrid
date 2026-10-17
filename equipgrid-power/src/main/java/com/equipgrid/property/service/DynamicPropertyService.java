@@ -1,5 +1,6 @@
 package com.equipgrid.property.service;
 
+import com.equipgrid.common.config.properties.AwsProperties;
 import com.equipgrid.common.exception.EquipGridException;
 import com.equipgrid.common.exception.EquipGridExceptionEnum;
 import com.equipgrid.common.storage.service.StorageService;
@@ -21,6 +22,7 @@ public class DynamicPropertyService {
 
   private final DynamicPropertyRepository dynamicPropertyRepository;
   private final StorageService storageService;
+  private final AwsProperties awsProperties;
 
   @Transactional(readOnly = true)
   public DynamicPropertyResponse getPropertyByKey(String key) {
@@ -79,10 +81,10 @@ public class DynamicPropertyService {
       String path = rawUrl.substring("s3://".length());
       int firstSlash = path.indexOf('/');
       if (firstSlash != -1) {
-        bucket = path.substring(0, firstSlash);
+        bucket = resolveTargetBucket(path.substring(0, firstSlash));
         objectKey = path.substring(firstSlash + 1);
       } else {
-        bucket = path;
+        bucket = resolveTargetBucket(path);
       }
     }
 
@@ -112,13 +114,29 @@ public class DynamicPropertyService {
       String path = url.substring("s3://".length());
       int firstSlash = path.indexOf('/');
       if (firstSlash != -1) {
-        String bucket = path.substring(0, firstSlash);
+        String rawBucket = path.substring(0, firstSlash);
+        String bucket = resolveTargetBucket(rawBucket);
         String key = path.substring(firstSlash + 1);
         return resolveS3HttpUrl(bucket, key);
       }
     }
 
     return url;
+  }
+
+  private String resolveTargetBucket(String bucket) {
+    String configuredCommonBucket = awsProperties.getCommonBucketName();
+    if (configuredCommonBucket != null && !configuredCommonBucket.isBlank()) {
+      if (bucket == null
+          || bucket.isBlank()
+          || bucket.startsWith("equipgrid-assets-")
+          || bucket.equals("common")
+          || bucket.equals("default")
+          || bucket.equals("assets")) {
+        return configuredCommonBucket;
+      }
+    }
+    return bucket;
   }
 
   private String resolveS3HttpUrl(String bucket, String key) {

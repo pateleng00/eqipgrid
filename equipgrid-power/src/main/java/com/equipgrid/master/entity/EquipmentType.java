@@ -40,6 +40,9 @@ public class EquipmentType extends BaseEntity {
   @Column(name = "hindi_description", length = 512)
   private String hindiDescription;
 
+  @Column(name = "image_url", length = 512)
+  private String imageUrl;
+
   @Builder.Default
   @Column(nullable = false)
   private Boolean active = true;

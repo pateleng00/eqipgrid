@@ -30,5 +30,7 @@ public class EquipmentTypeRequest {
 
   private String hindiDescription;
 
+  private String imageUrl;
+
   @Builder.Default private Boolean active = true;
 }

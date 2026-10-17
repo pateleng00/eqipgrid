@@ -13,6 +13,7 @@ import com.equipgrid.booking.entity.Booking;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.service.IBookingService;
+import com.equipgrid.common.config.properties.AwsProperties;
 import com.equipgrid.common.storage.service.StorageService;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.enums.CustomerTier;
@@ -63,8 +64,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
-  private static final String S3_FALLBACK_BASE =
-      "https://equipgrid-assets-dev.s3.ap-south-1.amazonaws.com";
   private static final Pattern LAT_LNG_PATTERN =
       Pattern.compile("([-+]?[0-9]{1,2}\\.[0-9]{3,})[,\\s]+([-+]?[0-9]{1,3}\\.[0-9]{3,})");
 
@@ -89,13 +88,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private final MetaWhatsAppClientService metaWhatsAppClientService;
   private final ChallanDocumentService challanDocumentService;
   private final RentalConfigurationRepository rentalConfigurationRepository;
+  private final AwsProperties awsProperties;
 
   public String getEquipmentHindiName(String name, String tag) {
     if (tag != null && !tag.isBlank()) {
       var opt = assetQueryRepository.fetchByAssetTag(tag);
       if (opt.isPresent()) {
         Asset a = opt.get();
-        if (a.getType() != null && a.getType().getHindiName() != null && !a.getType().getHindiName().isBlank()) {
+        if (a.getType() != null
+            && a.getType().getHindiName() != null
+            && !a.getType().getHindiName().isBlank()) {
           return a.getType().getHindiName();
         }
       }
@@ -641,8 +643,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       Hub chosen = hubs.get(choice - 1);
       context.setSelectedHubId(chosen.getId());
       context.setSelectedHubName(chosen.getName());
-      context.setSelectedCityName(
-          chosen.getCity() != null ? chosen.getCity().getName() : null);
+      context.setSelectedCityName(chosen.getCity() != null ? chosen.getCity().getName() : null);
     } else if (choice == 0 || choice == hubs.size() + 1 || input.toUpperCase().contains("ALL")) {
       context.setSelectedHubId(null);
       context.setSelectedHubName("All Hubs");
@@ -662,8 +663,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       if (matched != null) {
         context.setSelectedHubId(matched.getId());
         context.setSelectedHubName(matched.getName());
-        context.setSelectedCityName(
-            matched.getCity() != null ? matched.getCity().getName() : null);
+        context.setSelectedCityName(matched.getCity() != null ? matched.getCity().getName() : null);
       } else {
         return WhatsAppMessageResponse.builder()
             .to(conv.getPhoneNumber())
@@ -3211,7 +3211,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       if (presigned != null && !presigned.isBlank()) return presigned;
     } catch (Exception ignored) {
     }
-    return S3_FALLBACK_BASE + "/" + s3Key;
+    String bucket =
+        awsProperties.getCommonBucketName() != null
+                && !awsProperties.getCommonBucketName().isBlank()
+            ? awsProperties.getCommonBucketName()
+            : "equipgrid-assets-dev";
+    String region =
+        awsProperties.getRegion() != null && !awsProperties.getRegion().isBlank()
+            ? awsProperties.getRegion()
+            : "ap-south-1";
+    return "https://" + bucket + ".s3." + region + ".amazonaws.com/" + s3Key;
   }
 
   private Customer getOrCreateCustomer(String phone, String name) {

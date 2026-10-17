@@ -36,10 +36,11 @@ public class MachineMasterController {
   @GetMapping("/types")
   @Operation(summary = "Get all equipment types")
   public ResponseEntity<ApiResponse<List<EquipmentType>>> getTypes(
-      @RequestParam(required = false, defaultValue = "false") Boolean includeInactive) {
+      @RequestParam(required = false, defaultValue = "false") Boolean includeInactive,
+      @RequestParam(required = false) com.equipgrid.asset.enums.AssetCategory category) {
     return ResponseEntity.ok(
         ApiResponse.buildSuccess(
-            "Equipment types fetched", machineMasterService.getAllEquipmentTypes(includeInactive)));
+            "Equipment types fetched", machineMasterService.getAllEquipmentTypes(includeInactive, category)));
   }
 
   @GetMapping("/types/{id}")

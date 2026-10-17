@@ -4,8 +4,6 @@ import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.BillingUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,7 +20,8 @@ public class CreateAssetRequest {
 
   private String name;
 
-  @NotNull(message = "Equipment category is required (1: Construction, 2: Agriculture, 3: Multipurpose)")
+  @NotNull(
+      message = "Equipment category is required (1: Construction, 2: Agriculture, 3: Multipurpose)")
   private AssetCategory category;
 
   @NotNull(message = "Equipment Type selection is required from DB master")
