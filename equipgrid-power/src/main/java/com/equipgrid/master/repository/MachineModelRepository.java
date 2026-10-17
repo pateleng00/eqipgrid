@@ -11,7 +11,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface MachineModelRepository extends JpaRepository<MachineModel, Long> {
 
-  boolean existsByCodeIgnoreCase(String code);
+  boolean existsByModelNumberIgnoreCase(String modelNumber);
 
   boolean existsByNameIgnoreCase(String name);
 
