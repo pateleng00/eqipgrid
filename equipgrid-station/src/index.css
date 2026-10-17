@@ -103,12 +103,12 @@ h6 {
 /* ==========================================================================
    PRIMARY ACCENTS: DEEP FOREST TEAL (Replaces vibrant amber)
    ========================================================================== */
-/* Primary Action Buttons */
-button[class*='bg-amber-500'],
-button[class*='bg-amber-400'],
-button[class*='bg-amber-600'],
-a[class*='bg-amber-500'],
-a[class*='bg-amber-600'] {
+/* Primary Action Buttons (Exclude translucent / opacity variants like /10, /15, /20) */
+button[class~='bg-amber-500']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']),
+button[class~='bg-amber-400']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']),
+button[class~='bg-amber-600']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']),
+a[class~='bg-amber-500']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']),
+a[class~='bg-amber-600']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']) {
   background-color: #0f766e !important;
   color: #ffffff !important;
   font-weight: 700 !important;
@@ -116,22 +116,22 @@ a[class*='bg-amber-600'] {
   box-shadow: 0 1px 2px 0 rgba(15, 118, 110, 0.2) !important;
 }
 
-button[class*='bg-amber-500']:hover,
-button[class*='bg-amber-400']:hover,
-button[class*='bg-amber-600']:hover,
-a[class*='bg-amber-500']:hover,
-a[class*='bg-amber-600']:hover {
+button[class~='bg-amber-500']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']):hover,
+button[class~='bg-amber-400']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']):hover,
+button[class~='bg-amber-600']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']):hover,
+a[class~='bg-amber-500']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']):hover,
+a[class~='bg-amber-600']:not([class*='bg-amber-500/']):not([class*='bg-amber-400/']):not([class*='bg-amber-600/']):hover {
   background-color: #115e59 !important;
   border-color: #115e59 !important;
 }
 
 /* Icons or text inside amber action buttons become white */
-button[class*='bg-amber-500'] svg,
-button[class*='bg-amber-400'] svg,
-button[class*='bg-amber-600'] svg,
-button[class*='bg-amber-500'] span,
-button[class*='bg-amber-400'] span,
-button[class*='bg-amber-600'] span {
+button[class~='bg-amber-500']:not([class*='bg-amber-500/']) svg,
+button[class~='bg-amber-400']:not([class*='bg-amber-400/']) svg,
+button[class~='bg-amber-600']:not([class*='bg-amber-600/']) svg,
+button[class~='bg-amber-500']:not([class*='bg-amber-500/']) span,
+button[class~='bg-amber-400']:not([class*='bg-amber-400/']) span,
+button[class~='bg-amber-600']:not([class*='bg-amber-600/']) span {
   color: #ffffff !important;
 }
 
@@ -147,12 +147,12 @@ button[class*='bg-amber-600'] span {
   color: #0f766e !important;
 }
 
-[class*='bg-amber-500/10'] *,
-[class*='bg-amber-500/15'] *,
-[class*='bg-amber-500/20'] *,
-[class*='bg-amber-900/20'] *,
-[class*='bg-amber-950/20'] *,
-.bg-amber-50 * {
+[class*='bg-amber-500/10'] span:not([class*='text-']),
+[class*='bg-amber-500/15'] span:not([class*='text-']),
+[class*='bg-amber-500/20'] span:not([class*='text-']),
+[class*='bg-amber-900/20'] span:not([class*='text-']),
+[class*='bg-amber-950/20'] span:not([class*='text-']),
+.bg-amber-50 span:not([class*='text-']) {
   color: #0f766e !important;
 }
 

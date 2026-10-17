@@ -755,7 +755,9 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border select-none shrink-0',
               activeTab === 'IN_HOUSE'
-                ? 'bg-amber-500 text-slate-950 border-amber-500 font-black shadow-xs'
+                ? isDaylight
+                  ? 'bg-amber-100 text-amber-950 border-amber-600 font-black shadow-xs'
+                  : 'bg-amber-500 text-slate-950 border-amber-500 font-black shadow-xs'
                 : isDaylight
                   ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
                   : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 border-slate-700',
@@ -769,7 +771,9 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border select-none shrink-0',
               activeTab === 'EXTERNAL'
-                ? 'bg-indigo-600 text-white border-indigo-600 font-black shadow-xs'
+                ? isDaylight
+                  ? 'bg-indigo-100 text-indigo-950 border-indigo-600 font-black shadow-xs'
+                  : 'bg-indigo-600 text-white border-indigo-600 font-black shadow-xs'
                 : isDaylight
                   ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
                   : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 border-slate-700',
@@ -783,7 +787,9 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
             className={cn(
               'px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer border select-none shrink-0',
               activeTab === 'COMPLETED'
-                ? 'bg-emerald-600 text-white border-emerald-600 font-black shadow-xs'
+                ? isDaylight
+                  ? 'bg-emerald-100 text-emerald-950 border-emerald-600 font-black shadow-xs'
+                  : 'bg-emerald-600 text-white border-emerald-600 font-black shadow-xs'
                 : isDaylight
                   ? 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
                   : 'bg-slate-800/80 text-slate-300 hover:bg-slate-800 border-slate-700',
@@ -1169,7 +1175,7 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
                     <Layers className="h-4 w-4 text-amber-500" />
-                    <span>Select Machine via Cascading Filter (मशीन चयन: शहर → हब → प्रकार → OEM → मॉडल)</span>
+                    <span>Select Machine (मशीन चयन: शहर → हब → प्रकार → OEM → मॉडल)</span>
                   </div>
                   <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
                     {matchingAssets.length} unit{matchingAssets.length !== 1 ? 's' : ''} available
@@ -1365,16 +1371,51 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                     className={cn(
                       'p-2.5 rounded-xl border text-left flex items-center gap-2 cursor-pointer transition-all',
                       locationType === 'IN_HOUSE'
-                        ? 'border-amber-500 bg-amber-500/10 text-amber-600 font-bold'
+                        ? isDaylight
+                          ? 'border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-xs ring-1 ring-emerald-600/30'
+                          : 'border-emerald-500 bg-emerald-500/20 text-emerald-300 font-bold shadow-xs'
                         : isDaylight
-                          ? 'border-slate-200 hover:bg-slate-50'
-                          : 'border-slate-800 hover:bg-slate-800/60 text-slate-400',
+                          ? 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                          : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800/60 text-slate-400',
                     )}
                   >
-                    <Wrench className="h-4 w-4 shrink-0" />
+                    <Wrench
+                      className={cn(
+                        'h-4 w-4 shrink-0 transition-colors',
+                        locationType === 'IN_HOUSE'
+                          ? isDaylight
+                            ? 'text-emerald-700'
+                            : 'text-emerald-400'
+                          : 'text-slate-400',
+                      )}
+                    />
                     <div>
-                      <div className="text-xs font-bold">In-House Bay</div>
-                      <div className="text-[10px] text-slate-500">यार्ड शेड में मिस्त्री</div>
+                      <div
+                        className={cn(
+                          'text-xs font-bold',
+                          locationType === 'IN_HOUSE'
+                            ? isDaylight
+                              ? 'text-emerald-950'
+                              : 'text-emerald-200'
+                            : isDaylight
+                              ? 'text-slate-800'
+                              : 'text-slate-300',
+                        )}
+                      >
+                        In-House Bay
+                      </div>
+                      <div
+                        className={cn(
+                          'text-[10px]',
+                          locationType === 'IN_HOUSE'
+                            ? isDaylight
+                              ? 'text-emerald-800/80 font-medium'
+                              : 'text-emerald-400/80'
+                            : 'text-slate-500',
+                        )}
+                      >
+                        यार्ड शेड में मिस्त्री
+                      </div>
                     </div>
                   </button>
 
@@ -1384,16 +1425,51 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                     className={cn(
                       'p-2.5 rounded-xl border text-left flex items-center gap-2 cursor-pointer transition-all',
                       locationType === 'EXTERNAL_SERVICE_CENTER'
-                        ? 'border-indigo-500 bg-indigo-500/10 text-indigo-500 font-bold'
+                        ? isDaylight
+                          ? 'border-indigo-600 bg-indigo-50 text-indigo-950 font-bold shadow-xs ring-1 ring-indigo-600/30'
+                          : 'border-indigo-500 bg-indigo-500/20 text-indigo-300 font-bold shadow-xs'
                         : isDaylight
-                          ? 'border-slate-200 hover:bg-slate-50'
-                          : 'border-slate-800 hover:bg-slate-800/60 text-slate-400',
+                          ? 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                          : 'border-slate-800 bg-slate-900/60 hover:bg-slate-800/60 text-slate-400',
                     )}
                   >
-                    <Building2 className="h-4 w-4 shrink-0" />
+                    <Building2
+                      className={cn(
+                        'h-4 w-4 shrink-0 transition-colors',
+                        locationType === 'EXTERNAL_SERVICE_CENTER'
+                          ? isDaylight
+                            ? 'text-indigo-700'
+                            : 'text-indigo-400'
+                          : 'text-slate-400',
+                      )}
+                    />
                     <div>
-                      <div className="text-xs font-bold">External Center</div>
-                      <div className="text-[10px] text-slate-500">अधिकृत वर्कशॉप / डीलर</div>
+                      <div
+                        className={cn(
+                          'text-xs font-bold',
+                          locationType === 'EXTERNAL_SERVICE_CENTER'
+                            ? isDaylight
+                              ? 'text-indigo-950'
+                              : 'text-indigo-200'
+                            : isDaylight
+                              ? 'text-slate-800'
+                              : 'text-slate-300',
+                        )}
+                      >
+                        External Center
+                      </div>
+                      <div
+                        className={cn(
+                          'text-[10px]',
+                          locationType === 'EXTERNAL_SERVICE_CENTER'
+                            ? isDaylight
+                              ? 'text-indigo-800/80 font-medium'
+                              : 'text-indigo-400/80'
+                            : 'text-slate-500',
+                        )}
+                      >
+                        अधिकृत वर्कशॉप / डीलर
+                      </div>
                     </div>
                   </button>
                 </div>
@@ -1559,10 +1635,12 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                           className={cn(
                             'py-1.5 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 transition-all cursor-pointer',
                             isFreeService
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-xs font-black'
+                              ? isDaylight
+                                ? 'bg-emerald-100 text-emerald-950 border-emerald-600 shadow-xs font-black'
+                                : 'bg-emerald-500 text-slate-950 border-emerald-500 shadow-xs font-black'
                               : isDaylight
-                              ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
+                                ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
                           )}
                         >
                           <Check className={cn('h-3.5 w-3.5', isFreeService ? 'opacity-100' : 'opacity-0')} />
@@ -1575,10 +1653,12 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                           className={cn(
                             'py-1.5 px-2 rounded-lg text-xs font-bold border flex items-center justify-center gap-1 transition-all cursor-pointer',
                             !isFreeService
-                              ? 'bg-blue-600 text-white border-blue-600 shadow-xs font-black'
+                              ? isDaylight
+                                ? 'bg-blue-100 text-blue-950 border-blue-600 shadow-xs font-black'
+                                : 'bg-blue-600 text-white border-blue-600 shadow-xs font-black'
                               : isDaylight
-                              ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
-                              : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
+                                ? 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                                : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-900',
                           )}
                         >
                           <DollarSign className={cn('h-3.5 w-3.5', !isFreeService ? 'opacity-100' : 'opacity-0')} />
@@ -1780,19 +1860,43 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                                 'text-left px-2 py-1.5 rounded-lg text-[11px] font-bold border transition-all flex items-center justify-between gap-1 cursor-pointer select-none',
                                 isSelected
                                   ? comp.partCode === 'OTHER'
-                                    ? 'bg-rose-500/15 border-rose-500 text-rose-700 dark:text-rose-300 font-black'
-                                    : 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 font-black'
-                                  : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900',
+                                    ? isDaylight
+                                      ? 'bg-rose-50 border-rose-400 text-rose-950 font-black'
+                                      : 'bg-rose-500/15 border-rose-500 text-rose-300 font-black'
+                                    : isDaylight
+                                      ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-black'
+                                      : 'bg-emerald-500/15 border-emerald-500 text-emerald-300 font-black'
+                                  : isDaylight
+                                    ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                    : 'border-slate-800 bg-slate-900/60 text-slate-400 hover:bg-slate-900',
                               )}
                             >
                               <div className="truncate">
                                 <span>{comp.name}</span>
                                 {comp.hindiName && (
-                                  <span className="text-[10px] opacity-75 ml-1">({comp.hindiName})</span>
+                                  <span
+                                    className={cn(
+                                      'text-[10px] ml-1',
+                                      isSelected
+                                        ? isDaylight
+                                          ? 'text-emerald-800 font-medium'
+                                          : 'text-emerald-300'
+                                        : 'opacity-75 text-slate-400',
+                                    )}
+                                  >
+                                    ({comp.hindiName})
+                                  </span>
                                 )}
                               </div>
                               {isSelected ? (
-                                <CheckSquare className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                                <CheckSquare
+                                  className={cn(
+                                    'h-3.5 w-3.5 shrink-0',
+                                    comp.partCode === 'OTHER'
+                                      ? 'text-rose-600 dark:text-rose-400'
+                                      : 'text-emerald-600 dark:text-emerald-400',
+                                  )}
+                                />
                               ) : (
                                 <Square className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />
                               )}
