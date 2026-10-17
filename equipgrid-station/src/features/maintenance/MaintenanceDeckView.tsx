@@ -48,6 +48,7 @@ import {
   CompleteMaintenancePayload,
 } from '../../types';
 import { StatusBadge } from '../../components/StatusBadge';
+import { SearchSelect } from '../../components/SearchSelect';
 
 interface MaintenanceDeckViewProps {
   onNavigate?: (tab: string) => void;
@@ -1135,7 +1136,7 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div
             className={cn(
-              'w-full max-w-xl rounded-2xl border shadow-2xl p-5 sm:p-6 transition-all my-auto',
+              'w-full max-w-6xl rounded-2xl border shadow-2xl p-5 sm:p-6 transition-all my-auto',
               isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white',
             )}
           >
@@ -1181,42 +1182,43 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">
                       1. City (शहर)
                     </label>
-                    <select
-                      value={selectedCityId}
-                      onChange={(e) => handleCityChange(e.target.value ? Number(e.target.value) : '')}
-                      className={cn(
-                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
-                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                      )}
-                    >
-                      <option value="">-- All Cities (सभी शहर) --</option>
-                      {availableCities.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: '-- All Cities (सभी शहर) --' },
+                        ...availableCities.map((c) => ({
+                          value: c.id,
+                          label: c.name,
+                        })),
+                      ]}
+                      value={selectedCityId === '' ? '' : selectedCityId}
+                      onChange={(val) =>
+                        handleCityChange(val !== '' && val !== null && val !== undefined ? Number(val) : '')
+                      }
+                      placeholder="-- All Cities (सभी शहर) --"
+                      isClearable={false}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">
                       2. Hub / Yard (हब / यार्ड)
                     </label>
-                    <select
-                      value={selectedHubId}
-                      onChange={(e) => handleHubChange(e.target.value ? Number(e.target.value) : '')}
-                      className={cn(
-                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
-                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                      )}
-                    >
-                      <option value="">-- All Hubs (सभी हब) --</option>
-                      {availableHubs.map((h) => (
-                        <option key={h.id} value={h.id}>
-                          {h.name}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: '-- All Hubs (सभी हब) --' },
+                        ...availableHubs.map((h) => ({
+                          value: h.id,
+                          label: h.name,
+                          subLabel: h.cityName,
+                        })),
+                      ]}
+                      value={selectedHubId === '' ? '' : selectedHubId}
+                      onChange={(val) =>
+                        handleHubChange(val !== '' && val !== null && val !== undefined ? Number(val) : '')
+                      }
+                      placeholder="-- All Hubs (सभी हब) --"
+                      isClearable={false}
+                    />
                   </div>
 
                   <div>
@@ -1224,24 +1226,21 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                       <span>3. Machine Type (प्रकार) *</span>
                       <span className="text-[9px] text-amber-500 font-mono">Filters Parts</span>
                     </label>
-                    <select
-                      required
-                      value={selectedTypeId}
-                      onChange={(e) => handleTypeChange(e.target.value ? Number(e.target.value) : '')}
-                      className={cn(
-                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none font-bold',
-                        isDaylight
-                          ? 'border-amber-300 bg-white text-slate-900 focus:border-amber-500'
-                          : 'border-amber-800 bg-slate-950 text-white focus:border-amber-500',
-                      )}
-                    >
-                      <option value="">-- Select Equipment Type --</option>
-                      {availableTypes.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} {t.hindiName ? `(${t.hindiName})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: '-- All Machine Types --' },
+                        ...availableTypes.map((t) => ({
+                          value: t.id,
+                          label: t.hindiName ? `${t.name} (${t.hindiName})` : t.name,
+                        })),
+                      ]}
+                      value={selectedTypeId === '' ? '' : selectedTypeId}
+                      onChange={(val) =>
+                        handleTypeChange(val !== '' && val !== null && val !== undefined ? Number(val) : '')
+                      }
+                      placeholder="-- Select Equipment Type --"
+                      isClearable={false}
+                    />
                   </div>
                 </div>
 
@@ -1251,42 +1250,42 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">
                       4. OEM / Manufacturer (कंपनी / ब्रांड)
                     </label>
-                    <select
-                      value={selectedOemId}
-                      onChange={(e) => handleOemChange(e.target.value ? Number(e.target.value) : '')}
-                      className={cn(
-                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
-                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                      )}
-                    >
-                      <option value="">-- All OEMs / Brands --</option>
-                      {availableOems.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: '-- All OEMs / Brands --' },
+                        ...availableOems.map((m) => ({
+                          value: m.id,
+                          label: m.country ? `${m.name} (${m.country})` : m.name,
+                        })),
+                      ]}
+                      value={selectedOemId === '' ? '' : selectedOemId}
+                      onChange={(val) =>
+                        handleOemChange(val !== '' && val !== null && val !== undefined ? Number(val) : '')
+                      }
+                      placeholder="-- All OEMs / Brands --"
+                      isClearable={false}
+                    />
                   </div>
 
                   <div>
                     <label className="block text-[10px] font-bold text-slate-500 mb-1">
                       5. Model (मॉडल)
                     </label>
-                    <select
-                      value={selectedModelId}
-                      onChange={(e) => handleModelChange(e.target.value ? Number(e.target.value) : '')}
-                      className={cn(
-                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
-                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                      )}
-                    >
-                      <option value="">-- All Models (सभी मॉडल) --</option>
-                      {availableModels.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.name} {m.modelNumber ? `(${m.modelNumber})` : ''}
-                        </option>
-                      ))}
-                    </select>
+                    <SearchSelect
+                      options={[
+                        { value: '', label: '-- All Models (सभी मॉडल) --' },
+                        ...availableModels.map((m) => ({
+                          value: m.id,
+                          label: m.modelNumber ? `${m.name} (${m.modelNumber})` : m.name,
+                        })),
+                      ]}
+                      value={selectedModelId === '' ? '' : selectedModelId}
+                      onChange={(val) =>
+                        handleModelChange(val !== '' && val !== null && val !== undefined ? Number(val) : '')
+                      }
+                      placeholder="-- All Models (सभी मॉडल) --"
+                      isClearable={false}
+                    />
                   </div>
                 </div>
 
@@ -1295,33 +1294,35 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                   <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
                     6. Select Specific Machine Unit (मशीन यूनिट / टैग / सीरियल नंबर) *
                   </label>
-                  <select
-                    required
-                    value={selectedAssetId}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      const matched = assets.find((a) => a.id === val);
+                  <SearchSelect
+                    options={matchingAssets.map((a) => ({
+                      value: a.id,
+                      label: `[${a.assetTag}] ${a.name}`,
+                      subLabel: `S/N: ${a.serialNumber || 'N/A'} • ${a.engineHours || 0}h • Hub: ${a.hubName || 'Yard'}`,
+                      badge: a.status,
+                      badgeColor:
+                        a.status === 'DAMAGED'
+                          ? '#ef4444'
+                          : a.status === 'AVAILABLE'
+                          ? '#10b981'
+                          : '#f59e0b',
+                    }))}
+                    value={selectedAssetId === '' ? '' : selectedAssetId}
+                    onChange={(val) => {
+                      const assetId =
+                        val !== '' && val !== null && val !== undefined ? Number(val) : '';
+                      const matched = assets.find((a) => a.id === assetId);
                       if (matched) handleAssetSelect(matched);
-                      else setSelectedAssetId(val);
+                      else setSelectedAssetId(assetId);
                     }}
-                    className={cn(
-                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none font-semibold',
-                      isDaylight
-                        ? 'border-amber-400 bg-white text-slate-900 focus:border-amber-500'
-                        : 'border-amber-700 bg-slate-950 text-white focus:border-amber-500',
-                    )}
-                  >
-                    <option value="" disabled>
-                      {matchingAssets.length === 0
+                    placeholder={
+                      matchingAssets.length === 0
                         ? '-- No Available/Damaged Units Match this Filter --'
-                        : `-- Choose Unit from ${matchingAssets.length} Matching Machines --`}
-                    </option>
-                    {matchingAssets.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        [{a.assetTag}] {a.name} • S/N: {a.serialNumber || 'N/A'} • {a.engineHours || 0}h • [{a.status}]
-                      </option>
-                    ))}
-                  </select>
+                        : `Choose Unit from ${matchingAssets.length} Matching Machines...`
+                    }
+                    isClearable={true}
+                    noOptionsMessage="No matching machine units available"
+                  />
 
                   {/* Selected Asset Mini Card */}
                   {selectedAssetId && (() => {
@@ -1465,35 +1466,45 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">
                     Service Type (रखरखाव का प्रकार) *
                   </label>
-                  <select
+                  <SearchSelect
+                    options={[
+                      {
+                        value: 'PERIODIC_SERVICE',
+                        label: 'आवधिक / नियमित सर्विस (Periodic Service)',
+                        subLabel: 'Scheduled oil change, filters, hours threshold',
+                      },
+                      {
+                        value: 'REPAIR_WORK',
+                        label: 'मरम्मत का काम (Repair Work)',
+                        subLabel: 'Component replacement, breakdown fixes, damage parts',
+                      },
+                      {
+                        value: 'SERVICE_AND_REPAIR',
+                        label: 'सर्विस और मरम्मत दोनों (Service & Repair)',
+                        subLabel: 'Periodic overhaul along with damaged part repair',
+                      },
+                    ]}
                     value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value as MaintenanceServiceType)}
-                    className={cn(
-                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none font-bold',
-                      isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                    )}
-                  >
-                    <option value="PERIODIC_SERVICE">आवधिक / नियमित सर्विस (Periodic Service)</option>
-                    <option value="REPAIR_WORK">मरम्मत का काम (Repair Work)</option>
-                    <option value="SERVICE_AND_REPAIR">सर्विस और मरम्मत दोनों (Service & Repair)</option>
-                  </select>
+                    onChange={(val) => setServiceType(val as MaintenanceServiceType)}
+                    placeholder="Select Service Type..."
+                    isClearable={false}
+                  />
                 </div>
 
                 <div>
                   <label className="block text-[11px] font-bold text-slate-500 mb-1">Priority (प्राथमिकता)</label>
-                  <select
+                  <SearchSelect
+                    options={[
+                      { value: 'NORMAL', label: 'NORMAL (सामान्य)', badge: 'NORMAL', badgeColor: '#64748b' },
+                      { value: 'HIGH', label: 'HIGH (उच्च)', badge: 'HIGH', badgeColor: '#f59e0b' },
+                      { value: 'URGENT', label: 'URGENT (अत्यंत आवश्यक)', badge: 'URGENT', badgeColor: '#ef4444' },
+                      { value: 'LOW', label: 'LOW (कम प्राथमिकता)', badge: 'LOW', badgeColor: '#94a3b8' },
+                    ]}
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value as MaintenancePriority)}
-                    className={cn(
-                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none',
-                      isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                    )}
-                  >
-                    <option value="NORMAL">NORMAL (सामान्य)</option>
-                    <option value="HIGH">HIGH (उच्च)</option>
-                    <option value="URGENT">URGENT (अत्यंत आवश्यक)</option>
-                    <option value="LOW">LOW (कम प्राथमिकता)</option>
-                  </select>
+                    onChange={(val) => setPriority(val as MaintenancePriority)}
+                    placeholder="Select Priority..."
+                    isClearable={false}
+                  />
                 </div>
               </div>
 
@@ -1518,24 +1529,23 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                       <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1">
                         Service Number (सर्विस संख्या) *
                       </label>
-                      <select
+                      <SearchSelect
+                        options={[
+                          { value: '1st Service (50 Hours)', label: '1st Service (50 Hours / 50 घंटे)' },
+                          { value: '2nd Service (150 Hours)', label: '2nd Service (150 Hours / 150 घंटे)' },
+                          { value: '3rd Service (300 Hours)', label: '3rd Service (300 Hours / 300 घंटे)' },
+                          { value: '4th Service (500 Hours)', label: '4th Service (500 Hours / 500 घंटे)' },
+                          { value: '5th Service (750 Hours)', label: '5th Service (750 Hours / 750 घंटे)' },
+                          { value: '6th Service (1000 Hours)', label: '6th Service (1000 Hours / 1000 घंटे)' },
+                          { value: '7th Service (1250 Hours)', label: '7th Service (1250 Hours / 1250 घंटे)' },
+                          { value: '8th Service (1500 Hours)', label: '8th Service (1500 Hours / 1500 घंटे)' },
+                          { value: 'Custom Periodic Service', label: 'Custom Periodic Service (अन्य नियमित सर्विस)' },
+                        ]}
                         value={serviceNumber}
-                        onChange={(e) => setServiceNumber(e.target.value)}
-                        className={cn(
-                          'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none font-semibold',
-                          isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                        )}
-                      >
-                        <option value="1st Service (50 Hours)">1st Service (50 Hours / 50 घंटे)</option>
-                        <option value="2nd Service (150 Hours)">2nd Service (150 Hours / 150 घंटे)</option>
-                        <option value="3rd Service (300 Hours)">3rd Service (300 Hours / 300 घंटे)</option>
-                        <option value="4th Service (500 Hours)">4th Service (500 Hours / 500 घंटे)</option>
-                        <option value="5th Service (750 Hours)">5th Service (750 Hours / 750 घंटे)</option>
-                        <option value="6th Service (1000 Hours)">6th Service (1000 Hours / 1000 घंटे)</option>
-                        <option value="7th Service (1250 Hours)">7th Service (1250 Hours / 1250 घंटे)</option>
-                        <option value="8th Service (1500 Hours)">8th Service (1500 Hours / 1500 घंटे)</option>
-                        <option value="Custom Periodic Service">Custom Periodic Service (अन्य नियमित सर्विस)</option>
-                      </select>
+                        onChange={(val) => setServiceNumber(String(val))}
+                        placeholder="Select Service Stage..."
+                        isClearable={false}
+                      />
                     </div>
 
                     <div>
@@ -1709,22 +1719,21 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                           </div>
                           <div>
                             <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Category (श्रेणी)</label>
-                            <select
-                              value={newComponentCategory}
-                              onChange={(e) => setNewComponentCategory(e.target.value)}
-                              className={cn(
-                                'w-full rounded-lg border px-2 py-1 text-xs focus:outline-none font-semibold',
-                                isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
-                              )}
-                            >
-                              <option value="ATTACHMENT">ATTACHMENT (उपकरण/अटैचमेंट)</option>
-                              <option value="HYDRAULIC">HYDRAULIC (हाइड्रोलिक)</option>
-                              <option value="TRANSMISSION">TRANSMISSION (ट्रांसमिशन)</option>
-                              <option value="ENGINE">ENGINE (इंजन)</option>
-                              <option value="ELECTRICAL">ELECTRICAL (इलेक्ट्रिकल)</option>
-                              <option value="CHASSIS">CHASSIS / BODY (चेसिस)</option>
-                              <option value="CUSTOM_PARTS">CUSTOM_PARTS (अन्य विशिष्ट)</option>
-                            </select>
+                            <SearchSelect
+                              options={[
+                                { value: 'ATTACHMENT', label: 'ATTACHMENT (उपकरण/अटैचमेंट)' },
+                                { value: 'HYDRAULIC', label: 'HYDRAULIC (हाइड्रोलिक)' },
+                                { value: 'TRANSMISSION', label: 'TRANSMISSION (ट्रांसमिशन)' },
+                                { value: 'ENGINE', label: 'ENGINE (इंजन)' },
+                                { value: 'ELECTRICAL', label: 'ELECTRICAL (इलेक्ट्रिकल)' },
+                                { value: 'CHASSIS', label: 'CHASSIS / BODY (चेसिस)' },
+                                { value: 'CUSTOM_PARTS', label: 'CUSTOM_PARTS (अन्य विशिष्ट)' },
+                              ]}
+                              value={newComponentCategory || 'ATTACHMENT'}
+                              onChange={(val) => setNewComponentCategory(String(val))}
+                              placeholder="Select Category..."
+                              isClearable={false}
+                            />
                           </div>
                         </div>
 
@@ -1985,7 +1994,7 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
         <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
           <div
             className={cn(
-              'w-full max-w-xl rounded-2xl border shadow-2xl p-5 sm:p-6 transition-all my-auto',
+              'w-full max-w-6xl rounded-2xl border shadow-2xl p-5 sm:p-6 transition-all my-auto',
               isDaylight ? 'bg-white border-slate-200 text-slate-900' : 'bg-slate-900 border-slate-800 text-white',
             )}
           >
