@@ -242,6 +242,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
                 request.getCountry() != null && !request.getCountry().isBlank()
                     ? request.getCountry().trim()
                     : "India")
+            .logoUrl(request.getLogoUrl() != null && !request.getLogoUrl().isBlank() ? request.getLogoUrl().trim() : null)
             .active(request.getActive() != null ? request.getActive() : true)
             .build();
 
@@ -276,6 +277,9 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
     existing.setCode(newCode);
     if (request.getCountry() != null && !request.getCountry().isBlank()) {
       existing.setCountry(request.getCountry().trim());
+    }
+    if (request.getLogoUrl() != null) {
+      existing.setLogoUrl(request.getLogoUrl().trim());
     }
     if (request.getActive() != null) {
       existing.setActive(request.getActive());

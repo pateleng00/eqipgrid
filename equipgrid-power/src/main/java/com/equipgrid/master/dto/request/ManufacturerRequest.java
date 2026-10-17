@@ -23,4 +23,6 @@ public class ManufacturerRequest {
   private String country = "India";
 
   @Builder.Default private Boolean active = true;
+
+  private String logoUrl;
 }

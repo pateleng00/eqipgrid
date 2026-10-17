@@ -88,8 +88,8 @@ public class MachineMasterController {
 
   // ==================== MANUFACTURERS (OEM) ====================
 
-  @GetMapping("/manufacturers")
-  @Operation(summary = "Get all manufacturers")
+  @GetMapping({"/manufacturers", "/oems"})
+  @Operation(summary = "Get all manufacturers (OEMs)")
   public ResponseEntity<ApiResponse<List<Manufacturer>>> getManufacturers(
       @RequestParam(required = false, defaultValue = "false") Boolean includeInactive) {
     return ResponseEntity.ok(

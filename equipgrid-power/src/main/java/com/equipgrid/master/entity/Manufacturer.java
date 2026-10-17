@@ -30,4 +30,7 @@ public class Manufacturer extends BaseEntity {
   @Builder.Default
   @Column(nullable = false)
   private Boolean active = true;
+
+  @Column(name = "logo_url", length = 512)
+  private String logoUrl;
 }
