@@ -39,24 +39,64 @@ public class StorageController {
   @PostMapping("/promote")
   @Operation(
       summary = "Promote temporary media to permanent storage",
-      description = "Copies a file from the temporary staging bucket to the common bucket.")
+      description =
+          "Copies a file from the temporary staging bucket to its corresponding dedicated category folder in the permanent bucket.")
   public ResponseEntity<ApiResponse<Map<String, String>>> promoteFile(
       @RequestBody Map<String, String> payload) {
     String tempUrl = payload.get("tempUrl");
     String type = payload.getOrDefault("type", "IMAGE");
-    String identifier = payload.getOrDefault("identifier", "asset_" + System.currentTimeMillis());
-    com.equipgrid.common.storage.enums.DocumentType docType =
-        "VIDEO".equalsIgnoreCase(type)
-            ? com.equipgrid.common.storage.enums.DocumentType.ASSET_DOCUMENT
-            : com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
-    var res = storageService.promoteToPermanentStorage(docType, tempUrl, identifier);
+    String category = payload.get("category");
+    String subFolder = payload.get("subFolder");
+    String identifier = payload.getOrDefault("identifier", "doc_" + System.currentTimeMillis());
+
+    StorageService.StoragePromotionResult res;
+    if (category != null && !category.isBlank()) {
+      res =
+          storageService.promoteToPermanentCategoryFolder(
+              category, subFolder != null ? subFolder : "images", tempUrl, identifier);
+    } else {
+      com.equipgrid.common.storage.enums.DocumentType docType = resolveDocumentType(type);
+      res = storageService.promoteToPermanentStorage(docType, tempUrl, identifier);
+    }
+
     return ResponseEntity.ok(
         ApiResponse.buildSuccess(
             Map.of(
-                "url",
-                res.url() != null ? res.url() : "",
-                "key",
-                res.key() != null ? res.key() : "")));
+                "url", res.url() != null ? res.url() : "",
+                "key", res.key() != null ? res.key() : "")));
+  }
+
+  private com.equipgrid.common.storage.enums.DocumentType resolveDocumentType(String type) {
+    if (type == null || type.isBlank()) {
+      return com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
+    }
+    for (com.equipgrid.common.storage.enums.DocumentType dt :
+        com.equipgrid.common.storage.enums.DocumentType.values()) {
+      if (dt.name().equalsIgnoreCase(type)) {
+        return dt;
+      }
+    }
+    String upper = type.toUpperCase();
+    if (upper.contains("STATIC") && upper.contains("VID")) {
+      return com.equipgrid.common.storage.enums.DocumentType.STATIC_VIDEO;
+    }
+    if (upper.contains("STATIC")) {
+      return com.equipgrid.common.storage.enums.DocumentType.STATIC_IMAGE;
+    }
+    if (upper.contains("MAINT")
+        && (upper.contains("INV") || upper.contains("BILL") || upper.contains("DOC"))) {
+      return com.equipgrid.common.storage.enums.DocumentType.MAINTENANCE_INVOICE;
+    }
+    if (upper.contains("MAINT")) {
+      return com.equipgrid.common.storage.enums.DocumentType.MAINTENANCE_IMAGE;
+    }
+    if (upper.contains("VID")) {
+      return com.equipgrid.common.storage.enums.DocumentType.ASSET_VIDEO;
+    }
+    if (upper.contains("DOC") || upper.contains("PDF")) {
+      return com.equipgrid.common.storage.enums.DocumentType.ASSET_DOCUMENT;
+    }
+    return com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
   }
 
   @PostMapping("/signed-url")

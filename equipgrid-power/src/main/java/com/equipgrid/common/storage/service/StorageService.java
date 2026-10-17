@@ -140,13 +140,45 @@ public class StorageService {
         .build();
   }
 
+  public String buildPermanentObjectKey(
+      String category, String subFolder, String identifier, String ext) {
+    String cleanCategory =
+        (category != null && !category.isBlank())
+            ? category.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "")
+            : "misc";
+    String cleanSub =
+        (subFolder != null && !subFolder.isBlank())
+            ? subFolder.trim().toLowerCase().replaceAll("[^a-z0-9_-]", "")
+            : "";
+    String extension =
+        (ext != null && !ext.isBlank()) ? (ext.startsWith(".") ? ext.substring(1) : ext) : "jpg";
+
+    if (!cleanSub.isEmpty()) {
+      return cleanCategory + "/" + cleanSub + "/" + identifier + "." + extension;
+    }
+    return cleanCategory + "/" + identifier + "." + extension;
+  }
+
+  public String buildPermanentObjectKey(DocumentType documentType, String identifier, String ext) {
+    String category = documentType.getDocumentCategory().getFileStorageName();
+    String subFolder = documentType.getFileStorageName();
+    return buildPermanentObjectKey(category, subFolder, identifier, ext);
+  }
+
   public String copyToPermanentStorage(
       DocumentType documentType, String fileUrl, String identifier) {
+    return copyToPermanentCategoryFolder(
+        documentType.getDocumentCategory().getFileStorageName(),
+        documentType.getFileStorageName(),
+        fileUrl,
+        identifier);
+  }
+
+  public String copyToPermanentCategoryFolder(
+      String category, String subFolder, String fileUrl, String identifier) {
     if (fileUrl == null || fileUrl.isBlank()) {
       return null;
     }
-    String mapping = documentType.getFileStorageName();
-    String category = documentType.getDocumentCategory().getFileStorageName();
 
     try {
       String key;
@@ -171,7 +203,7 @@ public class StorageService {
         return fileUrl;
       }
 
-      String objectKey = appName() + "/" + category + "/" + mapping + "/" + identifier + "." + ext;
+      String objectKey = buildPermanentObjectKey(category, subFolder, identifier, ext);
 
       CopyObjectRequest copyRequest =
           new CopyObjectRequest(
@@ -179,7 +211,10 @@ public class StorageService {
               awsProperties.getCommonBucketName(), objectKey);
       s3client.copyObject(copyRequest);
 
-      log.info("[Storage] File copied to permanent bucket: {}", objectKey);
+      log.info(
+          "[Storage] File copied to permanent category folder: bucket={} key={}",
+          awsProperties.getCommonBucketName(),
+          objectKey);
       return objectKey;
 
     } catch (Exception e) {
@@ -203,10 +238,23 @@ public class StorageService {
     return new StoragePromotionResult(s3Key, permUrl);
   }
 
+  public StoragePromotionResult promoteToPermanentCategoryFolder(
+      String category, String subFolder, String fileUrl, String identifier) {
+    if (fileUrl == null || fileUrl.isBlank()) {
+      return new StoragePromotionResult(null, null);
+    }
+    String s3Key = copyToPermanentCategoryFolder(category, subFolder, fileUrl, identifier);
+    String permUrl;
+    if (s3Key != null && (s3Key.startsWith("http://") || s3Key.startsWith("https://"))) {
+      permUrl = s3Key;
+    } else {
+      permUrl = getPublicFileUrl(awsProperties.getCommonBucketName(), s3Key);
+    }
+    return new StoragePromotionResult(s3Key, permUrl);
+  }
+
   public String moveFileToPermanentStorage(
       DocumentType documentType, String fileUrl, String identifier) {
-    String mapping = documentType.getFileStorageName();
-    String category = documentType.getDocumentCategory().getFileStorageName();
     String tmpFilePath = "tmp";
 
     try {
@@ -233,11 +281,14 @@ public class StorageService {
         }
       }
 
-      // Upload to common bucket
-      String objectKey = appName() + "/" + category + "/" + mapping + "/" + identifier + "." + ext;
+      // Upload to common bucket in category folder
+      String objectKey = buildPermanentObjectKey(documentType, identifier, ext);
       s3client.putObject(awsProperties.getCommonBucketName(), objectKey, new File(tmpFilePath));
 
-      log.info("[Storage] File moved to permanent bucket: {}", objectKey);
+      log.info(
+          "[Storage] File moved to permanent category folder: bucket={} key={}",
+          awsProperties.getCommonBucketName(),
+          objectKey);
       return objectKey;
 
     } catch (Exception e) {
