@@ -4,6 +4,7 @@ import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.auth.entity.User;
 import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.Exceptions;
+import com.equipgrid.common.config.CacheConfig;
 import com.equipgrid.master.dto.request.EquipmentTypeRequest;
 import com.equipgrid.master.dto.request.ManufacturerRequest;
 import com.equipgrid.master.dto.request.ModelRequest;
@@ -17,7 +18,6 @@ import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
 import com.equipgrid.master.util.FuzzyMatchUtil;
-import com.equipgrid.common.config.CacheConfig;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -269,7 +269,10 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
                 request.getCountry() != null && !request.getCountry().isBlank()
                     ? request.getCountry().trim()
                     : "India")
-            .logoUrl(request.getLogoUrl() != null && !request.getLogoUrl().isBlank() ? request.getLogoUrl().trim() : null)
+            .logoUrl(
+                request.getLogoUrl() != null && !request.getLogoUrl().isBlank()
+                    ? request.getLogoUrl().trim()
+                    : null)
             .active(request.getActive() != null ? request.getActive() : true)
             .build();
 

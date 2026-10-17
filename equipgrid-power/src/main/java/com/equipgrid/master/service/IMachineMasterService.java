@@ -16,7 +16,8 @@ public interface IMachineMasterService {
   // --- Equipment Types ---
   List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive);
 
-  List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category);
+  List<EquipmentType> getAllEquipmentTypes(
+      Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category);
 
   EquipmentType getEquipmentTypeById(Long id);
 

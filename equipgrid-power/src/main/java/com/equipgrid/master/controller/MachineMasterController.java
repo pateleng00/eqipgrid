@@ -40,7 +40,8 @@ public class MachineMasterController {
       @RequestParam(required = false) com.equipgrid.asset.enums.AssetCategory category) {
     return ResponseEntity.ok(
         ApiResponse.buildSuccess(
-            "Equipment types fetched", machineMasterService.getAllEquipmentTypes(includeInactive, category)));
+            "Equipment types fetched",
+            machineMasterService.getAllEquipmentTypes(includeInactive, category)));
   }
 
   @GetMapping("/types/{id}")

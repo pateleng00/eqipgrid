@@ -10,8 +10,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * High-performance in-memory caching configuration powered by Caffeine.
- * Provides 24-hour TTL for master data (equipment types, OEMs, location hubs).
+ * High-performance in-memory caching configuration powered by Caffeine. Provides 24-hour TTL for
+ * master data (equipment types, OEMs, location hubs).
  */
 @Configuration
 @EnableCaching
@@ -22,6 +22,8 @@ public class CacheConfig {
   public static final String CACHE_MANUFACTURERS = "manufacturers";
   public static final String CACHE_LOCATION_HIERARCHY = "locationHierarchy";
   public static final String CACHE_HUBS = "hubs";
+  public static final String CACHE_STATES = "states";
+  public static final String CACHE_CITIES = "cities";
   public static final String CACHE_MACHINE_MODELS = "machineModels";
 
   @Bean
@@ -34,12 +36,11 @@ public class CacheConfig {
             CACHE_MANUFACTURERS,
             CACHE_LOCATION_HIERARCHY,
             CACHE_HUBS,
+            CACHE_STATES,
+            CACHE_CITIES,
             CACHE_MACHINE_MODELS));
     cacheManager.setCaffeine(
-        Caffeine.newBuilder()
-            .expireAfterWrite(24, TimeUnit.HOURS)
-            .maximumSize(1000)
-            .recordStats());
+        Caffeine.newBuilder().expireAfterWrite(24, TimeUnit.HOURS).maximumSize(1000).recordStats());
     return cacheManager;
   }
 }

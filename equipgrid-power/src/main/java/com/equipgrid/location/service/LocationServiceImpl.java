@@ -1,6 +1,7 @@
 package com.equipgrid.location.service;
 
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.common.config.CacheConfig;
 import com.equipgrid.location.dto.request.CityRequest;
 import com.equipgrid.location.dto.request.HubRequest;
 import com.equipgrid.location.dto.response.CityHierarchyResponse;
@@ -14,7 +15,6 @@ import com.equipgrid.location.repository.CityRepository;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.location.repository.LocationQueryRepository;
 import com.equipgrid.location.repository.StateRepository;
-import com.equipgrid.common.config.CacheConfig;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -39,6 +39,7 @@ public class LocationServiceImpl implements ILocationService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_STATES)
   public List<State> getStates() {
     return locationQueryRepository.findActiveStates();
   }
@@ -46,8 +47,10 @@ public class LocationServiceImpl implements ILocationService {
   @Override
   @Caching(
       evict = {
-        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
-        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+        @CacheEvict(value = CacheConfig.CACHE_STATES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true)
       })
   public State createState(State state) {
     return stateRepository.save(state);
@@ -55,12 +58,14 @@ public class LocationServiceImpl implements ILocationService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_CITIES, key = "'state-' + #stateId")
   public List<City> getCitiesByState(Long stateId) {
     return locationQueryRepository.findActiveCitiesByStateId(stateId);
   }
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_CITIES, key = "'all'")
   public List<City> getAllCities() {
     return locationQueryRepository.findAllActiveCities();
   }
@@ -68,8 +73,9 @@ public class LocationServiceImpl implements ILocationService {
   @Override
   @Caching(
       evict = {
-        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
-        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true)
       })
   public City createCity(CityRequest request) {
     State state =
@@ -89,13 +95,14 @@ public class LocationServiceImpl implements ILocationService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_HUBS, key = "'city-' + #cityId")
   public List<Hub> getHubsByCity(Long cityId) {
     return locationQueryRepository.findActiveHubsByCityId(cityId);
   }
 
   @Override
   @Transactional(readOnly = true)
-  @Cacheable(value = CacheConfig.CACHE_HUBS)
+  @Cacheable(value = CacheConfig.CACHE_HUBS, key = "'all'")
   public List<Hub> getAllHubs() {
     return locationQueryRepository.findAllActiveHubs();
   }
