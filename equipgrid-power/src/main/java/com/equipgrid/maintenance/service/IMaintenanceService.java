@@ -12,17 +12,13 @@ public interface IMaintenanceService {
 
   MaintenanceRecordResponse createMaintenanceRecord(CreateMaintenanceRequest request, Long userId);
 
-  MaintenanceRecordResponse updateMaintenanceProgress(
-      Long ticketId, UpdateMaintenanceProgressRequest request, Long userId);
+  MaintenanceRecordResponse updateMaintenanceProgress(Long ticketId, UpdateMaintenanceProgressRequest request, Long userId);
 
-  MaintenanceRecordResponse completeMaintenanceRecord(
-      Long ticketId, CompleteMaintenanceRequest request, Long userId);
+  MaintenanceRecordResponse completeMaintenanceRecord(Long ticketId, CompleteMaintenanceRequest request, Long userId);
 
-  MaintenanceRecordResponse uploadMaintenanceInvoice(
-      Long ticketId, MultipartFile file, Long userId);
+  MaintenanceRecordResponse uploadMaintenanceInvoice(Long ticketId, MultipartFile file, Long userId);
 
-  List<MaintenanceRecordResponse> getMaintenanceRecords(
-      Long hubId, MaintenanceStatus status, Boolean activeOnly);
+  List<MaintenanceRecordResponse> getMaintenanceRecords(Long hubId, MaintenanceStatus status, Boolean activeOnly);
 
   MaintenanceRecordResponse getMaintenanceRecordById(Long ticketId);
 

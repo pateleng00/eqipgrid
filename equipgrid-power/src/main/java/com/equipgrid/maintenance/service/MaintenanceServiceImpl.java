@@ -284,9 +284,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
     // Promote to permanent S3 storage under assets/invoices
     String identifier = "inv_" + record.getTicketNumber() + "_" + System.currentTimeMillis();
-    StorageService.StoragePromotionResult promoResult =
-        storageService.promoteToPermanentStorage(
-            DocumentType.MAINTENANCE_INVOICE, tempUrl, identifier);
+    StorageService.StoragePromotionResult promoResult = storageService.promoteToPermanentStorage(DocumentType.MAINTENANCE_INVOICE, tempUrl, identifier);
 
     String finalUrl =
         (promoResult.url() != null && !promoResult.url().isBlank()) ? promoResult.url() : tempUrl;
