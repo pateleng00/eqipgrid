@@ -10,6 +10,7 @@ import com.equipgrid.location.entity.QState;
 import com.equipgrid.location.entity.State;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
+import java.util.Optional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -35,6 +36,17 @@ public class LocationQueryRepository {
         .fetch();
   }
 
+  public Optional<State> findStateByCode(String code) {
+    if (code == null || code.isBlank()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qState)
+            .where(qState.code.equalsIgnoreCase(code.trim()))
+            .fetchOne());
+  }
+
   public List<City> findActiveCitiesByStateId(Long stateId) {
     return queryFactory
         .selectFrom(qCity)
@@ -52,8 +64,15 @@ public class LocationQueryRepository {
   }
 
   public List<Hub> findActiveHubsByCityId(Long cityId) {
+    if (cityId == null) {
+      return List.of();
+    }
     return queryFactory
         .selectFrom(qHub)
+        .leftJoin(qHub.city, qCity)
+        .fetchJoin()
+        .leftJoin(qCity.state, qState)
+        .fetchJoin()
         .where(qHub.city.id.eq(cityId).and(qHub.active.isTrue()))
         .orderBy(qHub.name.asc())
         .fetch();
@@ -62,9 +81,43 @@ public class LocationQueryRepository {
   public List<Hub> findAllActiveHubs() {
     return queryFactory
         .selectFrom(qHub)
+        .leftJoin(qHub.city, qCity)
+        .fetchJoin()
+        .leftJoin(qCity.state, qState)
+        .fetchJoin()
         .where(qHub.active.isTrue())
         .orderBy(qHub.name.asc())
         .fetch();
+  }
+
+  public Optional<Hub> findHubById(Long id) {
+    if (id == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qHub)
+            .leftJoin(qHub.city, qCity)
+            .fetchJoin()
+            .leftJoin(qCity.state, qState)
+            .fetchJoin()
+            .where(qHub.id.eq(id))
+            .fetchOne());
+  }
+
+  public Optional<Hub> findHubByCode(String code) {
+    if (code == null || code.isBlank()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qHub)
+            .leftJoin(qHub.city, qCity)
+            .fetchJoin()
+            .leftJoin(qCity.state, qState)
+            .fetchJoin()
+            .where(qHub.code.equalsIgnoreCase(code.trim()))
+            .fetchOne());
   }
 
   public List<Asset> findActiveAssetsMappedToHubs() {

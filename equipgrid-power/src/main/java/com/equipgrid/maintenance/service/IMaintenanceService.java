@@ -30,7 +30,7 @@ public interface IMaintenanceService {
 
   List<MaintenanceRecordResponse> getAssetMaintenanceHistory(Long assetId);
 
-  List<MaintenanceDamageComponent> getActiveDamageComponents(Long equipmentTypeId, String typeCode);
+  List<MaintenanceDamageComponent> getActiveDamageComponents(Long equipmentTypeId);
 
   MaintenanceDamageComponent createDamageComponent(
       CreateDamageComponentRequest request, Long userId);

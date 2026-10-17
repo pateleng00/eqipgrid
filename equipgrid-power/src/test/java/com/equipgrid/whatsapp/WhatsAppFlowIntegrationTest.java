@@ -47,6 +47,9 @@ class WhatsAppFlowIntegrationTest {
 
   @Autowired private com.equipgrid.location.repository.StateRepository stateRepository;
 
+  @Autowired
+  private com.equipgrid.location.repository.LocationQueryRepository locationQueryRepository;
+
   @Autowired private com.equipgrid.location.repository.CityRepository cityRepository;
 
   @Autowired private com.equipgrid.location.repository.HubRepository hubRepository;
@@ -82,8 +85,8 @@ class WhatsAppFlowIntegrationTest {
     com.equipgrid.location.entity.Hub yard = null;
     if (hubRepository.count() == 0) {
       com.equipgrid.location.entity.State state =
-          stateRepository
-              .findByCodeIgnoreCase("UP")
+          locationQueryRepository
+              .findStateByCode("UP")
               .orElseGet(
                   () ->
                       stateRepository.save(

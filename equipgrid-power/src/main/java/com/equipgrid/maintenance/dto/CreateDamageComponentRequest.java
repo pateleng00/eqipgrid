@@ -12,8 +12,6 @@ public class CreateDamageComponentRequest {
 
   private Long equipmentTypeId;
 
-  private String equipmentTypeCode;
-
   private String partCode;
 
   @NotBlank(message = "Component name is required")

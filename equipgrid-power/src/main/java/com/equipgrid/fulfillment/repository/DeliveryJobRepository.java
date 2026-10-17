@@ -1,9 +1,12 @@
 package com.equipgrid.fulfillment.repository;
 
 import com.equipgrid.fulfillment.entity.DeliveryJob;
-import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface DeliveryJobRepository extends JpaRepository<DeliveryJob, Long> {
-  Optional<DeliveryJob> findByBookingId(Long bookingId);
-}
+/**
+ * Persistence repository for DeliveryJob entity. Read queries are in FulfillmentQueryRepository
+ * (QueryDSL).
+ */
+@Repository
+public interface DeliveryJobRepository extends JpaRepository<DeliveryJob, Long> {}

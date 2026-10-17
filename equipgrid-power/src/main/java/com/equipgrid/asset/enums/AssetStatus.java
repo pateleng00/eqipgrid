@@ -8,23 +8,25 @@ import lombok.Getter;
 
 @Getter
 public enum AssetStatus {
-  AVAILABLE((short) 1),
-  RESERVED((short) 2),
-  DISPATCH_READY((short) 3),
-  DISPATCHED((short) 4),
-  ON_RENT((short) 5),
-  RETURN_PENDING((short) 6),
-  RETURNED((short) 7),
-  INSPECTION((short) 8),
-  DAMAGE_ASSESSMENT((short) 9),
-  MAINTENANCE((short) 10),
-  DAMAGED((short) 11),
-  RETIRED((short) 12);
+  AVAILABLE((short) 1, "Available in Yard (उपलब्ध)"),
+  RESERVED((short) 2, "Reserved for Booking (आरक्षित)"),
+  DISPATCH_READY((short) 3, "Ready for Dispatch (रवाना होने को तैयार)"),
+  DISPATCHED((short) 4, "Dispatched (रवाना)"),
+  ON_RENT((short) 5, "On Rent (खेत पर कार्यरत)"),
+  RETURN_PENDING((short) 6, "Return Pending (वापसी लंबित)"),
+  RETURNED((short) 7, "Returned to Hub (यार्ड में वापस)"),
+  INSPECTION((short) 8, "Under Return Inspection (निरीक्षण जारी)"),
+  DAMAGE_ASSESSMENT((short) 9, "Damage Assessment (क्षति आकलन)"),
+  MAINTENANCE((short) 10, "Under Maintenance & Repair (मरम्मत जारी)"),
+  DAMAGED((short) 11, "Damaged (क्षतिग्रस्त)"),
+  RETIRED((short) 12, "Decommissioned / Retired (सेवामुक्त)");
 
   @JsonValue private final Short value;
+  private final String description;
 
-  AssetStatus(short value) {
+  AssetStatus(short value, String description) {
     this.value = value;
+    this.description = description;
   }
 
   public static AssetStatus fromValue(Short value) {

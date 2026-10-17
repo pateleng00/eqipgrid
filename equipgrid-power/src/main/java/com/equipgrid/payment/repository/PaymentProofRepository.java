@@ -1,10 +1,12 @@
 package com.equipgrid.payment.repository;
 
 import com.equipgrid.payment.entity.PaymentProof;
-import com.equipgrid.payment.enums.VerificationStatus;
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface PaymentProofRepository extends JpaRepository<PaymentProof, Long> {
-  List<PaymentProof> findByStatusOrderBySubmittedAtAsc(VerificationStatus status);
-}
+/**
+ * Persistence repository for PaymentProof entity. Read and status queries are handled in
+ * PaymentQueryRepository (QueryDSL).
+ */
+@Repository
+public interface PaymentProofRepository extends JpaRepository<PaymentProof, Long> {}

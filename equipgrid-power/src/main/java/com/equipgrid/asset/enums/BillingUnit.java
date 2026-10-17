@@ -23,6 +23,7 @@ public enum BillingUnit {
   private final String unitLabel;
   private final String unitLabelLong;
   private final String displayName;
+  private final String description;
 
   BillingUnit(
       short value, String code, String unitLabel, String unitLabelLong, String displayName) {
@@ -31,10 +32,7 @@ public enum BillingUnit {
     this.unitLabel = unitLabel;
     this.unitLabelLong = unitLabelLong;
     this.displayName = displayName;
-  }
-
-  public String getDescription() {
-    return displayName;
+    this.description = displayName;
   }
 
   public static BillingUnit fromValue(Short value) {

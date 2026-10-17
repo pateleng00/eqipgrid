@@ -1,17 +1,15 @@
 package com.equipgrid.master.repository;
 
 import com.equipgrid.master.entity.EquipmentType;
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence repository for EquipmentType entity. Read and query operations are handled in
+ * MasterQueryRepository (QueryDSL).
+ */
 @Repository
 public interface EquipmentTypeRepository extends JpaRepository<EquipmentType, Long> {
-  List<EquipmentType> findByActiveTrueOrderByNameAsc();
-
-  List<EquipmentType> findAllByOrderByNameAsc();
-
-  java.util.Optional<EquipmentType> findByCode(String code);
 
   boolean existsByCodeIgnoreCase(String code);
 

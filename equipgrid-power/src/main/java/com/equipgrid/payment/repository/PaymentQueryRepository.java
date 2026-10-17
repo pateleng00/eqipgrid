@@ -1,8 +1,14 @@
 package com.equipgrid.payment.repository;
 
 import com.equipgrid.payment.entity.Payment;
+import com.equipgrid.payment.entity.PaymentProof;
 import com.equipgrid.payment.entity.QPayment;
+import com.equipgrid.payment.entity.QPaymentProof;
+import com.equipgrid.payment.entity.QRefundTransaction;
+import com.equipgrid.payment.entity.RefundTransaction;
 import com.equipgrid.payment.enums.PaymentMode;
+import com.equipgrid.payment.enums.RefundStatus;
+import com.equipgrid.payment.enums.VerificationStatus;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,6 +27,8 @@ public class PaymentQueryRepository {
 
   private final JPAQueryFactory queryFactory;
   private final QPayment qPayment = QPayment.payment;
+  private final QPaymentProof qPaymentProof = QPaymentProof.paymentProof;
+  private final QRefundTransaction qRefund = QRefundTransaction.refundTransaction;
 
   public List<Payment> fetchAll() {
     return queryFactory.selectFrom(qPayment).orderBy(qPayment.id.desc()).fetch();
@@ -91,5 +99,43 @@ public class PaymentQueryRepository {
   public BigDecimal sumTotalAll() {
     BigDecimal sum = queryFactory.select(qPayment.amount.sum()).from(qPayment).fetchOne();
     return sum != null ? sum : BigDecimal.ZERO;
+  }
+
+  public Optional<Payment> fetchByTransactionRef(String transactionRef) {
+    if (transactionRef == null || transactionRef.isBlank()) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qPayment)
+            .where(qPayment.transactionRef.eq(transactionRef.trim()))
+            .fetchOne());
+  }
+
+  public List<PaymentProof> fetchProofsByStatus(VerificationStatus status) {
+    if (status == null) {
+      return List.of();
+    }
+    return queryFactory
+        .selectFrom(qPaymentProof)
+        .where(qPaymentProof.status.eq(status))
+        .orderBy(qPaymentProof.submittedAt.asc())
+        .fetch();
+  }
+
+  public Optional<RefundTransaction> fetchFirstRefundByBookingIdAndStatus(
+      Long bookingId, RefundStatus status) {
+    if (bookingId == null || status == null) {
+      return Optional.empty();
+    }
+    return Optional.ofNullable(
+        queryFactory
+            .selectFrom(qRefund)
+            .where(qRefund.booking.id.eq(bookingId).and(qRefund.status.eq(status)))
+            .fetchFirst());
+  }
+
+  public List<RefundTransaction> fetchAllRefunds() {
+    return queryFactory.selectFrom(qRefund).orderBy(qRefund.id.desc()).fetch();
   }
 }

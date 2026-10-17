@@ -123,12 +123,11 @@ public class MaintenanceController {
   @Operation(
       summary = "List machine damage components",
       description =
-          "Fetches active damage components, optionally filtered by equipmentTypeId or typeCode. Universal components are always included.")
+          "Fetches active damage components, optionally filtered by equipmentTypeId. Universal components are always included.")
   public ResponseEntity<ApiResponse<List<MaintenanceDamageComponent>>> listDamageComponents(
-      @RequestParam(required = false) Long equipmentTypeId,
-      @RequestParam(required = false) String typeCode) {
+      @RequestParam(required = false) Long equipmentTypeId) {
     List<MaintenanceDamageComponent> components =
-        maintenanceService.getActiveDamageComponents(equipmentTypeId, typeCode);
+        maintenanceService.getActiveDamageComponents(equipmentTypeId);
     return ResponseEntity.ok(ApiResponse.buildSuccess(components));
   }
 

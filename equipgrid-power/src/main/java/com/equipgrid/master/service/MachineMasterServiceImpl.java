@@ -17,6 +17,7 @@ import com.equipgrid.master.repository.BillingUnitMasterRepository;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
+import com.equipgrid.master.repository.MasterQueryRepository;
 import com.equipgrid.master.util.FuzzyMatchUtil;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -38,6 +39,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   private final ManufacturerRepository manufacturerRepository;
   private final MachineModelRepository machineModelRepository;
   private final BillingUnitMasterRepository billingUnitMasterRepository;
+  private final MasterQueryRepository masterQueryRepository;
   private final AssetRepository assetRepository;
 
   // ==================== EQUIPMENT TYPES ====================
@@ -56,10 +58,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
           "(#includeInactive != null ? #includeInactive : false) + '-' + (#category != null ? #category.name() : 'ALL')")
   public List<EquipmentType> getAllEquipmentTypes(
       Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
-    List<EquipmentType> list =
-        Boolean.TRUE.equals(includeInactive)
-            ? equipmentTypeRepository.findAllByOrderByNameAsc()
-            : equipmentTypeRepository.findByActiveTrueOrderByNameAsc();
+    List<EquipmentType> list = masterQueryRepository.fetchEquipmentTypes(includeInactive);
     if (category != null) {
       return list.stream()
           .filter(t -> category.equals(t.getCategory()))
@@ -208,7 +207,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Transactional(readOnly = true)
   public FuzzyCheckResponse checkEquipmentTypeAvailability(String name, Long excludeId) {
     List<FuzzyMatchUtil.MatchCandidate> candidates =
-        equipmentTypeRepository.findAll().stream()
+        masterQueryRepository.fetchEquipmentTypes(true).stream()
             .map(t -> new FuzzyMatchUtil.MatchCandidate(t.getId(), t.getName()))
             .collect(Collectors.toList());
 
@@ -230,10 +229,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
       value = CacheConfig.CACHE_MANUFACTURERS,
       key = "#includeInactive != null ? #includeInactive : false")
   public List<Manufacturer> getAllManufacturers(Boolean includeInactive) {
-    if (Boolean.TRUE.equals(includeInactive)) {
-      return manufacturerRepository.findAllByOrderByNameAsc();
-    }
-    return manufacturerRepository.findByActiveTrueOrderByNameAsc();
+    return masterQueryRepository.fetchManufacturers(includeInactive);
   }
 
   @Override
@@ -357,7 +353,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Transactional(readOnly = true)
   public FuzzyCheckResponse checkManufacturerAvailability(String name, Long excludeId) {
     List<FuzzyMatchUtil.MatchCandidate> candidates =
-        manufacturerRepository.findAll().stream()
+        masterQueryRepository.fetchManufacturers(true).stream()
             .map(m -> new FuzzyMatchUtil.MatchCandidate(m.getId(), m.getName()))
             .collect(Collectors.toList());
 
@@ -381,27 +377,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
           "(#typeId != null ? #typeId : 0) + '-' + (#manufacturerId != null ? #manufacturerId : 0) + '-' + (#includeInactive != null ? #includeInactive : false)")
   public List<MachineModel> getMachineModels(
       Long typeId, Long manufacturerId, Boolean includeInactive) {
-    boolean activeOnly = !Boolean.TRUE.equals(includeInactive);
-
-    if (typeId != null && manufacturerId != null) {
-      return activeOnly
-          ? machineModelRepository.findByTypeIdAndManufacturerIdAndActiveTrueOrderByNameAsc(
-              typeId, manufacturerId)
-          : machineModelRepository.findByTypeIdAndManufacturerIdOrderByNameAsc(
-              typeId, manufacturerId);
-    } else if (typeId != null) {
-      return activeOnly
-          ? machineModelRepository.findByTypeIdAndActiveTrueOrderByNameAsc(typeId)
-          : machineModelRepository.findByTypeIdOrderByNameAsc(typeId);
-    } else if (manufacturerId != null) {
-      return activeOnly
-          ? machineModelRepository.findByManufacturerIdAndActiveTrueOrderByNameAsc(manufacturerId)
-          : machineModelRepository.findByManufacturerIdOrderByNameAsc(manufacturerId);
-    } else {
-      return activeOnly
-          ? machineModelRepository.findByActiveTrueOrderByNameAsc()
-          : machineModelRepository.findAllByOrderByNameAsc();
-    }
+    return masterQueryRepository.fetchModels(typeId, manufacturerId, includeInactive);
   }
 
   @Override
@@ -517,18 +493,8 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Transactional(readOnly = true)
   public FuzzyCheckResponse checkMachineModelAvailability(
       String name, Long typeId, Long manufacturerId, Long excludeId) {
-    List<MachineModel> candidatesQuery;
-    if (typeId != null && manufacturerId != null) {
-      candidatesQuery =
-          machineModelRepository.findByTypeIdAndManufacturerIdOrderByNameAsc(
-              typeId, manufacturerId);
-    } else if (typeId != null) {
-      candidatesQuery = machineModelRepository.findByTypeIdOrderByNameAsc(typeId);
-    } else if (manufacturerId != null) {
-      candidatesQuery = machineModelRepository.findByManufacturerIdOrderByNameAsc(manufacturerId);
-    } else {
-      candidatesQuery = machineModelRepository.findAll();
-    }
+    List<MachineModel> candidatesQuery =
+        masterQueryRepository.fetchModels(typeId, manufacturerId, true);
 
     List<FuzzyMatchUtil.MatchCandidate> candidates =
         candidatesQuery.stream()
@@ -550,7 +516,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Override
   @Transactional(readOnly = true)
   public List<BillingUnitMaster> getAllBillingUnits() {
-    return billingUnitMasterRepository.findByActiveTrueOrderByDisplayOrderAsc();
+    return masterQueryRepository.fetchBillingUnits(true);
   }
 
   @Override

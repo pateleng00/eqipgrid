@@ -1,15 +1,15 @@
 package com.equipgrid.master.repository;
 
 import com.equipgrid.master.entity.Manufacturer;
-import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/**
+ * Persistence repository for Manufacturer entity. Read and query operations are handled in
+ * MasterQueryRepository (QueryDSL).
+ */
 @Repository
 public interface ManufacturerRepository extends JpaRepository<Manufacturer, Long> {
-  List<Manufacturer> findByActiveTrueOrderByNameAsc();
-
-  List<Manufacturer> findAllByOrderByNameAsc();
 
   boolean existsByCodeIgnoreCase(String code);
 

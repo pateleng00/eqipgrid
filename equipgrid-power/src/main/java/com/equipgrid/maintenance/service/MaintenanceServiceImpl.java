@@ -20,6 +20,7 @@ import com.equipgrid.maintenance.enums.MaintenancePriority;
 import com.equipgrid.maintenance.enums.MaintenanceServiceType;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
 import com.equipgrid.maintenance.repository.MaintenanceDamageComponentRepository;
+import com.equipgrid.maintenance.repository.MaintenanceQueryRepository;
 import com.equipgrid.maintenance.repository.MaintenanceRecordRepository;
 import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
@@ -43,6 +44,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
   private final MaintenanceRecordRepository maintenanceRecordRepository;
   private final MaintenanceDamageComponentRepository damageComponentRepository;
+  private final MaintenanceQueryRepository maintenanceQueryRepository;
   private final EquipmentTypeRepository equipmentTypeRepository;
   private final AssetRepository assetRepository;
   private final HubRepository hubRepository;
@@ -347,42 +349,17 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
   @Transactional(readOnly = true)
   public List<MaintenanceRecordResponse> getMaintenanceRecords(
       Long hubId, MaintenanceStatus status, Boolean activeOnly) {
-    List<MaintenanceRecord> records;
-
-    if (hubId != null) {
-      if (Boolean.TRUE.equals(activeOnly)) {
-        records =
-            maintenanceRecordRepository.findByHubIdAndStatusNotOrderByCreatedAtDesc(
-                hubId, MaintenanceStatus.COMPLETED);
-      } else if (status != null) {
-        records =
-            maintenanceRecordRepository.findByHubIdOrderByCreatedAtDesc(hubId).stream()
-                .filter(r -> r.getStatus() == status)
-                .toList();
-      } else {
-        records = maintenanceRecordRepository.findByHubIdOrderByCreatedAtDesc(hubId);
-      }
-    } else {
-      if (Boolean.TRUE.equals(activeOnly)) {
-        records =
-            maintenanceRecordRepository.findByStatusNotOrderByCreatedAtDesc(
-                MaintenanceStatus.COMPLETED);
-      } else if (status != null) {
-        records = maintenanceRecordRepository.findByStatusOrderByCreatedAtDesc(status);
-      } else {
-        records = maintenanceRecordRepository.findAll();
-      }
-    }
-
-    return records.stream().map(MaintenanceRecordResponse::fromEntity).toList();
+    return maintenanceQueryRepository.fetchRecords(hubId, status, activeOnly).stream()
+        .map(MaintenanceRecordResponse::fromEntity)
+        .toList();
   }
 
   @Override
   @Transactional(readOnly = true)
   public MaintenanceRecordResponse getMaintenanceRecordById(Long ticketId) {
     MaintenanceRecord record =
-        maintenanceRecordRepository
-            .findById(ticketId)
+        maintenanceQueryRepository
+            .fetchById(ticketId)
             .orElseThrow(
                 () ->
                     new EquipGridException(
@@ -394,22 +371,15 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
   @Override
   @Transactional(readOnly = true)
   public List<MaintenanceRecordResponse> getAssetMaintenanceHistory(Long assetId) {
-    return maintenanceRecordRepository.findByAssetIdOrderByCreatedAtDesc(assetId).stream()
+    return maintenanceQueryRepository.fetchByAssetId(assetId).stream()
         .map(MaintenanceRecordResponse::fromEntity)
         .toList();
   }
 
   @Override
   @Transactional(readOnly = true)
-  public List<MaintenanceDamageComponent> getActiveDamageComponents(
-      Long equipmentTypeId, String typeCode) {
-    if (equipmentTypeId != null && equipmentTypeId > 0) {
-      return damageComponentRepository.findActiveByTypeOrUniversal(equipmentTypeId);
-    }
-    if (typeCode != null && !typeCode.isBlank()) {
-      return damageComponentRepository.findActiveByTypeCodeOrUniversal(typeCode);
-    }
-    return damageComponentRepository.findByActiveTrueOrderByDisplayOrderAsc();
+  public List<MaintenanceDamageComponent> getActiveDamageComponents(Long equipmentTypeId) {
+    return maintenanceQueryRepository.fetchActiveDamageComponents(equipmentTypeId);
   }
 
   @Override
@@ -422,22 +392,15 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
     }
 
     EquipmentType equipmentType = null;
-    String typeCode = request.getEquipmentTypeCode();
-
     if (request.getEquipmentTypeId() != null && request.getEquipmentTypeId() > 0) {
       equipmentType = equipmentTypeRepository.findById(request.getEquipmentTypeId()).orElse(null);
-      if (equipmentType != null && (typeCode == null || typeCode.isBlank())) {
-        typeCode = equipmentType.getCode();
-      }
-    } else if (typeCode != null && !typeCode.isBlank()) {
-      equipmentType = equipmentTypeRepository.findByCode(typeCode).orElse(null);
     }
 
     String partCode = request.getPartCode();
     if (partCode == null || partCode.isBlank()) {
       String prefix =
-          typeCode != null
-              ? typeCode.replace("TYPE-", "").replace("-", "_")
+          equipmentType != null
+              ? equipmentType.getCode().replace("TYPE-", "").replace("-", "_")
               : (Boolean.TRUE.equals(request.getIsUniversal()) ? "UNI" : "GEN");
       String cleanName = request.getName().toUpperCase().replaceAll("[^A-Z0-9]+", "_");
       partCode = prefix + "_" + cleanName;
@@ -446,7 +409,6 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
     MaintenanceDamageComponent component =
         MaintenanceDamageComponent.builder()
             .equipmentType(equipmentType)
-            .equipmentTypeCode(typeCode)
             .isUniversal(Boolean.TRUE.equals(request.getIsUniversal()))
             .partCode(partCode)
             .name(request.getName().trim())
@@ -465,10 +427,10 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
     MaintenanceDamageComponent saved = damageComponentRepository.save(component);
     log.info(
-        "[Maintenance] Created new damage component {} ({}) for type {}",
+        "[Maintenance] Created new damage component {} ({}) for equipmentTypeId {}",
         saved.getName(),
         saved.getPartCode(),
-        typeCode);
+        request.getEquipmentTypeId());
     return saved;
   }
 
@@ -516,7 +478,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
     long count = maintenanceRecordRepository.count();
     String baseTicket = String.format("MNT-%d-%04d", year, count + 1);
 
-    if (maintenanceRecordRepository.findByTicketNumber(baseTicket).isEmpty()) {
+    if (maintenanceQueryRepository.fetchByTicketNumber(baseTicket).isEmpty()) {
       return baseTicket;
     }
     // Fallback if sequence collides

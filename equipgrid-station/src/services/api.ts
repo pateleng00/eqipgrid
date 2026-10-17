@@ -3051,8 +3051,20 @@ export class ApiStore {
     return request<MaintenanceTicket[]>(`/maintenance/assets/${assetId}/history`);
   }
 
-  async fetchDamageComponents(): Promise<MaintenanceDamageComponent[]> {
-    return request<MaintenanceDamageComponent[]>('/maintenance/damage-components');
+  async fetchDamageComponents(
+    equipmentTypeId?: number,
+  ): Promise<MaintenanceDamageComponent[]> {
+    const qs = equipmentTypeId ? `?equipmentTypeId=${equipmentTypeId}` : '';
+    return request<MaintenanceDamageComponent[]>(`/maintenance/damage-components${qs}`);
+  }
+
+  async createDamageComponent(
+    payload: Partial<MaintenanceDamageComponent>,
+  ): Promise<MaintenanceDamageComponent> {
+    return request<MaintenanceDamageComponent>('/maintenance/damage-components', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   }
 
   async uploadDamagePhoto(file: File): Promise<string> {

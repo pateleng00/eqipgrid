@@ -1,7 +1,9 @@
 package com.equipgrid.asset.repository;
 
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.entity.QAsset;
+import com.equipgrid.asset.entity.QAssetMedia;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
 import com.querydsl.core.BooleanBuilder;
@@ -21,6 +23,7 @@ public class AssetQueryRepository {
 
   private final JPAQueryFactory queryFactory;
   private final QAsset qAsset = QAsset.asset;
+  private final QAssetMedia qAssetMedia = QAssetMedia.assetMedia;
 
   public List<Asset> fetchAssets(AssetCategory category, AssetStatus status) {
     BooleanBuilder builder = new BooleanBuilder();
@@ -144,5 +147,42 @@ public class AssetQueryRepository {
 
     Long count = queryFactory.select(qAsset.count()).from(qAsset).where(builder).fetchOne();
     return count != null ? count : 0L;
+  }
+
+  public List<AssetMedia> fetchMediaByAssetId(Long assetId) {
+    if (assetId == null) {
+      return List.of();
+    }
+    return queryFactory
+        .selectFrom(qAssetMedia)
+        .where(qAssetMedia.asset.id.eq(assetId))
+        .orderBy(qAssetMedia.mediaType.asc(), qAssetMedia.displayOrder.asc())
+        .fetch();
+  }
+
+  public long countMediaByAssetIdAndMediaType(Long assetId, String mediaType) {
+    if (assetId == null || mediaType == null) {
+      return 0L;
+    }
+    Long count =
+        queryFactory
+            .select(qAssetMedia.count())
+            .from(qAssetMedia)
+            .where(qAssetMedia.asset.id.eq(assetId).and(qAssetMedia.mediaType.eq(mediaType)))
+            .fetchOne();
+    return count != null ? count : 0L;
+  }
+
+  public int fetchMaxMediaDisplayOrder(Long assetId, String mediaType) {
+    if (assetId == null || mediaType == null) {
+      return -1;
+    }
+    Integer max =
+        queryFactory
+            .select(qAssetMedia.displayOrder.max())
+            .from(qAssetMedia)
+            .where(qAssetMedia.asset.id.eq(assetId).and(qAssetMedia.mediaType.eq(mediaType)))
+            .fetchOne();
+    return max != null ? max : -1;
   }
 }

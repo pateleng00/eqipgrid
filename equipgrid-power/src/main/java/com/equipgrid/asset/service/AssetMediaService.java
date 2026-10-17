@@ -4,6 +4,7 @@ import com.equipgrid.asset.dto.response.AssetMediaResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.repository.AssetMediaRepository;
+import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.audit.service.IAuditService;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.exception.EquipGridException;
@@ -36,6 +37,7 @@ public class AssetMediaService {
       Set.of("video/mp4", "video/webm", "video/quicktime");
 
   private final AssetMediaRepository mediaRepository;
+  private final AssetQueryRepository assetQueryRepository;
   private final IAssetService assetService;
   private final StorageService storageService;
   private final IAuditService auditService;
@@ -44,7 +46,7 @@ public class AssetMediaService {
 
   public List<AssetMediaResponse> listMedia(Long assetId) {
     assetService.getAssetById(assetId); // validates asset exists
-    return mediaRepository.findByAssetIdOrderByMediaTypeAscDisplayOrderAsc(assetId).stream()
+    return assetQueryRepository.fetchMediaByAssetId(assetId).stream()
         .map(this::toResponse)
         .toList();
   }
@@ -56,7 +58,7 @@ public class AssetMediaService {
     Asset asset = assetService.getAssetById(assetId);
 
     // Enforce image limit
-    long existingCount = mediaRepository.countByAssetIdAndMediaType(assetId, "IMAGE");
+    long existingCount = assetQueryRepository.countMediaByAssetIdAndMediaType(assetId, "IMAGE");
     if (existingCount >= MAX_IMAGES) {
       throw new EquipGridException(
           EquipGridExceptionEnum.EG_BUSINESS_RULE_VIOLATION,
@@ -73,7 +75,7 @@ public class AssetMediaService {
         storageService.copyToPermanentStorage(
             DocumentType.ASSET_IMAGE, (String) tmp.get("url"), identifier);
 
-    int nextOrder = mediaRepository.findMaxDisplayOrder(assetId, "IMAGE") + 1;
+    int nextOrder = assetQueryRepository.fetchMaxMediaDisplayOrder(assetId, "IMAGE") + 1;
 
     AssetMedia media =
         AssetMedia.builder()
@@ -106,7 +108,7 @@ public class AssetMediaService {
     Asset asset = assetService.getAssetById(assetId);
 
     // Enforce single video limit
-    long existingVideo = mediaRepository.countByAssetIdAndMediaType(assetId, "VIDEO");
+    long existingVideo = assetQueryRepository.countMediaByAssetIdAndMediaType(assetId, "VIDEO");
     if (existingVideo >= MAX_VIDEOS) {
       throw new EquipGridException(
           EquipGridExceptionEnum.EG_BUSINESS_RULE_VIOLATION,

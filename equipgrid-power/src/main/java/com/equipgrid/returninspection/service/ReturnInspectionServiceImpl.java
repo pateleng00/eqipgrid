@@ -11,6 +11,7 @@ import com.equipgrid.booking.repository.BookingRepository;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.payment.entity.RefundTransaction;
 import com.equipgrid.payment.enums.RefundStatus;
+import com.equipgrid.payment.repository.PaymentQueryRepository;
 import com.equipgrid.payment.repository.RefundTransactionRepository;
 import com.equipgrid.returninspection.dto.request.CreateInspectionRequest;
 import com.equipgrid.returninspection.dto.response.SettlementCalculationResponse;
@@ -36,6 +37,7 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
   private final AssetRepository assetRepository;
   private final IAuditService auditService;
   private final RefundTransactionRepository refundTransactionRepository;
+  private final PaymentQueryRepository paymentQueryRepository;
   private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
       whatsAppNotificationService;
 
@@ -112,8 +114,8 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
                     : BigDecimal.ZERO)
             .max(BigDecimal.ZERO);
     if (refundable.compareTo(BigDecimal.ZERO) > 0) {
-      refundTransactionRepository
-          .findFirstByBookingIdAndStatus(booking.getId(), RefundStatus.PENDING)
+      paymentQueryRepository
+          .fetchFirstRefundByBookingIdAndStatus(booking.getId(), RefundStatus.PENDING)
           .orElseGet(
               () ->
                   refundTransactionRepository.save(

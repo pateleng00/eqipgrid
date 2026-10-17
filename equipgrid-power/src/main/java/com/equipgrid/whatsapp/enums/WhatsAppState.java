@@ -8,28 +8,27 @@ import lombok.Getter;
 
 @Getter
 public enum WhatsAppState {
-  MAIN_MENU((short) 1),
-  SELECTING_CATEGORY((short) 2),
-  SELECTING_ASSET((short) 3),
-  ENTERING_DATES((short) 4),
-  ENTERING_LOCATION((short) 5),
-  CONFIRMING_BOOKING((short) 6),
-  AWAITING_PAYMENT((short) 7),
-  TRACKING_ORDER((short) 8),
-  REQUESTING_RETURN((short) 9),
-  SELECTING_HUB((short) 10),
-  SELECTING_DELIVERY_DESTINATION((short) 11),
-  /** Processing an incoming voice note via Gemini STT + intent parsing */
-  PROCESSING_VOICE((short) 12),
-  /** Step-by-step WhatsApp damage checklist during return pickup */
-  DAMAGE_CHECKLIST_ACTIVE((short) 13),
-  /** Multimode tariff slab selection (Per Acre, Per Trip, Daily Shift, Metered Hourly) */
-  SELECTING_TARIFF((short) 14);
+  MAIN_MENU((short) 1, "Main Menu (मुख्य मेनू)"),
+  SELECTING_CATEGORY((short) 2, "Selecting Category (श्रेणी चयन)"),
+  SELECTING_ASSET((short) 3, "Selecting Machine (मशीन चयन)"),
+  ENTERING_DATES((short) 4, "Entering Rental Dates (तारीख चयन)"),
+  ENTERING_LOCATION((short) 5, "Entering Delivery Location (स्थान दर्ज)"),
+  CONFIRMING_BOOKING((short) 6, "Confirming Booking (बुकिंग पुष्टि)"),
+  AWAITING_PAYMENT((short) 7, "Awaiting Payment (भुगतान प्रतीक्षा)"),
+  TRACKING_ORDER((short) 8, "Tracking Order (ऑर्डर ट्रैकिंग)"),
+  REQUESTING_RETURN((short) 9, "Requesting Return (वापसी अनुरोध)"),
+  SELECTING_HUB((short) 10, "Selecting Station Hub (स्टेशन चयन)"),
+  SELECTING_DELIVERY_DESTINATION((short) 11, "Selecting Destination (गंतव्य चयन)"),
+  PROCESSING_VOICE((short) 12, "Processing Voice Note (ध्वनि संदेश प्रसंस्करण)"),
+  DAMAGE_CHECKLIST_ACTIVE((short) 13, "Damage Checklist Active (क्षति जांच)"),
+  SELECTING_TARIFF((short) 14, "Selecting Tariff Plan (किराया दर चयन)");
 
   @JsonValue private final Short value;
+  private final String description;
 
-  WhatsAppState(short value) {
+  WhatsAppState(short value, String description) {
     this.value = value;
+    this.description = description;
   }
 
   public static WhatsAppState fromValue(Short value) {

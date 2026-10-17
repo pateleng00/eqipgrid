@@ -4,6 +4,7 @@ import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.service.ICustomerService;
 import com.equipgrid.farmlocation.dto.request.UpsertFarmLocationRequest;
 import com.equipgrid.farmlocation.entity.FarmLocation;
+import com.equipgrid.farmlocation.repository.FarmLocationQueryRepository;
 import com.equipgrid.farmlocation.repository.FarmLocationRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -14,21 +15,21 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class FarmLocationServiceImpl implements IFarmLocationService {
   private final FarmLocationRepository farmLocationRepository;
+  private final FarmLocationQueryRepository farmLocationQueryRepository;
   private final ICustomerService customerService;
 
   @Override
   @Transactional(readOnly = true)
   public List<FarmLocation> getCustomerLocations(Long customerId) {
     customerService.getCustomerById(customerId);
-    return farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(
-        customerId);
+    return farmLocationQueryRepository.fetchByCustomerId(customerId);
   }
 
   @Override
   @Transactional(readOnly = true)
   public FarmLocation getCustomerLocation(Long customerId, Long locationId) {
-    return farmLocationRepository
-        .findByIdAndCustomerIdAndActiveTrue(locationId, customerId)
+    return farmLocationQueryRepository
+        .fetchByIdAndCustomerId(locationId, customerId)
         .orElseThrow(
             () -> new Exceptions.ResourceNotFoundException("Saved farm location not found"));
   }
@@ -54,9 +55,7 @@ public class FarmLocationServiceImpl implements IFarmLocationService {
 
   private void normalizeDefault(Long customerId, FarmLocation target) {
     if (!Boolean.TRUE.equals(target.getIsDefault())) return;
-    farmLocationRepository
-        .findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(customerId)
-        .stream()
+    farmLocationQueryRepository.fetchByCustomerId(customerId).stream()
         .filter(location -> !location.getId().equals(target.getId()))
         .forEach(location -> location.setIsDefault(false));
   }

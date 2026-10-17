@@ -92,6 +92,20 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   const [meterHoursAtService, setMeterHoursAtService] = useState<string>('');
   const [assignedTechnician, setAssignedTechnician] = useState('');
 
+  // Cascading Machine Filter State: City -> Hub -> Equipment Type -> OEM -> Model -> Asset Unit
+  const [selectedCityId, setSelectedCityId] = useState<number | ''>('');
+  const [selectedHubId, setSelectedHubId] = useState<number | ''>('');
+  const [selectedTypeId, setSelectedTypeId] = useState<number | ''>('');
+  const [selectedOemId, setSelectedOemId] = useState<number | ''>('');
+  const [selectedModelId, setSelectedModelId] = useState<number | ''>('');
+
+  // Inline custom component creation state
+  const [isAddingNewComponent, setIsAddingNewComponent] = useState(false);
+  const [newComponentName, setNewComponentName] = useState('');
+  const [newComponentHindiName, setNewComponentHindiName] = useState('');
+  const [newComponentCategory, setNewComponentCategory] = useState('');
+  const [isSavingNewComponent, setIsSavingNewComponent] = useState(false);
+
   // Periodic Service specific fields
   const [serviceNumber, setServiceNumber] = useState<string>('1st Service (50 Hours)');
   const [isFreeService, setIsFreeService] = useState<boolean>(true);
@@ -131,7 +145,6 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
   const [uploadedInvoiceFileName, setUploadedInvoiceFileName] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-
   // Fetch tickets & damage components from backend
   const loadTickets = async () => {
     setLoadingTickets(true);
@@ -145,10 +158,10 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     }
   };
 
-  const loadDamageComponents = async () => {
+  const loadDamageComponents = async (typeId?: number) => {
     setLoadingComponents(true);
     try {
-      const data = await api.fetchDamageComponents();
+      const data = await api.fetchDamageComponents(typeId);
       setDamageComponents(data || []);
     } catch (err) {
       console.error('Failed to load damage components:', err);
@@ -242,9 +255,134 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     );
   }, [assets]);
 
-  // Open Create Modal
+  // 1. Available Cities (from api.cities or derived from hubs)
+  const availableCities = useMemo(() => {
+    if (api.cities && api.cities.length > 0) return api.cities;
+    const cityMap = new Map<number, string>();
+    api.hubs.forEach((h) => {
+      if (h.cityId) {
+        cityMap.set(h.cityId, h.cityName || `City #${h.cityId}`);
+      }
+    });
+    return Array.from(cityMap.entries()).map(([id, name]) => ({
+      id,
+      name,
+      stateId: 0,
+      active: true,
+    }));
+  }, [api.cities, api.hubs]);
+
+  // 2. Hubs filtered by selectedCityId
+  const availableHubs = useMemo(() => {
+    return api.hubs.filter((h) => !selectedCityId || h.cityId === Number(selectedCityId));
+  }, [api.hubs, selectedCityId]);
+
+  // 3. Equipment Types list
+  const availableTypes = useMemo(() => {
+    return api.types.filter((t) => t.active !== false);
+  }, [api.types]);
+
+  // 4. OEMs / Manufacturers filtered by selectedTypeId
+  const availableOems = useMemo(() => {
+    if (!selectedTypeId) return api.manufacturers.filter((m) => m.active !== false);
+    const matchingModelOemIds = new Set(
+      api.models.filter((m) => m.typeId === Number(selectedTypeId)).map((m) => m.manufacturerId),
+    );
+    eligibleAssets
+      .filter((a) => a.typeId === Number(selectedTypeId))
+      .forEach((a) => {
+        if (a.manufacturerId) matchingModelOemIds.add(a.manufacturerId);
+      });
+    return api.manufacturers.filter(
+      (m) => matchingModelOemIds.size === 0 || matchingModelOemIds.has(m.id),
+    );
+  }, [api.manufacturers, api.models, eligibleAssets, selectedTypeId]);
+
+  // 5. Models filtered by selectedTypeId and selectedOemId
+  const availableModels = useMemo(() => {
+    return api.models.filter((m) => {
+      if (selectedTypeId && m.typeId !== Number(selectedTypeId)) return false;
+      if (selectedOemId && m.manufacturerId !== Number(selectedOemId)) return false;
+      return true;
+    });
+  }, [api.models, selectedTypeId, selectedOemId]);
+
+  // 6. Matching Machine Units (Assets)
+  const matchingAssets = useMemo(() => {
+    return eligibleAssets.filter((a) => {
+      if (selectedHubId && a.hubId !== Number(selectedHubId)) return false;
+      if (selectedTypeId && a.typeId !== Number(selectedTypeId)) return false;
+      if (selectedOemId && a.manufacturerId !== Number(selectedOemId)) return false;
+      if (selectedModelId && a.modelId !== Number(selectedModelId)) return false;
+      return true;
+    });
+  }, [eligibleAssets, selectedHubId, selectedTypeId, selectedOemId, selectedModelId]);
+
+  // Cascading Selection Handlers
+  const handleCityChange = (cityId: number | '') => {
+    setSelectedCityId(cityId);
+    setSelectedHubId('');
+    setSelectedAssetId('');
+  };
+
+  const handleHubChange = (hubId: number | '') => {
+    setSelectedHubId(hubId);
+    setSelectedAssetId('');
+  };
+
+  const handleTypeChange = (typeId: number | '') => {
+    setSelectedTypeId(typeId);
+    setSelectedOemId('');
+    setSelectedModelId('');
+    setSelectedAssetId('');
+    setSelectedDamagedComponents([]);
+    loadDamageComponents(typeId ? Number(typeId) : undefined);
+  };
+
+  const handleOemChange = (oemId: number | '') => {
+    setSelectedOemId(oemId);
+    setSelectedModelId('');
+    setSelectedAssetId('');
+  };
+
+  const handleModelChange = (modelId: number | '') => {
+    setSelectedModelId(modelId);
+    setSelectedAssetId('');
+  };
+
+  const handleAssetSelect = (asset: Asset) => {
+    setSelectedAssetId(asset.id);
+    if (asset.engineHours) {
+      setMeterHoursAtService(String(asset.engineHours));
+    }
+  };
+
+  // Open Create Modal (with cascading pre-population if preselectedAssetId)
   const handleOpenCreateModal = (preselectedAssetId?: number) => {
-    setSelectedAssetId(preselectedAssetId || (eligibleAssets[0]?.id ?? ''));
+    const matched = preselectedAssetId ? assets.find((a) => a.id === preselectedAssetId) : undefined;
+    const initialAsset = matched || (eligibleAssets.length > 0 ? eligibleAssets[0] : undefined);
+
+    if (initialAsset) {
+      setSelectedAssetId(initialAsset.id);
+      setSelectedHubId(initialAsset.hubId || '');
+      const hubObj = api.hubs.find((h) => h.id === initialAsset.hubId);
+      setSelectedCityId(hubObj?.cityId || '');
+      setSelectedTypeId(initialAsset.typeId || '');
+      setSelectedOemId(initialAsset.manufacturerId || '');
+      setSelectedModelId(initialAsset.modelId || '');
+      setMeterHoursAtService(initialAsset.engineHours ? String(initialAsset.engineHours) : '');
+      loadDamageComponents(initialAsset.typeId || undefined);
+    } else {
+      setSelectedAssetId('');
+      setSelectedCityId('');
+      setSelectedHubId('');
+      setSelectedTypeId('');
+      setSelectedOemId('');
+      setSelectedModelId('');
+      setMeterHoursAtService('');
+      loadDamageComponents(undefined);
+    }
+
     setServiceType('PERIODIC_SERVICE');
     setLocationType('IN_HOUSE');
     setServiceCenterName('');
@@ -255,7 +393,6 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     setWorkScope('');
     setEstimatedCost('');
     setExpectedCompletionDate('');
-    setMeterHoursAtService('');
     setAssignedTechnician('');
     setServiceNumber('1st Service (50 Hours)');
     setIsFreeService(true);
@@ -265,7 +402,41 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
     setSelectedDamagedComponents([]);
     setOtherDamageDescription('');
     setDamageImageUrls([]);
+    setIsAddingNewComponent(false);
+    setNewComponentName('');
+    setNewComponentHindiName('');
     setIsCreateModalOpen(true);
+  };
+
+  // Save new custom damage component to database
+  const handleSaveCustomComponent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newComponentName.trim()) {
+      alert('Please enter component name (पुर्जे का नाम लिखें).');
+      return;
+    }
+    setIsSavingNewComponent(true);
+    try {
+      const created = await api.createDamageComponent({
+        equipmentTypeId: selectedTypeId ? Number(selectedTypeId) : undefined,
+        name: newComponentName.trim(),
+        hindiName: newComponentHindiName.trim() || undefined,
+        category: newComponentCategory.trim() || 'CUSTOM_PARTS',
+        isUniversal: !selectedTypeId,
+      });
+
+      // Reload damage components for this equipment type
+      await loadDamageComponents(selectedTypeId ? Number(selectedTypeId) : undefined);
+      // Auto-select newly created component
+      setSelectedDamagedComponents((prev) => [...prev, created.partCode]);
+      setNewComponentName('');
+      setNewComponentHindiName('');
+      setIsAddingNewComponent(false);
+    } catch (err: any) {
+      alert(`Error saving custom component: ${err?.message || 'Server error'}`);
+    } finally {
+      setIsSavingNewComponent(false);
+    }
   };
 
   // Toggle damaged component selection
@@ -987,29 +1158,198 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
             </div>
 
             <form onSubmit={handleCreateTicketSubmit} className="mt-4 space-y-4 text-xs">
-              {/* Asset Selector */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1">
-                  Select Yard Machine (मशीन चुनें) *
-                </label>
-                <select
-                  required
-                  value={selectedAssetId}
-                  onChange={(e) => setSelectedAssetId(Number(e.target.value))}
-                  className={cn(
-                    'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none',
-                    isDaylight
-                      ? 'border-slate-300 bg-white text-slate-900 focus:border-amber-500'
-                      : 'border-slate-800 bg-slate-950 text-white focus:border-amber-500',
-                  )}
-                >
-                  <option value="" disabled>-- Select Available / Damaged Machine --</option>
-                  {eligibleAssets.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      [{a.assetTag}] {a.name} — Status: {a.status} (Hub: {a.hubName || 'Main Yard'})
+              {/* ── 6-Step Cascading Machine Selector ── */}
+              <div
+                className={cn(
+                  'p-3.5 rounded-xl border space-y-3',
+                  isDaylight ? 'bg-slate-50/80 border-slate-200' : 'bg-slate-950/40 border-slate-800',
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                    <Layers className="h-4 w-4 text-amber-500" />
+                    <span>Select Machine via Cascading Filter (मशीन चयन: शहर → हब → प्रकार → OEM → मॉडल)</span>
+                  </div>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-mono">
+                    {matchingAssets.length} unit{matchingAssets.length !== 1 ? 's' : ''} available
+                  </span>
+                </div>
+
+                {/* Step 1, 2, 3: City, Hub, Equipment Type */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                      1. City (शहर)
+                    </label>
+                    <select
+                      value={selectedCityId}
+                      onChange={(e) => handleCityChange(e.target.value ? Number(e.target.value) : '')}
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
+                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                      )}
+                    >
+                      <option value="">-- All Cities (सभी शहर) --</option>
+                      {availableCities.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                      2. Hub / Yard (हब / यार्ड)
+                    </label>
+                    <select
+                      value={selectedHubId}
+                      onChange={(e) => handleHubChange(e.target.value ? Number(e.target.value) : '')}
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
+                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                      )}
+                    >
+                      <option value="">-- All Hubs (सभी हब) --</option>
+                      {availableHubs.map((h) => (
+                        <option key={h.id} value={h.id}>
+                          {h.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1 flex items-center justify-between">
+                      <span>3. Machine Type (प्रकार) *</span>
+                      <span className="text-[9px] text-amber-500 font-mono">Filters Parts</span>
+                    </label>
+                    <select
+                      required
+                      value={selectedTypeId}
+                      onChange={(e) => handleTypeChange(e.target.value ? Number(e.target.value) : '')}
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none font-bold',
+                        isDaylight
+                          ? 'border-amber-300 bg-white text-slate-900 focus:border-amber-500'
+                          : 'border-amber-800 bg-slate-950 text-white focus:border-amber-500',
+                      )}
+                    >
+                      <option value="">-- Select Equipment Type --</option>
+                      {availableTypes.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} {t.hindiName ? `(${t.hindiName})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Step 4 & 5: OEM & Model */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                      4. OEM / Manufacturer (कंपनी / ब्रांड)
+                    </label>
+                    <select
+                      value={selectedOemId}
+                      onChange={(e) => handleOemChange(e.target.value ? Number(e.target.value) : '')}
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
+                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                      )}
+                    >
+                      <option value="">-- All OEMs / Brands --</option>
+                      {availableOems.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-500 mb-1">
+                      5. Model (मॉडल)
+                    </label>
+                    <select
+                      value={selectedModelId}
+                      onChange={(e) => handleModelChange(e.target.value ? Number(e.target.value) : '')}
+                      className={cn(
+                        'w-full rounded-lg border px-2.5 py-1.5 text-xs focus:outline-none',
+                        isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                      )}
+                    >
+                      <option value="">-- All Models (सभी मॉडल) --</option>
+                      {availableModels.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} {m.modelNumber ? `(${m.modelNumber})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Step 6: Specific Physical Machine Unit Selection */}
+                <div className="pt-1 border-t border-slate-200 dark:border-slate-800">
+                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-200 mb-1">
+                    6. Select Specific Machine Unit (मशीन यूनिट / टैग / सीरियल नंबर) *
+                  </label>
+                  <select
+                    required
+                    value={selectedAssetId}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      const matched = assets.find((a) => a.id === val);
+                      if (matched) handleAssetSelect(matched);
+                      else setSelectedAssetId(val);
+                    }}
+                    className={cn(
+                      'w-full rounded-xl border px-3 py-2 text-xs focus:outline-none font-semibold',
+                      isDaylight
+                        ? 'border-amber-400 bg-white text-slate-900 focus:border-amber-500'
+                        : 'border-amber-700 bg-slate-950 text-white focus:border-amber-500',
+                    )}
+                  >
+                    <option value="" disabled>
+                      {matchingAssets.length === 0
+                        ? '-- No Available/Damaged Units Match this Filter --'
+                        : `-- Choose Unit from ${matchingAssets.length} Matching Machines --`}
                     </option>
-                  ))}
-                </select>
+                    {matchingAssets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        [{a.assetTag}] {a.name} • S/N: {a.serialNumber || 'N/A'} • {a.engineHours || 0}h • [{a.status}]
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Selected Asset Mini Card */}
+                  {selectedAssetId && (() => {
+                    const selAsset = assets.find((a) => a.id === Number(selectedAssetId));
+                    if (!selAsset) return null;
+                    return (
+                      <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-2">
+                          <Truck className="h-4 w-4 text-amber-500" />
+                          <div>
+                            <span className="font-black text-slate-900 dark:text-white">
+                              {selAsset.name}
+                            </span>{' '}
+                            <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400">
+                              [{selAsset.assetTag}]
+                            </span>
+                            <div className="text-[10px] text-slate-500">
+                              Hub: {selAsset.hubName || 'Yard'} • S/N: {selAsset.serialNumber || 'N/A'} • Meter: {selAsset.engineHours || 0} Hours
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 border">
+                          {selAsset.status}
+                        </span>
+                      </div>
+                    );
+                  })()}
+                </div>
               </div>
 
               {/* Service Location Type Selector */}
@@ -1273,16 +1613,153 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                     <span className="text-[10px] text-amber-500 font-semibold">खराबी व मरम्मत</span>
                   </div>
 
+                  {/* Equipment Type scoping context */}
+                  {selectedTypeId ? (
+                    <div className="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <Layers className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                          Type Scope:{' '}
+                          <span className="font-bold text-amber-600 dark:text-amber-400">
+                            {api.types.find((t) => t.id === Number(selectedTypeId))?.name || 'Selected Equipment Type'}
+                          </span>
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                        {damageComponents.length} Type-Specific & Universal Parts Loaded
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 rounded-lg bg-sky-50 dark:bg-sky-950/30 border border-sky-200 dark:border-sky-900/40 text-xs flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sky-800 dark:text-sky-300">
+                        <Info className="h-4 w-4 shrink-0 text-sky-500" />
+                        <span>
+                          <strong>Step 3 Hint:</strong> Select Equipment Type in Step 3 above to automatically load exact components for that machine class (Tractor, Rotavator, Harvester, etc.).
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-sky-600 dark:text-sky-400 shrink-0 font-semibold">
+                        Universal Parts Only
+                      </span>
+                    </div>
+                  )}
+
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                      <span>Select Damaged Machine / Vehicle Components (क्षतिग्रस्त पुर्जे चुनें) *</span>
-                      <span className="text-[10px] text-slate-400">Database table list</span>
-                    </label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-1.5">
+                        <span>Select Damaged Machine / Vehicle Components (क्षतिग्रस्त पुर्जे चुनें) *</span>
+                        {selectedDamagedComponents.length > 0 && (
+                          <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-amber-500 text-white font-bold">
+                            {selectedDamagedComponents.length} selected
+                          </span>
+                        )}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingNewComponent(!isAddingNewComponent)}
+                        className="text-[10px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <PlusCircle className="h-3 w-3" />
+                        <span>{isAddingNewComponent ? 'Close Add Part' : '+ Add New Part (नया पुर्जा जोड़ें)'}</span>
+                      </button>
+                    </div>
+
+                    {/* Inline Form to add custom component to this equipment type */}
+                    {isAddingNewComponent && (
+                      <div className="mb-2.5 p-2.5 rounded-lg border border-amber-300 dark:border-amber-800 bg-white dark:bg-slate-900 shadow-sm space-y-2">
+                        <div className="flex items-center justify-between border-b pb-1.5 border-slate-100 dark:border-slate-800">
+                          <span className="text-[11px] font-black text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                            <PlusCircle className="h-3.5 w-3.5 text-amber-500" />
+                            <span>Add New Component to {api.types.find((t) => t.id === Number(selectedTypeId))?.name || 'All Types'}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewComponent(false)}
+                            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Part Name (English) *</label>
+                            <input
+                              type="text"
+                              value={newComponentName}
+                              onChange={(e) => setNewComponentName(e.target.value)}
+                              placeholder="e.g. PTO Yoke, Tine Holder"
+                              className={cn(
+                                'w-full rounded-lg border px-2 py-1 text-xs focus:outline-none font-semibold',
+                                isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                              )}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Hindi Name (हिंदी नाम - ऐच्छिक)</label>
+                            <input
+                              type="text"
+                              value={newComponentHindiName}
+                              onChange={(e) => setNewComponentHindiName(e.target.value)}
+                              placeholder="जैसे पी.टी.ओ. योक, ब्लेड होल्डर"
+                              className={cn(
+                                'w-full rounded-lg border px-2 py-1 text-xs focus:outline-none',
+                                isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                              )}
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-500 mb-0.5">Category (श्रेणी)</label>
+                            <select
+                              value={newComponentCategory}
+                              onChange={(e) => setNewComponentCategory(e.target.value)}
+                              className={cn(
+                                'w-full rounded-lg border px-2 py-1 text-xs focus:outline-none font-semibold',
+                                isDaylight ? 'border-slate-300 bg-white' : 'border-slate-800 bg-slate-950',
+                              )}
+                            >
+                              <option value="ATTACHMENT">ATTACHMENT (उपकरण/अटैचमेंट)</option>
+                              <option value="HYDRAULIC">HYDRAULIC (हाइड्रोलिक)</option>
+                              <option value="TRANSMISSION">TRANSMISSION (ट्रांसमिशन)</option>
+                              <option value="ENGINE">ENGINE (इंजन)</option>
+                              <option value="ELECTRICAL">ELECTRICAL (इलेक्ट्रिकल)</option>
+                              <option value="CHASSIS">CHASSIS / BODY (चेसिस)</option>
+                              <option value="CUSTOM_PARTS">CUSTOM_PARTS (अन्य विशिष्ट)</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingNewComponent(false)}
+                            className="px-2.5 py-1 text-[11px] rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSavingNewComponent || !newComponentName.trim()}
+                            onClick={handleSaveCustomComponent}
+                            className="px-3 py-1 text-[11px] font-bold rounded-lg bg-amber-500 hover:bg-amber-600 text-slate-950 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          >
+                            {isSavingNewComponent ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Check className="h-3 w-3" />
+                            )}
+                            <span>{isSavingNewComponent ? 'Saving...' : 'Save Part to DB (पुर्जा सेव करें)'}</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {loadingComponents ? (
-                      <div className="text-xs text-slate-400 py-2">Loading generic components list...</div>
+                      <div className="text-xs text-slate-400 py-2 flex items-center gap-2">
+                        <RefreshCw className="h-3.5 w-3.5 animate-spin text-amber-500" />
+                        <span>Loading {selectedTypeId ? 'type-specific' : 'generic'} components list...</span>
+                      </div>
                     ) : (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-44 overflow-y-auto p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-48 overflow-y-auto p-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                         {damageComponents.map((comp) => {
                           const isSelected = selectedDamagedComponents.includes(comp.partCode);
                           return (
@@ -1299,9 +1776,12 @@ export const MaintenanceDeckView: React.FC<MaintenanceDeckViewProps> = ({ onNavi
                                   : 'border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900',
                               )}
                             >
-                              <span className="truncate">
-                                {comp.name} {comp.hindiName ? `(${comp.hindiName})` : ''}
-                              </span>
+                              <div className="truncate">
+                                <span>{comp.name}</span>
+                                {comp.hindiName && (
+                                  <span className="text-[10px] opacity-75 ml-1">({comp.hindiName})</span>
+                                )}
+                              </div>
                               {isSelected ? (
                                 <CheckSquare className="h-3.5 w-3.5 shrink-0 text-amber-500" />
                               ) : (

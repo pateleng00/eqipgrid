@@ -6,6 +6,7 @@ import com.equipgrid.fulfillment.entity.DeliveryJob;
 import com.equipgrid.fulfillment.entity.ReturnPickupJob;
 import com.equipgrid.fulfillment.enums.JobStatus;
 import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
+import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
 import com.equipgrid.fulfillment.repository.ReturnPickupJobRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,25 +23,26 @@ public class FulfillmentServiceImpl implements IFulfillmentService {
 
   private final DeliveryJobRepository deliveryJobs;
   private final ReturnPickupJobRepository returnJobs;
+  private final FulfillmentQueryRepository fulfillmentQueryRepository;
   private final IBookingService bookingService;
 
   @Override
   @Transactional(readOnly = true)
   public List<DeliveryJob> getAllDeliveries() {
-    return deliveryJobs.findAll();
+    return fulfillmentQueryRepository.fetchAllDeliveryJobs();
   }
 
   @Override
   @Transactional(readOnly = true)
   public List<ReturnPickupJob> getAllReturns() {
-    return returnJobs.findAll();
+    return fulfillmentQueryRepository.fetchAllReturnPickupJobs();
   }
 
   @Override
   public DeliveryJob createOrUpdateDeliveryForBooking(Long bookingId, UpdateJobRequest request) {
     DeliveryJob job =
-        deliveryJobs
-            .findByBookingId(bookingId)
+        fulfillmentQueryRepository
+            .fetchDeliveryJobByBookingId(bookingId)
             .orElseGet(
                 () ->
                     DeliveryJob.builder()
@@ -56,8 +58,8 @@ public class FulfillmentServiceImpl implements IFulfillmentService {
   @Override
   public DeliveryJob updateDeliveryJob(Long id, UpdateJobRequest request) {
     DeliveryJob job =
-        deliveryJobs
-            .findById(id)
+        fulfillmentQueryRepository
+            .fetchDeliveryJobById(id)
             .orElseThrow(() -> new IllegalArgumentException("Delivery job not found: " + id));
     applyDeliveryDetails(job, request);
     if (job.getStatus() == JobStatus.COMPLETED && job.getDeliveredAt() == null) {
@@ -69,8 +71,8 @@ public class FulfillmentServiceImpl implements IFulfillmentService {
   @Override
   public ReturnPickupJob updateReturnJob(Long id, UpdateJobRequest request) {
     ReturnPickupJob job =
-        returnJobs
-            .findById(id)
+        fulfillmentQueryRepository
+            .fetchReturnPickupJobById(id)
             .orElseThrow(() -> new IllegalArgumentException("Return pickup job not found: " + id));
     if (request.getStatus() != null) {
       job.setStatus(request.getStatus());

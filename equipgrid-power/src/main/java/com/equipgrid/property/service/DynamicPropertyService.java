@@ -7,6 +7,7 @@ import com.equipgrid.common.storage.service.StorageService;
 import com.equipgrid.property.dto.DynamicPropertyRequest;
 import com.equipgrid.property.dto.DynamicPropertyResponse;
 import com.equipgrid.property.entity.DynamicProperty;
+import com.equipgrid.property.repository.DynamicPropertyQueryRepository;
 import com.equipgrid.property.repository.DynamicPropertyRepository;
 import java.util.List;
 import java.util.Optional;
@@ -21,14 +22,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class DynamicPropertyService {
 
   private final DynamicPropertyRepository dynamicPropertyRepository;
+  private final DynamicPropertyQueryRepository dynamicPropertyQueryRepository;
   private final StorageService storageService;
   private final AwsProperties awsProperties;
 
   @Transactional(readOnly = true)
   public DynamicPropertyResponse getPropertyByKey(String key) {
     DynamicProperty property =
-        dynamicPropertyRepository
-            .findByKey(key)
+        dynamicPropertyQueryRepository
+            .fetchByKey(key)
             .orElseThrow(
                 () ->
                     new EquipGridException(
@@ -39,19 +41,19 @@ public class DynamicPropertyService {
 
   @Transactional(readOnly = true)
   public Optional<DynamicPropertyResponse> findPropertyByKey(String key) {
-    return dynamicPropertyRepository.findByKey(key).map(this::toResponse);
+    return dynamicPropertyQueryRepository.fetchByKey(key).map(this::toResponse);
   }
 
   @Transactional(readOnly = true)
   public List<DynamicPropertyResponse> getAllProperties() {
-    return dynamicPropertyRepository.findAll().stream().map(this::toResponse).toList();
+    return dynamicPropertyQueryRepository.fetchAll().stream().map(this::toResponse).toList();
   }
 
   @Transactional
   public DynamicPropertyResponse upsertProperty(DynamicPropertyRequest request) {
     DynamicProperty property =
-        dynamicPropertyRepository
-            .findByKey(request.getKey())
+        dynamicPropertyQueryRepository
+            .fetchByKey(request.getKey())
             .map(
                 existing -> {
                   existing.setValue(request.getValue());

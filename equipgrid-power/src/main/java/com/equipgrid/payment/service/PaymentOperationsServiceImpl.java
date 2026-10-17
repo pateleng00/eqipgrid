@@ -11,6 +11,7 @@ import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.enums.RefundStatus;
 import com.equipgrid.payment.enums.VerificationStatus;
 import com.equipgrid.payment.repository.PaymentProofRepository;
+import com.equipgrid.payment.repository.PaymentQueryRepository;
 import com.equipgrid.payment.repository.RefundTransactionRepository;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -27,12 +28,13 @@ public class PaymentOperationsServiceImpl implements IPaymentOperationsService {
 
   private final PaymentProofRepository proofs;
   private final RefundTransactionRepository refunds;
+  private final PaymentQueryRepository paymentQueryRepository;
   private final IPaymentService payments;
 
   @Override
   @Transactional(readOnly = true)
   public List<PaymentProof> getPendingProofs() {
-    return proofs.findByStatusOrderBySubmittedAtAsc(VerificationStatus.PENDING);
+    return paymentQueryRepository.fetchProofsByStatus(VerificationStatus.PENDING);
   }
 
   @Override
@@ -74,7 +76,7 @@ public class PaymentOperationsServiceImpl implements IPaymentOperationsService {
   @Override
   @Transactional(readOnly = true)
   public List<RefundTransaction> getAllRefunds() {
-    return refunds.findAll();
+    return paymentQueryRepository.fetchAllRefunds();
   }
 
   @Override

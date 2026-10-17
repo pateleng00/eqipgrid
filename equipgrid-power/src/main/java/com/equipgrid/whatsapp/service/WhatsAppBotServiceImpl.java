@@ -4,7 +4,6 @@ import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.entity.AssetMedia;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
-import com.equipgrid.asset.repository.AssetMediaRepository;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.booking.dto.request.CreateBookingRequest;
 import com.equipgrid.booking.dto.request.QuoteRequest;
@@ -23,15 +22,19 @@ import com.equipgrid.dispatch.entity.DispatchRecord;
 import com.equipgrid.dispatch.repository.DispatchQueryRepository;
 import com.equipgrid.farmlocation.entity.FarmLocation;
 import com.equipgrid.farmlocation.enums.FarmLocationType;
+import com.equipgrid.farmlocation.repository.FarmLocationQueryRepository;
 import com.equipgrid.farmlocation.repository.FarmLocationRepository;
 import com.equipgrid.fulfillment.entity.ReturnPickupJob;
+import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
 import com.equipgrid.fulfillment.repository.ReturnPickupJobRepository;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
+import com.equipgrid.location.repository.LocationQueryRepository;
 import com.equipgrid.payment.entity.PaymentProof;
 import com.equipgrid.payment.repository.PaymentProofRepository;
 import com.equipgrid.payment.service.IPaymentService;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.whatsapp.dto.model.UpiPaymentDetails;
 import com.equipgrid.whatsapp.dto.model.VoiceBookingIntent;
@@ -72,15 +75,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private final CustomerRepository customerRepository;
   private final CustomerQueryRepository customerQueryRepository;
   private final AssetQueryRepository assetQueryRepository;
-  private final AssetMediaRepository assetMediaRepository;
   private final HubRepository hubRepository;
+  private final LocationQueryRepository locationQueryRepository;
   private final IBookingService bookingService;
   private final BookingQueryRepository bookingQueryRepository;
   private final IPaymentService paymentService;
   private final PaymentProofRepository paymentProofRepository;
   private final DispatchQueryRepository dispatchQueryRepository;
+  private final FulfillmentQueryRepository fulfillmentQueryRepository;
   private final ReturnPickupJobRepository returnPickupJobRepository;
   private final FarmLocationRepository farmLocationRepository;
+  private final FarmLocationQueryRepository farmLocationQueryRepository;
   private final IUpiQrGeneratorService upiQrGeneratorService;
   private final StorageService storageService;
   private final ObjectMapper objectMapper;
@@ -88,6 +93,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private final MetaWhatsAppClientService metaWhatsAppClientService;
   private final ChallanDocumentService challanDocumentService;
   private final RentalConfigurationRepository rentalConfigurationRepository;
+  private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
   private final AwsProperties awsProperties;
 
   public String getEquipmentHindiName(String name, String tag) {
@@ -246,8 +252,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     List<WhatsAppMessageResponse> catalog = new ArrayList<>();
     for (Asset a : assets) {
-      List<AssetMedia> media =
-          assetMediaRepository.findByAssetIdOrderByMediaTypeAscDisplayOrderAsc(a.getId());
+      List<AssetMedia> media = assetQueryRepository.fetchMediaByAssetId(a.getId());
       String videoUrl = null;
       String previewImg = null;
       List<String> images = new ArrayList<>();
@@ -302,9 +307,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     conv.setContextData(null);
     conversationRepository.save(conv);
 
-    List<FarmLocation> locations =
-        farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(
-            customer.getId());
+    List<FarmLocation> locations = farmLocationQueryRepository.fetchByCustomerId(customer.getId());
     List<Booking> bookings = bookingQueryRepository.fetchByCustomerId(customer.getId());
     boolean isReturning = !locations.isEmpty() || !bookings.isEmpty();
 
@@ -583,7 +586,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
   private WhatsAppMessageResponse displayHubOptions(
       WhatsAppConversation conv, WhatsAppConversationContext context) {
-    List<Hub> hubs = hubRepository.findByActiveTrueOrderByNameAsc();
+    List<Hub> hubs = locationQueryRepository.findAllActiveHubs();
     StringBuilder sb = new StringBuilder();
 
     String catSub = "";
@@ -632,7 +635,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       WhatsAppConversation conv,
       Customer customer,
       WhatsAppConversationContext context) {
-    List<Hub> hubs = hubRepository.findByActiveTrueOrderByNameAsc();
+    List<Hub> hubs = locationQueryRepository.findAllActiveHubs();
     int choice = -1;
     try {
       choice = Integer.parseInt(input.trim());
@@ -847,7 +850,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         sb.append(String.format("   • 📍 Yard: %s\n", hubStr));
       }
       List<RentalConfiguration> assetConfigs =
-          rentalConfigurationRepository.findByAssetIdAndActiveTrue(asset.getId());
+          rentalConfigurationQueryRepository.fetchByAssetId(asset.getId());
       if (assetConfigs.size() > 1) {
         sb.append(
             String.format(
@@ -1010,9 +1013,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       }
     }
 
-    // Fetch S3 media items for this machine (4 photos + 1 10-second demo video)
-    List<AssetMedia> mediaList =
-        assetMediaRepository.findByAssetIdOrderByMediaTypeAscDisplayOrderAsc(selected.getId());
+    List<AssetMedia> mediaList = assetQueryRepository.fetchMediaByAssetId(selected.getId());
     String demoVideoUrl = null;
     String previewImgUrl = null;
     List<String> photoUrls = new ArrayList<>();
@@ -1039,27 +1040,22 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     if (selected.getHub() != null) {
       sb.append(String.format("📍 Station Hub: *%s*\n", selected.getHub().getName()));
     }
-
-    // Check for active RentalConfigurations (supporting multimode billing: Per Acre, Per Trip,
-    // Daily Shift, etc.)
     Long hubId = selected.getHub() != null ? selected.getHub().getId() : null;
     List<RentalConfiguration> configs =
         hubId != null
-            ? rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(
-                selected.getId(), hubId)
-            : rentalConfigurationRepository.findByAssetIdAndActiveTrue(selected.getId());
+            ? rentalConfigurationQueryRepository.fetchByAssetIdAndHubId(selected.getId(), hubId)
+            : rentalConfigurationQueryRepository.fetchByAssetId(selected.getId());
     if (configs.isEmpty()) {
-      configs = rentalConfigurationRepository.findByAssetIdAndActiveTrue(selected.getId());
+      configs = rentalConfigurationQueryRepository.fetchByAssetId(selected.getId());
     }
     if (configs.isEmpty() && selected.getType() != null) {
       configs =
           hubId != null
-              ? rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+              ? rentalConfigurationQueryRepository.fetchByTypeIdAndHubId(
                   selected.getType().getId(), hubId)
-              : rentalConfigurationRepository.findByTypeIdAndActiveTrue(selected.getType().getId());
+              : rentalConfigurationQueryRepository.fetchByTypeId(selected.getType().getId());
       if (configs.isEmpty()) {
-        configs =
-            rentalConfigurationRepository.findByTypeIdAndActiveTrue(selected.getType().getId());
+        configs = rentalConfigurationQueryRepository.fetchByTypeId(selected.getType().getId());
       }
     }
 
@@ -1429,8 +1425,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     boolean isAgri = "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory());
 
     List<FarmLocation> savedLocations =
-        farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(
-            customer.getId());
+        farmLocationQueryRepository.fetchByCustomerId(customer.getId());
 
     if (!savedLocations.isEmpty()) {
       conv.setState(WhatsAppState.SELECTING_DELIVERY_DESTINATION);
@@ -1563,8 +1558,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       WhatsAppConversationContext context) {
     String trimmed = input.toUpperCase().trim();
     List<FarmLocation> savedLocations =
-        farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(
-            customer.getId());
+        farmLocationQueryRepository.fetchByCustomerId(customer.getId());
 
     if (!savedLocations.isEmpty()) {
       // Check numeric selection
@@ -1964,8 +1958,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private void saveFarmLocationFromConversation(
       Customer customer, WhatsAppConversationContext context) {
     if (context.getSelectedFarmLocationId() != null) {
-      farmLocationRepository
-          .findByIdAndCustomerIdAndActiveTrue(context.getSelectedFarmLocationId(), customer.getId())
+      farmLocationQueryRepository
+          .fetchByIdAndCustomerId(context.getSelectedFarmLocationId(), customer.getId())
           .ifPresent(
               loc -> {
                 loc.setLastUsedAt(LocalDateTime.now());
@@ -1975,8 +1969,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     }
 
     List<FarmLocation> existingLocs =
-        farmLocationRepository.findByCustomerIdAndActiveTrueOrderByIsDefaultDescLastUsedAtDesc(
-            customer.getId());
+        farmLocationQueryRepository.fetchByCustomerId(customer.getId());
 
     if (context.getLatitude() != null && context.getLongitude() != null) {
       double lat = context.getLatitude();
@@ -2547,8 +2540,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             BookingStatus.RETURN_REQUESTED,
             "Customer requested return pickup through WhatsApp",
             "WHATSAPP_BOT");
-        returnPickupJobRepository
-            .findByBookingId(booking.getId())
+        fulfillmentQueryRepository
+            .fetchReturnPickupJobByBookingId(booking.getId())
             .orElseGet(
                 () ->
                     returnPickupJobRepository.save(
@@ -2592,7 +2585,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private String getActiveHubCitiesSummary() {
     try {
       List<String> cities =
-          hubRepository.findByActiveTrueOrderByNameAsc().stream()
+          locationQueryRepository.findAllActiveHubs().stream()
               .map(h -> h.getCity() != null ? h.getCity().getName() : h.getName())
               .filter(name -> name != null && !name.isBlank())
               .distinct()
@@ -2899,7 +2892,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     if (intent.getHubNameHint() != null && !intent.getHubNameHint().isBlank()) {
       // Try to match hub name from hint
       String hint = intent.getHubNameHint().toLowerCase();
-      hubRepository.findByActiveTrueOrderByNameAsc().stream()
+      locationQueryRepository.findAllActiveHubs().stream()
           .filter(
               h ->
                   h.getName().toLowerCase().contains(hint)

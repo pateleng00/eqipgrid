@@ -8,19 +8,21 @@ import lombok.Getter;
 
 @Getter
 public enum Role {
-  CUSTOMER((short) 1),
-  OPERATOR((short) 2),
-  TECHNICIAN((short) 3),
-  DRIVER((short) 4),
-  DEALER((short) 5),
-  MANAGER((short) 6),
-  ADMIN((short) 7),
-  ROOT((short) 8);
+  CUSTOMER((short) 1, "Customer / Farmer (ग्राहक / किसान)"),
+  OPERATOR((short) 2, "Machine Operator (मशीन ऑपरेटर)"),
+  TECHNICIAN((short) 3, "Maintenance Technician (तकनीशियन)"),
+  DRIVER((short) 4, "Logistics Driver (चालक)"),
+  DEALER((short) 5, "Village Dealer Partner (डीलर साझेदार)"),
+  MANAGER((short) 6, "Station Hub Manager (स्टेशन प्रबंधक)"),
+  ADMIN((short) 7, "Platform Administrator (व्यवस्थापक)"),
+  ROOT((short) 8, "Super Administrator (मुख्य व्यवस्थापक)");
 
   @JsonValue private final Short value;
+  private final String description;
 
-  Role(short value) {
+  Role(short value, String description) {
     this.value = value;
+    this.description = description;
   }
 
   public static Role fromValue(Short value) {

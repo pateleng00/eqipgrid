@@ -37,12 +37,10 @@ public class MaintenanceRecord extends BaseEntity {
   @JoinColumn(name = "hub_id", nullable = false)
   private Hub hub;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "service_type", nullable = false, length = 32)
+  @Column(name = "service_type", nullable = false)
   private MaintenanceServiceType serviceType;
 
-  @Enumerated(EnumType.STRING)
-  @Column(name = "location_type", nullable = false, length = 32)
+  @Column(name = "location_type", nullable = false)
   private MaintenanceLocationType locationType;
 
   @Column(name = "service_center_name", length = 255)
@@ -55,13 +53,11 @@ public class MaintenanceRecord extends BaseEntity {
   private String serviceCenterAddress;
 
   @Builder.Default
-  @Enumerated(EnumType.STRING)
-  @Column(name = "priority", nullable = false, length = 16)
+  @Column(name = "priority", nullable = false)
   private MaintenancePriority priority = MaintenancePriority.NORMAL;
 
   @Builder.Default
-  @Enumerated(EnumType.STRING)
-  @Column(name = "status", nullable = false, length = 32)
+  @Column(name = "status", nullable = false)
   private MaintenanceStatus status = MaintenanceStatus.IN_PROGRESS;
 
   @Column(name = "issue_description", nullable = false, columnDefinition = "TEXT")

@@ -8,16 +8,18 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentType {
-  ADVANCE((short) 1),
-  DEPOSIT((short) 2),
-  FINAL_SETTLEMENT((short) 3),
-  DAMAGE_CHARGE((short) 4),
-  REFUND((short) 5);
+  ADVANCE((short) 1, "Advance Rental Payment (अग्रिम किराया)"),
+  DEPOSIT((short) 2, "Security Deposit (सुरक्षा राशि)"),
+  FINAL_SETTLEMENT((short) 3, "Final Settlement (अंतिम निपटान)"),
+  DAMAGE_CHARGE((short) 4, "Damage Recovery Charge (क्षति शुल्क)"),
+  REFUND((short) 5, "Deposit Refund (जमानत वापसी)");
 
   @JsonValue private final Short value;
+  private final String description;
 
-  PaymentType(short value) {
+  PaymentType(short value, String description) {
     this.value = value;
+    this.description = description;
   }
 
   public static PaymentType fromValue(Short value) {

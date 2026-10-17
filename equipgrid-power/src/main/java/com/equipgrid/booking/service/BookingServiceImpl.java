@@ -23,6 +23,7 @@ import com.equipgrid.farmlocation.entity.FarmLocation;
 import com.equipgrid.farmlocation.service.IFarmLocationService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
@@ -54,6 +55,7 @@ public class BookingServiceImpl implements IBookingService {
   private final IWhatsAppNotificationService whatsAppNotificationService;
   private final OtpVerificationService otpVerificationService;
   private final RentalConfigurationRepository rentalConfigurationRepository;
+  private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
 
   @Override
   public List<Booking> getAllBookings(BookingStatus status) {
@@ -93,12 +95,12 @@ public class BookingServiceImpl implements IBookingService {
     } else {
       Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
       List<RentalConfiguration> configs =
-          rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+          rentalConfigurationQueryRepository.fetchByAssetIdAndHubId(asset.getId(), hId);
       if (!configs.isEmpty()) {
         rentalConfig = configs.get(0);
       } else if (asset.getType() != null && asset.getHub() != null) {
         configs =
-            rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+            rentalConfigurationQueryRepository.fetchByTypeIdAndHubId(
                 asset.getType().getId(), asset.getHub().getId());
         if (!configs.isEmpty()) {
           rentalConfig = configs.get(0);
@@ -277,12 +279,12 @@ public class BookingServiceImpl implements IBookingService {
     } else {
       Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
       List<RentalConfiguration> configs =
-          rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+          rentalConfigurationQueryRepository.fetchByAssetIdAndHubId(asset.getId(), hId);
       if (!configs.isEmpty()) {
         rentalConfig = configs.get(0);
       } else if (asset.getType() != null && asset.getHub() != null) {
         configs =
-            rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+            rentalConfigurationQueryRepository.fetchByTypeIdAndHubId(
                 asset.getType().getId(), asset.getHub().getId());
         if (!configs.isEmpty()) {
           rentalConfig = configs.get(0);

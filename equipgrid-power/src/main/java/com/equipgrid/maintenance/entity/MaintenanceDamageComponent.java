@@ -22,9 +22,6 @@ public class MaintenanceDamageComponent extends BaseEntity {
   @JoinColumn(name = "equipment_type_id")
   private EquipmentType equipmentType;
 
-  @Column(name = "equipment_type_code", length = 64)
-  private String equipmentTypeCode;
-
   @Builder.Default
   @Column(name = "is_universal")
   private Boolean isUniversal = false;

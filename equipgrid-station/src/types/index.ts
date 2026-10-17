@@ -254,6 +254,7 @@ export interface City {
 export interface Hub {
   id: number;
   cityId: number;
+  cityName?: string;
   name: string;
   code: string;
   address: string;
@@ -896,11 +897,13 @@ export type MaintenanceServiceType =
 
 export interface MaintenanceDamageComponent {
   id: number;
+  equipmentTypeId?: number;
   partCode: string;
   name: string;
   hindiName?: string;
   category?: string;
   description?: string;
+  isUniversal?: boolean;
   active: boolean;
   displayOrder?: number;
 }

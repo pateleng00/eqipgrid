@@ -11,6 +11,7 @@ import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.rentalconfig.dto.request.CreateRentalConfigRequest;
 import com.equipgrid.rentalconfig.dto.request.UpdateRentalConfigRequest;
 import com.equipgrid.rentalconfig.entity.RentalConfiguration;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import java.math.BigDecimal;
 import java.util.List;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class RentalConfigServiceImpl implements IRentalConfigService {
 
   private final RentalConfigurationRepository rentalConfigurationRepository;
+  private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
   private final HubRepository hubRepository;
   private final AssetRepository assetRepository;
   private final EquipmentTypeRepository equipmentTypeRepository;
@@ -34,13 +36,7 @@ public class RentalConfigServiceImpl implements IRentalConfigService {
   @Override
   @Transactional(readOnly = true)
   public List<RentalConfiguration> getRentalConfigs(Long hubId, Long assetId) {
-    if (hubId != null) {
-      return rentalConfigurationRepository.findByHubIdAndActiveTrue(hubId);
-    } else if (assetId != null) {
-      return rentalConfigurationRepository.findByAssetIdAndActiveTrue(assetId);
-    } else {
-      return rentalConfigurationRepository.findByActiveTrueOrderByIdDesc();
-    }
+    return rentalConfigurationQueryRepository.fetchRentalConfigs(hubId, assetId);
   }
 
   @Override

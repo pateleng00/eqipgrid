@@ -13,6 +13,7 @@ import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.repository.CustomerRepository;
 import com.equipgrid.fulfillment.entity.DeliveryJob;
 import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
+import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.payment.dto.request.RecordPaymentRequest;
 import com.equipgrid.payment.entity.Payment;
@@ -39,6 +40,7 @@ public class PaymentServiceImpl implements IPaymentService {
   private final CustomerRepository customerRepository;
   private final IAuditService auditService;
   private final DeliveryJobRepository deliveryJobRepository;
+  private final FulfillmentQueryRepository fulfillmentQueryRepository;
   private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
       whatsAppNotificationService;
 
@@ -64,8 +66,8 @@ public class PaymentServiceImpl implements IPaymentService {
                         "Booking not found: " + request.getBookingId()));
 
     if (request.getTransactionRef() != null && !request.getTransactionRef().isBlank()) {
-      paymentRepository
-          .findByTransactionRef(request.getTransactionRef().trim())
+      paymentQueryRepository
+          .fetchByTransactionRef(request.getTransactionRef().trim())
           .ifPresent(
               existing -> {
                 if (!existing.getBooking().getId().equals(booking.getId())
@@ -125,8 +127,8 @@ public class PaymentServiceImpl implements IPaymentService {
             asset.getAssetTag(),
             booking.getBookingNumber());
       }
-      deliveryJobRepository
-          .findByBookingId(booking.getId())
+      fulfillmentQueryRepository
+          .fetchDeliveryJobByBookingId(booking.getId())
           .orElseGet(
               () -> deliveryJobRepository.save(DeliveryJob.builder().booking(booking).build()));
     }

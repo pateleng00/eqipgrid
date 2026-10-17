@@ -15,6 +15,7 @@ import com.equipgrid.dispatch.repository.DispatchQueryRepository;
 import com.equipgrid.dispatch.repository.DispatchRepository;
 import com.equipgrid.fulfillment.enums.JobStatus;
 import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
+import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -37,6 +38,7 @@ public class DispatchServiceImpl implements IDispatchService {
   private final AssetRepository assetRepository;
   private final IAuditService auditService;
   private final DeliveryJobRepository deliveryJobRepository;
+  private final FulfillmentQueryRepository fulfillmentQueryRepository;
   private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
       whatsAppNotificationService;
 
@@ -123,8 +125,8 @@ public class DispatchServiceImpl implements IDispatchService {
 
     booking.setStatus(BookingStatus.ON_RENT);
     bookingRepository.save(booking);
-    deliveryJobRepository
-        .findByBookingId(booking.getId())
+    fulfillmentQueryRepository
+        .fetchDeliveryJobByBookingId(booking.getId())
         .ifPresent(
             job -> {
               job.setStatus(JobStatus.COMPLETED);

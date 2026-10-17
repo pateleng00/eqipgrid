@@ -8,13 +8,15 @@ import lombok.Getter;
 
 @Getter
 public enum CustomerTier {
-  TIER_1_BASIC((short) 1),
-  TIER_2_VERIFIED((short) 2);
+  TIER_1_BASIC((short) 1, "Tier 1 - Standard / Basic (मानक)"),
+  TIER_2_VERIFIED((short) 2, "Tier 2 - KYC Verified (सत्यापित)");
 
   @JsonValue private final Short value;
+  private final String description;
 
-  CustomerTier(short value) {
+  CustomerTier(short value, String description) {
     this.value = value;
+    this.description = description;
   }
 
   public static CustomerTier fromValue(Short value) {

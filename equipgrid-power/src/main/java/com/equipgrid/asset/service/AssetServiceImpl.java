@@ -20,6 +20,7 @@ import com.equipgrid.master.repository.BillingUnitMasterRepository;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
+import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,7 @@ public class AssetServiceImpl implements IAssetService {
   private final HubRepository hubRepository;
   private final BillingUnitMasterRepository billingUnitMasterRepository;
   private final RentalConfigurationRepository rentalConfigurationRepository;
+  private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
 
   @Override
   public List<Asset> getAllAssets(AssetCategory category, AssetStatus status) {
@@ -84,8 +86,7 @@ public class AssetServiceImpl implements IAssetService {
   private void populateRentalPricing(Asset asset) {
     if (asset == null || asset.getId() == null) return;
     Long hId = asset.getHub() != null ? asset.getHub().getId() : 0L;
-    var configs =
-        rentalConfigurationRepository.findByAssetIdAndHubIdAndActiveTrue(asset.getId(), hId);
+    var configs = rentalConfigurationQueryRepository.fetchByAssetIdAndHubId(asset.getId(), hId);
     if (!configs.isEmpty()) {
       var cfg = configs.get(0);
       asset.setDailyRate(cfg.getBaseDailyRate());
@@ -101,7 +102,7 @@ public class AssetServiceImpl implements IAssetService {
       }
     } else if (asset.getType() != null && asset.getHub() != null) {
       configs =
-          rentalConfigurationRepository.findByTypeIdAndHubIdAndActiveTrue(
+          rentalConfigurationQueryRepository.fetchByTypeIdAndHubId(
               asset.getType().getId(), asset.getHub().getId());
       if (!configs.isEmpty()) {
         var cfg = configs.get(0);
@@ -122,8 +123,7 @@ public class AssetServiceImpl implements IAssetService {
 
   private void populateMedia(Asset asset) {
     if (asset == null || asset.getId() == null) return;
-    var mediaList =
-        assetMediaRepository.findByAssetIdOrderByMediaTypeAscDisplayOrderAsc(asset.getId());
+    var mediaList = assetQueryRepository.fetchMediaByAssetId(asset.getId());
     mediaList.forEach(m -> m.setUrl(storageService.createPreSignedFileUrl(m.getS3Key())));
     asset.setMediaItems(mediaList);
   }
