@@ -1,9 +1,11 @@
 package com.equipgrid.maintenance.service;
 
 import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
+import com.equipgrid.maintenance.dto.CreateDamageComponentRequest;
 import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
 import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
 import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
+import com.equipgrid.maintenance.entity.MaintenanceDamageComponent;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,7 +30,10 @@ public interface IMaintenanceService {
 
   List<MaintenanceRecordResponse> getAssetMaintenanceHistory(Long assetId);
 
-  List<com.equipgrid.maintenance.entity.MaintenanceDamageComponent> getActiveDamageComponents();
+  List<MaintenanceDamageComponent> getActiveDamageComponents(Long equipmentTypeId, String typeCode);
+
+  MaintenanceDamageComponent createDamageComponent(
+      CreateDamageComponentRequest request, Long userId);
 
   String uploadDamagePhoto(MultipartFile file, Long userId);
 }

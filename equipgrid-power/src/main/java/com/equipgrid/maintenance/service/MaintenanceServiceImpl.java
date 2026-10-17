@@ -10,6 +10,7 @@ import com.equipgrid.common.storage.service.StorageService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
+import com.equipgrid.maintenance.dto.CreateDamageComponentRequest;
 import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
 import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
 import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
@@ -20,6 +21,8 @@ import com.equipgrid.maintenance.enums.MaintenanceServiceType;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
 import com.equipgrid.maintenance.repository.MaintenanceDamageComponentRepository;
 import com.equipgrid.maintenance.repository.MaintenanceRecordRepository;
+import com.equipgrid.master.entity.EquipmentType;
+import com.equipgrid.master.repository.EquipmentTypeRepository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -40,6 +43,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
   private final MaintenanceRecordRepository maintenanceRecordRepository;
   private final MaintenanceDamageComponentRepository damageComponentRepository;
+  private final EquipmentTypeRepository equipmentTypeRepository;
   private final AssetRepository assetRepository;
   private final HubRepository hubRepository;
   private final StorageService storageService;
@@ -397,8 +401,75 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
 
   @Override
   @Transactional(readOnly = true)
-  public List<MaintenanceDamageComponent> getActiveDamageComponents() {
+  public List<MaintenanceDamageComponent> getActiveDamageComponents(
+      Long equipmentTypeId, String typeCode) {
+    if (equipmentTypeId != null && equipmentTypeId > 0) {
+      return damageComponentRepository.findActiveByTypeOrUniversal(equipmentTypeId);
+    }
+    if (typeCode != null && !typeCode.isBlank()) {
+      return damageComponentRepository.findActiveByTypeCodeOrUniversal(typeCode);
+    }
     return damageComponentRepository.findByActiveTrueOrderByDisplayOrderAsc();
+  }
+
+  @Override
+  @Transactional
+  public MaintenanceDamageComponent createDamageComponent(
+      CreateDamageComponentRequest request, Long userId) {
+    if (request.getName() == null || request.getName().isBlank()) {
+      throw new EquipGridException(
+          EquipGridExceptionEnum.EG_400, "Component name cannot be empty.");
+    }
+
+    EquipmentType equipmentType = null;
+    String typeCode = request.getEquipmentTypeCode();
+
+    if (request.getEquipmentTypeId() != null && request.getEquipmentTypeId() > 0) {
+      equipmentType = equipmentTypeRepository.findById(request.getEquipmentTypeId()).orElse(null);
+      if (equipmentType != null && (typeCode == null || typeCode.isBlank())) {
+        typeCode = equipmentType.getCode();
+      }
+    } else if (typeCode != null && !typeCode.isBlank()) {
+      equipmentType = equipmentTypeRepository.findByCode(typeCode).orElse(null);
+    }
+
+    String partCode = request.getPartCode();
+    if (partCode == null || partCode.isBlank()) {
+      String prefix =
+          typeCode != null
+              ? typeCode.replace("TYPE-", "").replace("-", "_")
+              : (Boolean.TRUE.equals(request.getIsUniversal()) ? "UNI" : "GEN");
+      String cleanName = request.getName().toUpperCase().replaceAll("[^A-Z0-9]+", "_");
+      partCode = prefix + "_" + cleanName;
+    }
+
+    MaintenanceDamageComponent component =
+        MaintenanceDamageComponent.builder()
+            .equipmentType(equipmentType)
+            .equipmentTypeCode(typeCode)
+            .isUniversal(Boolean.TRUE.equals(request.getIsUniversal()))
+            .partCode(partCode)
+            .name(request.getName().trim())
+            .hindiName(request.getHindiName() != null ? request.getHindiName().trim() : null)
+            .category(
+                request.getCategory() != null ? request.getCategory().trim() : "CUSTOM_COMPONENT")
+            .description(request.getDescription())
+            .active(true)
+            .displayOrder(100)
+            .build();
+
+    if (userId != null) {
+      component.setCreatedBy(userId);
+      component.setUpdatedBy(userId);
+    }
+
+    MaintenanceDamageComponent saved = damageComponentRepository.save(component);
+    log.info(
+        "[Maintenance] Created new damage component {} ({}) for type {}",
+        saved.getName(),
+        saved.getPartCode(),
+        typeCode);
+    return saved;
   }
 
   @Override

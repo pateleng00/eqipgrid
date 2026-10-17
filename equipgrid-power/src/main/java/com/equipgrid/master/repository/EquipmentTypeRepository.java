@@ -11,6 +11,8 @@ public interface EquipmentTypeRepository extends JpaRepository<EquipmentType, Lo
 
   List<EquipmentType> findAllByOrderByNameAsc();
 
+  java.util.Optional<EquipmentType> findByCode(String code);
+
   boolean existsByCodeIgnoreCase(String code);
 
   boolean existsByNameIgnoreCase(String name);

@@ -121,12 +121,30 @@ public class MaintenanceController {
 
   @GetMapping("/damage-components")
   @Operation(
-      summary = "List standard machine damage components",
+      summary = "List machine damage components",
       description =
-          "Fetches active generic vehicle and machinery damage components from the database.")
-  public ResponseEntity<ApiResponse<List<MaintenanceDamageComponent>>> listDamageComponents() {
-    List<MaintenanceDamageComponent> components = maintenanceService.getActiveDamageComponents();
+          "Fetches active damage components, optionally filtered by equipmentTypeId or typeCode. Universal components are always included.")
+  public ResponseEntity<ApiResponse<List<MaintenanceDamageComponent>>> listDamageComponents(
+      @RequestParam(required = false) Long equipmentTypeId,
+      @RequestParam(required = false) String typeCode) {
+    List<MaintenanceDamageComponent> components =
+        maintenanceService.getActiveDamageComponents(equipmentTypeId, typeCode);
     return ResponseEntity.ok(ApiResponse.buildSuccess(components));
+  }
+
+  @PostMapping("/damage-components")
+  @Operation(
+      summary = "Register a new damage component",
+      description =
+          "Adds a new component to the database linked to a specific equipment type or marked as universal.")
+  public ResponseEntity<ApiResponse<MaintenanceDamageComponent>> createDamageComponent(
+      @Valid @RequestBody com.equipgrid.maintenance.dto.CreateDamageComponentRequest request,
+      @AuthenticationPrincipal User currentUser) {
+    Long userId = currentUser != null ? currentUser.getId() : null;
+    MaintenanceDamageComponent component =
+        maintenanceService.createDamageComponent(request, userId);
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess("Damage component registered successfully", component));
   }
 
   @PostMapping(value = "/damage-photos", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

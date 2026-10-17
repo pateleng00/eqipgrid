@@ -1,6 +1,7 @@
 package com.equipgrid.maintenance.entity;
 
 import com.equipgrid.common.BaseEntity;
+import com.equipgrid.master.entity.EquipmentType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,7 +18,18 @@ public class MaintenanceDamageComponent extends BaseEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "part_code", nullable = false, unique = true, length = 64)
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "equipment_type_id")
+  private EquipmentType equipmentType;
+
+  @Column(name = "equipment_type_code", length = 64)
+  private String equipmentTypeCode;
+
+  @Builder.Default
+  @Column(name = "is_universal")
+  private Boolean isUniversal = false;
+
+  @Column(name = "part_code", nullable = false, length = 64)
   private String partCode;
 
   @Column(name = "name", nullable = false, length = 128)
