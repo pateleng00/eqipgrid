@@ -25,7 +25,7 @@ Thumbs.db
 **/application-prod.properties
 **/application-production.properties
 config-secret/
-config/
+/config/
 
 # Java / Spring Boot / Gradle (equipgrid-power)
 .gradle/

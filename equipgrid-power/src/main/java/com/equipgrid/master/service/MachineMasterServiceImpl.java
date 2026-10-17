@@ -17,10 +17,14 @@ import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
 import com.equipgrid.master.util.FuzzyMatchUtil;
+import com.equipgrid.common.config.CacheConfig;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +50,10 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(
+      value = CacheConfig.CACHE_EQUIPMENT_TYPES,
+      key =
+          "(#includeInactive != null ? #includeInactive : false) + '-' + (#category != null ? #category.name() : 'ALL')")
   public List<EquipmentType> getAllEquipmentTypes(
       Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
     List<EquipmentType> list =
@@ -72,6 +80,11 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES_BY_CATEGORY, allEntries = true)
+      })
   public EquipmentType createEquipmentType(EquipmentTypeRequest request) {
     // 1. Fuzzy match check to avoid duplicacy
     FuzzyCheckResponse fuzzyCheck = checkEquipmentTypeAvailability(request.getName(), null);
@@ -112,6 +125,11 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES_BY_CATEGORY, allEntries = true)
+      })
   public EquipmentType updateEquipmentType(Long id, EquipmentTypeRequest request) {
     EquipmentType existing = getEquipmentTypeById(id);
 
@@ -151,6 +169,11 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_EQUIPMENT_TYPES_BY_CATEGORY, allEntries = true)
+      })
   public void deleteEquipmentType(Long id, User caller) {
     // Enforce role rule: Admins can add and update, but NOT delete
     if (caller != null && caller.getRole() != null && caller.getRole() != Role.ROOT) {
@@ -203,6 +226,9 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(
+      value = CacheConfig.CACHE_MANUFACTURERS,
+      key = "#includeInactive != null ? #includeInactive : false")
   public List<Manufacturer> getAllManufacturers(Boolean includeInactive) {
     if (Boolean.TRUE.equals(includeInactive)) {
       return manufacturerRepository.findAllByOrderByNameAsc();
@@ -221,6 +247,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MANUFACTURERS, allEntries = true)
   public Manufacturer createManufacturer(ManufacturerRequest request) {
     // 1. Fuzzy match check
     FuzzyCheckResponse fuzzyCheck = checkManufacturerAvailability(request.getName(), null);
@@ -256,6 +283,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MANUFACTURERS, allEntries = true)
   public Manufacturer updateManufacturer(Long id, ManufacturerRequest request) {
     Manufacturer existing = getManufacturerById(id);
 
@@ -291,6 +319,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MANUFACTURERS, allEntries = true)
   public void deleteManufacturer(Long id, User caller) {
     // Enforce role rule: Admins can add and update, but NOT delete
     if (caller != null && caller.getRole() != null && caller.getRole() != Role.ROOT) {
@@ -343,6 +372,10 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(
+      value = CacheConfig.CACHE_MACHINE_MODELS,
+      key =
+          "(#typeId != null ? #typeId : 0) + '-' + (#manufacturerId != null ? #manufacturerId : 0) + '-' + (#includeInactive != null ? #includeInactive : false)")
   public List<MachineModel> getMachineModels(
       Long typeId, Long manufacturerId, Boolean includeInactive) {
     boolean activeOnly = !Boolean.TRUE.equals(includeInactive);
@@ -379,6 +412,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MACHINE_MODELS, allEntries = true)
   public MachineModel createMachineModel(ModelRequest request) {
     // Equipment type and manufacturer are required
     EquipmentType type = getEquipmentTypeById(request.getTypeId());
@@ -418,6 +452,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MACHINE_MODELS, allEntries = true)
   public MachineModel updateMachineModel(Long id, ModelRequest request) {
     MachineModel existing = getMachineModelById(id);
 
@@ -450,6 +485,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   }
 
   @Override
+  @CacheEvict(value = CacheConfig.CACHE_MACHINE_MODELS, allEntries = true)
   public void deleteMachineModel(Long id, User caller) {
     // Enforce role rule: Admins can add and update, but NOT delete
     if (caller != null && caller.getRole() != null && caller.getRole() != Role.ROOT) {

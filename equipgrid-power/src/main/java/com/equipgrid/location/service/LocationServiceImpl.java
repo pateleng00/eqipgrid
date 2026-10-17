@@ -14,11 +14,15 @@ import com.equipgrid.location.repository.CityRepository;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.location.repository.LocationQueryRepository;
 import com.equipgrid.location.repository.StateRepository;
+import com.equipgrid.common.config.CacheConfig;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +44,11 @@ public class LocationServiceImpl implements ILocationService {
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
   public State createState(State state) {
     return stateRepository.save(state);
   }
@@ -57,6 +66,11 @@ public class LocationServiceImpl implements ILocationService {
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
   public City createCity(CityRequest request) {
     State state =
         stateRepository
@@ -81,11 +95,17 @@ public class LocationServiceImpl implements ILocationService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_HUBS)
   public List<Hub> getAllHubs() {
     return locationQueryRepository.findAllActiveHubs();
   }
 
   @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
   public Hub createHub(HubRequest request) {
     City city =
         cityRepository
@@ -112,6 +132,7 @@ public class LocationServiceImpl implements ILocationService {
 
   @Override
   @Transactional(readOnly = true)
+  @Cacheable(value = CacheConfig.CACHE_LOCATION_HIERARCHY)
   public List<StateHierarchyResponse> getLocationHierarchy() {
     List<Asset> activeAssets = locationQueryRepository.findActiveAssetsMappedToHubs();
 
