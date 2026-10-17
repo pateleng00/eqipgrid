@@ -49,6 +49,11 @@ import {
   UpdateFulfillmentJobPayload,
   EquipmentRecommendationRequest,
   EquipmentRecommendationResponse,
+  MaintenanceTicket,
+  CreateMaintenanceTicketPayload,
+  UpdateMaintenanceProgressPayload,
+  CompleteMaintenancePayload,
+  MaintenanceStatus,
 } from '../types';
 
 // Verified AWS S3 assets bucket base URL
@@ -2930,6 +2935,119 @@ export class ApiStore {
       qrCodeBase64: string;
       qrCodeImageUrl: string;
     }>(`/whatsapp/qr/merchant/details${qs}`);
+  }
+
+  // ── Maintenance & Servicing API ──────────────────────────────────────────
+
+  async fetchMaintenanceTickets(
+    hubId?: number,
+    status?: MaintenanceStatus,
+    activeOnly?: boolean,
+  ): Promise<MaintenanceTicket[]> {
+    const params = new URLSearchParams();
+    if (hubId) params.append('hubId', hubId.toString());
+    if (status) params.append('status', status);
+    if (activeOnly !== undefined) params.append('activeOnly', String(activeOnly));
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<MaintenanceTicket[]>(`/maintenance/tickets${qs}`);
+  }
+
+  async getMaintenanceTicket(id: number): Promise<MaintenanceTicket> {
+    return request<MaintenanceTicket>(`/maintenance/tickets/${id}`);
+  }
+
+  async createMaintenanceTicket(
+    payload: CreateMaintenanceTicketPayload,
+  ): Promise<MaintenanceTicket> {
+    const ticket = await request<MaintenanceTicket>('/maintenance/tickets', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    // Update local asset status
+    const asset = this.assets.find((a) => a.id === payload.assetId);
+    if (asset) {
+      asset.status = payload.serviceType === 'BREAKDOWN_REPAIR' ? 'DAMAGED' : 'MAINTENANCE';
+    }
+    this.notify();
+    return ticket;
+  }
+
+  async updateMaintenanceTicketProgress(
+    id: number,
+    payload: UpdateMaintenanceProgressPayload,
+  ): Promise<MaintenanceTicket> {
+    return request<MaintenanceTicket>(`/maintenance/tickets/${id}/progress`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async uploadMaintenanceInvoice(id: number, file: File): Promise<MaintenanceTicket> {
+    const url = `${API_BASE}/maintenance/tickets/${id}/invoice`;
+    let token = '';
+    try {
+      const authStored = localStorage.getItem('equipgrid_auth_user');
+      if (authStored) {
+        const parsed = JSON.parse(authStored);
+        if (parsed?.token) token = parsed.token;
+      }
+    } catch {}
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: Record<string, string> = {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (!res.ok) {
+      let errMsg = `Invoice upload failed: ${res.status} ${res.statusText}`;
+      try {
+        const errBody = await res.json();
+        if (errBody?.message?.text) errMsg = errBody.message.text;
+        else if (errBody?.message)
+          errMsg =
+            typeof errBody.message === 'string'
+              ? errBody.message
+              : JSON.stringify(errBody.message);
+      } catch {}
+      throw new Error(errMsg);
+    }
+
+    const json = await res.json();
+    return (json?.data !== undefined ? json.data : json) as MaintenanceTicket;
+  }
+
+  async completeMaintenanceTicket(
+    id: number,
+    payload: CompleteMaintenancePayload,
+  ): Promise<MaintenanceTicket> {
+    const ticket = await request<MaintenanceTicket>(`/maintenance/tickets/${id}/complete`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+
+    // Restore local asset status
+    const asset = this.assets.find((a) => a.id === ticket.assetId);
+    if (asset) {
+      asset.status = 'AVAILABLE';
+      if (payload.meterHoursAfterService) {
+        asset.engineHours = payload.meterHoursAfterService;
+      }
+    }
+    this.notify();
+    return ticket;
+  }
+
+  async fetchAssetMaintenanceHistory(assetId: number): Promise<MaintenanceTicket[]> {
+    return request<MaintenanceTicket[]>(`/maintenance/assets/${assetId}/history`);
   }
 }
 

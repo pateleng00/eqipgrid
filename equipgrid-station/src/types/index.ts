@@ -886,3 +886,103 @@ export function getFarmerFriendlyStatus(status: BookingStatus | string): FarmerF
       };
   }
 }
+
+// ── Maintenance & Servicing Types ──────────────────────────────────────────
+
+export type MaintenanceServiceType =
+  | 'ROUTINE_SERVICE'
+  | 'BREAKDOWN_REPAIR'
+  | 'MAJOR_OVERHAUL'
+  | 'PREVENTIVE_CHECK';
+
+export type MaintenanceLocationType = 'IN_HOUSE' | 'EXTERNAL_SERVICE_CENTER';
+
+export type MaintenanceStatus =
+  | 'SCHEDULED'
+  | 'IN_PROGRESS'
+  | 'WAITING_PARTS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+export type MaintenancePriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export interface MaintenanceTicket {
+  id: number;
+  ticketNumber: string;
+  assetId: number;
+  assetName: string;
+  assetSerialNumber?: string;
+  assetModelName?: string;
+  assetCategory?: AssetCategory;
+  assetImageUrl?: string;
+  assetStatus?: AssetStatus;
+  hubId: number;
+  hubName: string;
+  serviceType: MaintenanceServiceType;
+  locationType: MaintenanceLocationType;
+  serviceCenterName?: string;
+  serviceCenterContact?: string;
+  serviceCenterAddress?: string;
+  priority: MaintenancePriority;
+  status: MaintenanceStatus;
+  issueDescription: string;
+  workScope?: string;
+  estimatedCost?: number;
+  actualPartsCost?: number;
+  actualLaborCost?: number;
+  totalCost?: number;
+  invoiceNumber?: string;
+  invoiceDocumentUrl?: string;
+  invoiceFileName?: string;
+  invoiceFileType?: string;
+  invoiceUploadedAt?: string;
+  meterHoursAtService?: number;
+  nextServiceDueHours?: number;
+  startedAt?: string;
+  expectedCompletionDate?: string;
+  completedAt?: string;
+  completionNotes?: string;
+  assignedTechnician?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CreateMaintenanceTicketPayload {
+  assetId: number;
+  serviceType: MaintenanceServiceType;
+  locationType: MaintenanceLocationType;
+  serviceCenterName?: string;
+  serviceCenterContact?: string;
+  serviceCenterAddress?: string;
+  priority?: MaintenancePriority;
+  issueDescription: string;
+  workScope?: string;
+  estimatedCost?: number;
+  expectedCompletionDate?: string;
+  meterHoursAtService?: number;
+  assignedTechnician?: string;
+}
+
+export interface UpdateMaintenanceProgressPayload {
+  status?: MaintenanceStatus;
+  priority?: MaintenancePriority;
+  workScope?: string;
+  estimatedCost?: number;
+  expectedCompletionDate?: string;
+  completionNotes?: string;
+  assignedTechnician?: string;
+}
+
+export interface CompleteMaintenancePayload {
+  actualPartsCost?: number;
+  actualLaborCost?: number;
+  totalCost?: number;
+  invoiceNumber?: string;
+  invoiceDocumentUrl?: string;
+  invoiceFileName?: string;
+  invoiceFileType?: string;
+  completionNotes?: string;
+  meterHoursAfterService?: number;
+  nextServiceDueHours?: number;
+}
+
