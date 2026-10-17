@@ -23,9 +23,7 @@ public class CacheManagementController {
 
   private final CacheManager cacheManager;
 
-  @RequestMapping(
-      value = {"/clear", "/evict-all"},
-      method = {RequestMethod.GET, RequestMethod.POST, RequestMethod.DELETE})
+  @GetMapping({"/clear", "/evict-all"})
   @Operation(
       summary = "Instantly invalidate and clear all in-memory cache items (or a specific cache)",
       description =
