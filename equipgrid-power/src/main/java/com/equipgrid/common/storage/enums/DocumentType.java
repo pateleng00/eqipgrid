@@ -27,7 +27,10 @@ public enum DocumentType {
 
   // ── Customer KYC ──────────────────────────────────────────────────
   CUSTOMER_ID_PROOF("id-proof", DocumentCategory.CUSTOMER),
-  CUSTOMER_AGREEMENT("agreements", DocumentCategory.CUSTOMER);
+  CUSTOMER_AGREEMENT("agreements", DocumentCategory.CUSTOMER),
+
+  // ── Maintenance & Workshop Invoices ────────────────────────────────
+  MAINTENANCE_INVOICE("invoices", DocumentCategory.ASSET);
 
   /** S3 folder name for this specific document type. */
   private final String fileStorageName;

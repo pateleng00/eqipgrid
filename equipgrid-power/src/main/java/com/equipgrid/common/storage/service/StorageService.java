@@ -35,11 +35,13 @@ public class StorageService {
 
   private static final long MAX_IMAGE_SIZE_BYTES = 15 * 1024 * 1024L; // 15 MB
   private static final long MAX_VIDEO_SIZE_BYTES = 100 * 1024 * 1024L; // 100 MB
+  private static final long MAX_DOCUMENT_SIZE_BYTES = 25 * 1024 * 1024L; // 25 MB
 
   private static final Set<String> ALLOWED_IMAGE_TYPES =
       Set.of("image/jpeg", "image/png", "image/webp", "image/gif");
   private static final Set<String> ALLOWED_VIDEO_TYPES =
       Set.of("video/mp4", "video/webm", "video/quicktime");
+  private static final Set<String> ALLOWED_DOCUMENT_TYPES = Set.of("application/pdf");
 
   private final AmazonS3 s3client;
   private final AwsProperties awsProperties;
@@ -330,9 +332,17 @@ public class StorageService {
       }
       return "VIDEO";
     }
+    if (ct != null && ALLOWED_DOCUMENT_TYPES.contains(ct)) {
+      if (file.getSize() > MAX_DOCUMENT_SIZE_BYTES) {
+        throw new EquipGridException(
+            EquipGridExceptionEnum.EG_400,
+            "Document exceeds maximum size of 25 MB (" + file.getSize() + " bytes received)");
+      }
+      return "DOCUMENT";
+    }
     throw new EquipGridException(
         EquipGridExceptionEnum.EG_400,
-        "Unsupported content type: " + ct + ". Allowed: jpeg, png, webp, gif, mp4, webm, mov");
+        "Unsupported content type: " + ct + ". Allowed: jpeg, png, webp, gif, pdf, mp4, webm, mov");
   }
 
   private String appName() {
