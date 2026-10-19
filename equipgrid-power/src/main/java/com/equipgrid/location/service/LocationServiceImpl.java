@@ -160,58 +160,56 @@ public class LocationServiceImpl implements ILocationService {
         List<HubHierarchyResponse> hubDtos = new ArrayList<>();
 
         for (Hub hub : hubsInCity) {
-          List<Asset> hubAssets = assetsByHubId.get(hub.getId());
-          // CONDITION: At least 1 machine mapped with hub location address
-          if (hubAssets != null && !hubAssets.isEmpty()) {
-            Map<String, Integer> categoryCounts = new LinkedHashMap<>();
-            categoryCounts.put("AGRICULTURE", 0);
-            categoryCounts.put("CONSTRUCTION", 0);
-            categoryCounts.put("MULTIPURPOSE_FLEET", 0);
+          List<Asset> hubAssets = assetsByHubId.getOrDefault(hub.getId(), Collections.emptyList());
 
-            List<HubMachineResponse> machineDtos = new ArrayList<>();
+          Map<String, Integer> categoryCounts = new LinkedHashMap<>();
+          categoryCounts.put("AGRICULTURE", 0);
+          categoryCounts.put("CONSTRUCTION", 0);
+          categoryCounts.put("MULTIPURPOSE_FLEET", 0);
 
-            for (Asset a : hubAssets) {
-              String catName = a.getCategory() != null ? a.getCategory().name() : "AGRICULTURE";
-              categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + 1);
+          List<HubMachineResponse> machineDtos = new ArrayList<>();
 
-              machineDtos.add(
-                  HubMachineResponse.builder()
-                      .assetId(a.getId())
-                      .assetTag(a.getAssetTag())
-                      .name(a.getName())
-                      .modelName(a.getModelName())
-                      .category(catName)
-                      .categoryDescription(
-                          a.getCategory() != null ? a.getCategory().getDescription() : "")
-                      .dailyRate(a.getDailyRate())
-                      .depositAmount(a.getDepositAmount())
-                      .status(a.getStatus() != null ? a.getStatus().name() : "AVAILABLE")
-                      .imageUrl(a.getImageUrl())
-                      .conditionNotes(a.getConditionNotes())
-                      .build());
-            }
+          for (Asset a : hubAssets) {
+            String catName = a.getCategory() != null ? a.getCategory().name() : "AGRICULTURE";
+            categoryCounts.put(catName, categoryCounts.getOrDefault(catName, 0) + 1);
 
-            hubDtos.add(
-                HubHierarchyResponse.builder()
-                    .hubId(hub.getId())
-                    .hubName(hub.getName())
-                    .hubCode(hub.getCode())
-                    .address(hub.getAddress())
-                    .contactPhone(
-                        hub.getContactPhone() != null && !hub.getContactPhone().isBlank()
-                            ? hub.getContactPhone()
-                            : "+91 94674 79922")
-                    .operatingRadiusKm(hub.getOperatingRadiusKm())
-                    .latitude(hub.getLatitude())
-                    .longitude(hub.getLongitude())
-                    .totalMachineCount(hubAssets.size())
-                    .categoryCounts(categoryCounts)
-                    .machines(machineDtos)
+            machineDtos.add(
+                HubMachineResponse.builder()
+                    .assetId(a.getId())
+                    .assetTag(a.getAssetTag())
+                    .name(a.getName())
+                    .modelName(a.getModelName())
+                    .category(catName)
+                    .categoryDescription(
+                        a.getCategory() != null ? a.getCategory().getDescription() : "")
+                    .dailyRate(a.getDailyRate())
+                    .depositAmount(a.getDepositAmount())
+                    .status(a.getStatus() != null ? a.getStatus().name() : "AVAILABLE")
+                    .imageUrl(a.getImageUrl())
+                    .conditionNotes(a.getConditionNotes())
                     .build());
           }
+
+          hubDtos.add(
+              HubHierarchyResponse.builder()
+                  .hubId(hub.getId())
+                  .hubName(hub.getName())
+                  .hubCode(hub.getCode())
+                  .address(hub.getAddress())
+                  .contactPhone(
+                      hub.getContactPhone() != null && !hub.getContactPhone().isBlank()
+                          ? hub.getContactPhone()
+                          : "+91 94674 79922")
+                  .operatingRadiusKm(hub.getOperatingRadiusKm())
+                  .latitude(hub.getLatitude())
+                  .longitude(hub.getLongitude())
+                  .totalMachineCount(hubAssets.size())
+                  .categoryCounts(categoryCounts)
+                  .machines(machineDtos)
+                  .build());
         }
 
-        // Only include city if at least one hub with active machine
+        // Include city if it has active hubs
         if (!hubDtos.isEmpty()) {
           cityDtos.add(
               CityHierarchyResponse.builder()
