@@ -209,28 +209,22 @@ public class LocationServiceImpl implements ILocationService {
                   .build());
         }
 
-        // Include city if it has active hubs
-        if (!hubDtos.isEmpty()) {
-          cityDtos.add(
-              CityHierarchyResponse.builder()
-                  .cityId(city.getId())
-                  .cityName(city.getName())
-                  .pinCode(city.getPinCode())
-                  .hubs(hubDtos)
-                  .build());
-        }
-      }
-
-      // Only include state if at least one city with active hub
-      if (!cityDtos.isEmpty()) {
-        result.add(
-            StateHierarchyResponse.builder()
-                .stateId(state.getId())
-                .stateName(state.getName())
-                .stateCode(state.getCode())
-                .cities(cityDtos)
+        cityDtos.add(
+            CityHierarchyResponse.builder()
+                .cityId(city.getId())
+                .cityName(city.getName())
+                .pinCode(city.getPinCode())
+                .hubs(hubDtos)
                 .build());
       }
+
+      result.add(
+          StateHierarchyResponse.builder()
+              .stateId(state.getId())
+              .stateName(state.getName())
+              .stateCode(state.getCode())
+              .cities(cityDtos)
+              .build());
     }
 
     return result;
