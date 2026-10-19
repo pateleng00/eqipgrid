@@ -20,6 +20,9 @@ public class State extends BaseEntity {
   @Column(nullable = false, unique = true, length = 128)
   private String name;
 
+  @Column(name = "hindi_name", length = 128)
+  private String hindiName;
+
   @Column(nullable = false, unique = true, length = 10)
   private String code;
 

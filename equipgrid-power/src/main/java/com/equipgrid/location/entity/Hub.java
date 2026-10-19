@@ -25,6 +25,9 @@ public class Hub extends BaseEntity {
   @Column(nullable = false, length = 128)
   private String name;
 
+  @Column(name = "hindi_name", length = 128)
+  private String hindiName;
+
   @Column(nullable = false, unique = true, length = 32)
   private String code;
 

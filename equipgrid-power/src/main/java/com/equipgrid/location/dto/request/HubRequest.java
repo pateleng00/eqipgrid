@@ -20,6 +20,8 @@ public class HubRequest {
   @NotBlank(message = "Hub name is required")
   private String name;
 
+  private String hindiName;
+
   @NotBlank(message = "Hub code is required")
   private String code;
 

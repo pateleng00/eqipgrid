@@ -19,5 +19,7 @@ public class CityRequest {
   @NotBlank(message = "City name is required")
   private String name;
 
+  private String hindiName;
+
   private String pinCode;
 }

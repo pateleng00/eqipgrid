@@ -15,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class HubHierarchyResponse {
   private Long hubId;
   private String hubName;
+  private String hindiName;
   private String hubCode;
   private String address;
   private String contactPhone;

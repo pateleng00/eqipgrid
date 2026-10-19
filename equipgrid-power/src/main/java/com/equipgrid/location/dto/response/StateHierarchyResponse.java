@@ -13,6 +13,7 @@ import lombok.NoArgsConstructor;
 public class StateHierarchyResponse {
   private Long stateId;
   private String stateName;
+  private String hindiName;
   private String stateCode;
   private List<CityHierarchyResponse> cities;
 }

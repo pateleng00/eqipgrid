@@ -87,6 +87,7 @@ public class LocationServiceImpl implements ILocationService {
         City.builder()
             .state(state)
             .name(request.getName())
+            .hindiName(request.getHindiName())
             .pinCode(request.getPinCode())
             .active(true)
             .build();
@@ -123,6 +124,7 @@ public class LocationServiceImpl implements ILocationService {
         Hub.builder()
             .city(city)
             .name(request.getName())
+            .hindiName(request.getHindiName())
             .code(request.getCode())
             .address(request.getAddress())
             .contactPhone(request.getContactPhone())
@@ -194,6 +196,7 @@ public class LocationServiceImpl implements ILocationService {
               HubHierarchyResponse.builder()
                   .hubId(hub.getId())
                   .hubName(hub.getName())
+                  .hindiName(hub.getHindiName())
                   .hubCode(hub.getCode())
                   .address(hub.getAddress())
                   .contactPhone(
@@ -213,6 +216,7 @@ public class LocationServiceImpl implements ILocationService {
             CityHierarchyResponse.builder()
                 .cityId(city.getId())
                 .cityName(city.getName())
+                .hindiName(city.getHindiName())
                 .pinCode(city.getPinCode())
                 .hubs(hubDtos)
                 .build());
@@ -222,6 +226,7 @@ public class LocationServiceImpl implements ILocationService {
           StateHierarchyResponse.builder()
               .stateId(state.getId())
               .stateName(state.getName())
+              .hindiName(state.getHindiName())
               .stateCode(state.getCode())
               .cities(cityDtos)
               .build());

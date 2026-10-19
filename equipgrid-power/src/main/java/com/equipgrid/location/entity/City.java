@@ -26,6 +26,9 @@ public class City extends BaseEntity {
   @Column(nullable = false, length = 128)
   private String name;
 
+  @Column(name = "hindi_name", length = 128)
+  private String hindiName;
+
   @Column(name = "pin_code", length = 12)
   private String pinCode;
 
