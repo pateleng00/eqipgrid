@@ -1906,63 +1906,7 @@ export class ApiStore {
     }
   }
 
-  private farmLocationsStore: Record<number, FarmLocation[]> = {
-    1: [
-      {
-        id: 101,
-        localName: 'Bada Khet (West)',
-        localNameHindi: 'बड़ा खेत (पश्चिम)',
-        aliases: 'Tubewell wala khet, Canal side',
-        locationType: 'FARM',
-        latitude: 27.3948,
-        longitude: 80.1287,
-        village: 'Bhatgaon',
-        tehsil: 'Sandila',
-        district: 'Hardoi',
-        landmark: 'Near Govt Primary School & Canal siphon',
-        accessNotes: 'Clear 12ft gravel track, tractor trolley can reach field edge directly.',
-        deliveryContactName: 'Rameshwar Yadav',
-        deliveryContactPhone: '+91 98765 43210',
-        isDefault: true,
-      },
-      {
-        id: 102,
-        localName: 'Purva Bagh & Orchard',
-        localNameHindi: 'पुरवा बाग',
-        aliases: 'Mango orchard, Purani Haveli',
-        locationType: 'FARM',
-        latitude: 27.3985,
-        longitude: 80.1342,
-        village: 'Purva',
-        tehsil: 'Sandila',
-        district: 'Hardoi',
-        landmark: 'Behind Shiv Mandir',
-        accessNotes: 'Narrow mud road after culvert, mini-truck or power weeder easily accessible.',
-        deliveryContactName: 'Rameshwar Yadav',
-        deliveryContactPhone: '+91 98765 43210',
-        isDefault: false,
-      },
-    ],
-    2: [
-      {
-        id: 201,
-        localName: 'Kallu Bhai Borewell Farm',
-        localNameHindi: 'बोरवेल वाला खेत',
-        aliases: 'Nahar ke paar, High school road',
-        locationType: 'FARM',
-        latitude: 26.8521,
-        longitude: 80.9492,
-        village: 'Malihabad',
-        tehsil: 'Malihabad',
-        district: 'Lucknow',
-        landmark: 'Adjacent to Solar Pump Substation',
-        accessNotes: 'Paved tar road up to boundary, all commercial trucks can enter.',
-        deliveryContactName: 'Kallu Ram',
-        deliveryContactPhone: '+91 98112 34567',
-        isDefault: true,
-      },
-    ],
-  };
+  private farmLocationsStore: Record<number, FarmLocation[]> = {};
 
   // --- BOOKING OPERATIONS ---
   async getFarmLocations(customerId: number): Promise<FarmLocation[]> {

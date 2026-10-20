@@ -96,9 +96,7 @@ export const UpsertFarmLocationModal: React.FC<UpsertFarmLocationModalProps> = (
       },
       (err) => {
         console.warn('GPS location error:', err);
-        // Fallback default coordinate near UP agricultural belt
-        setLatitude('27.394800');
-        setLongitude('80.128700');
+        setErrorMsg('Could not acquire device GPS coordinates. Please enter coordinates or address manually.');
         setGpsLoading(false);
       },
       { timeout: 7000, enableHighAccuracy: true },

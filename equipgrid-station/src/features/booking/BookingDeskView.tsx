@@ -1923,7 +1923,7 @@ export const BookingDeskView: React.FC<BookingDeskViewProps> = ({
                             return {
                               value: a.id,
                               label: `[${a.assetTag}] ${a.name || a.modelName || a.typeName || 'Equipment'}`,
-                              subLabel: `${rateText} • ${depText} • ${shiftPolicy} • Yard: ${a.hubName || 'Hardoi'}`,
+                              subLabel: `${rateText} • ${depText} • ${shiftPolicy}${a.hubName ? ` • Yard: ${a.hubName}` : ''}`,
                               badge: rate != null ? 'AVAILABLE' : 'UNCONFIGURED',
                             };
                           })}
