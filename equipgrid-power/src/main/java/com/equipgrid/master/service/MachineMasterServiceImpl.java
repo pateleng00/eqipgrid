@@ -59,11 +59,12 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   public List<EquipmentType> getAllEquipmentTypes(
       Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
     List<EquipmentType> list = masterQueryRepository.fetchEquipmentTypes(includeInactive);
-    list.forEach(t -> {
-      if (t.getImageUrl() != null && t.getImageUrl().startsWith("s3://")) {
-        t.setImageUrl(resolveS3Url(t.getImageUrl()));
-      }
-    });
+    list.forEach(
+        t -> {
+          if (t.getImageUrl() != null && t.getImageUrl().startsWith("s3://")) {
+            t.setImageUrl(resolveS3Url(t.getImageUrl()));
+          }
+        });
     if (category != null) {
       return list.stream()
           .filter(t -> category.equals(t.getCategory()))
@@ -75,12 +76,13 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Override
   @Transactional(readOnly = true)
   public EquipmentType getEquipmentTypeById(Long id) {
-    EquipmentType type = equipmentTypeRepository
-        .findById(id)
-        .orElseThrow(
-            () ->
-                new Exceptions.ResourceNotFoundException(
-                    "Equipment type not found with ID: " + id));
+    EquipmentType type =
+        equipmentTypeRepository
+            .findById(id)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException(
+                        "Equipment type not found with ID: " + id));
     if (type.getImageUrl() != null && type.getImageUrl().startsWith("s3://")) {
       type.setImageUrl(resolveS3Url(type.getImageUrl()));
     }

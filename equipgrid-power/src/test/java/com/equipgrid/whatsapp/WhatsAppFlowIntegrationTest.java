@@ -18,6 +18,8 @@ import com.equipgrid.whatsapp.service.IUpiQrGeneratorService;
 import com.equipgrid.whatsapp.service.IWhatsAppBotService;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -874,5 +876,87 @@ class WhatsAppFlowIntegrationTest {
         "AGRICULTURE",
         intentAgri.getAssetCategory(),
         "Reaper/rotavator farm request must extract AGRICULTURE category");
+  }
+
+  @Test
+  @DisplayName(
+      "Custom Date Selection: Customer can choose any specific start date, date+duration combo, and dates are valid for specified duration")
+  void testCustomDateAndDurationSelectionFlow() {
+    String phone = "+919999888877";
+
+    // 1. Initial greeting
+    WhatsAppInboundRequest req1 =
+        WhatsAppInboundRequest.builder().from(phone).message("Namaste").build();
+    WhatsAppMessageResponse resp1 = whatsAppBotService.processIncomingMessage(req1);
+    assertEquals(WhatsAppState.MAIN_MENU, resp1.getState());
+
+    // 2. Choose Option 1 (Rent Machinery)
+    WhatsAppInboundRequest req2 = WhatsAppInboundRequest.builder().from(phone).message("1").build();
+    WhatsAppMessageResponse resp2 = whatsAppBotService.processIncomingMessage(req2);
+    assertEquals(WhatsAppState.SELECTING_CATEGORY, resp2.getState());
+
+    // 3. Select Category 1 (Agriculture) -> Prompts for Station Hub
+    WhatsAppInboundRequest req3 = WhatsAppInboundRequest.builder().from(phone).message("1").build();
+    WhatsAppMessageResponse resp3 = whatsAppBotService.processIncomingMessage(req3);
+    assertEquals(WhatsAppState.SELECTING_HUB, resp3.getState());
+
+    // 4. Select Hub 1 (Hardoi Central Yard) -> Prompts for Rental Duration & Start Date
+    WhatsAppInboundRequest req4 = WhatsAppInboundRequest.builder().from(phone).message("1").build();
+    WhatsAppMessageResponse resp4 = whatsAppBotService.processIncomingMessage(req4);
+    assertEquals(WhatsAppState.ENTERING_DATES, resp4.getState());
+    assertTrue(resp4.getMessage().contains("Rental Duration & Start Date"));
+
+    // 5. Test Step A: Customer inputs a specific custom date (5 days in the future, e.g. "25 Oct"
+    // format)
+    LocalDate targetStart = LocalDate.now().plusDays(5);
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM");
+    String customDateStr = targetStart.format(fmt);
+
+    WhatsAppInboundRequest req5 =
+        WhatsAppInboundRequest.builder().from(phone).message(customDateStr).build();
+    WhatsAppMessageResponse resp5 = whatsAppBotService.processIncomingMessage(req5);
+    assertNotNull(resp5);
+    assertEquals(WhatsAppState.ENTERING_DATES, resp5.getState());
+    assertTrue(
+        resp5.getMessage().contains("Selected Start Date"),
+        "Bot should acknowledge the specific custom start date");
+    assertTrue(resp5.getMessage().contains("For how many days"));
+
+    // 6. Test Step B: Customer now inputs duration "3" (3 days)
+    WhatsAppInboundRequest req6 = WhatsAppInboundRequest.builder().from(phone).message("3").build();
+    WhatsAppMessageResponse resp6 = whatsAppBotService.processIncomingMessage(req6);
+    assertNotNull(resp6);
+    assertEquals(WhatsAppState.SELECTING_ASSET, resp6.getState());
+
+    LocalDate expectedEnd = targetStart.plusDays(2); // 3 days total: targetStart, +1, +2
+    String expectedWindow = String.format("%s to %s (3 Days)", targetStart, expectedEnd);
+    assertTrue(
+        resp6.getMessage().contains(expectedWindow),
+        "Available machines list must explicitly show booking valid from " + expectedWindow);
+
+    // 7. Test Step C: Test single-shot combined date and duration with another phone
+    String phone2 = "+919999888866";
+    whatsAppBotService.processIncomingMessage(
+        WhatsAppInboundRequest.builder().from(phone2).message("Namaste").build());
+    whatsAppBotService.processIncomingMessage(
+        WhatsAppInboundRequest.builder().from(phone2).message("1").build());
+    whatsAppBotService.processIncomingMessage(
+        WhatsAppInboundRequest.builder().from(phone2).message("1").build());
+    whatsAppBotService.processIncomingMessage(
+        WhatsAppInboundRequest.builder().from(phone2).message("1").build());
+
+    // Single message: "कल से 2 दिन"
+    WhatsAppInboundRequest comboReq =
+        WhatsAppInboundRequest.builder().from(phone2).message("कल से 2 दिन").build();
+    WhatsAppMessageResponse comboResp = whatsAppBotService.processIncomingMessage(comboReq);
+    assertNotNull(comboResp);
+    assertEquals(WhatsAppState.SELECTING_ASSET, comboResp.getState());
+
+    LocalDate tomorrow = LocalDate.now().plusDays(1);
+    LocalDate dayAfter = tomorrow.plusDays(1);
+    String comboWindow = String.format("%s to %s (2 Days)", tomorrow, dayAfter);
+    assertTrue(
+        comboResp.getMessage().contains(comboWindow),
+        "Single-shot combined date expression should set booking window to " + comboWindow);
   }
 }

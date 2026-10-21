@@ -48,9 +48,11 @@ import com.equipgrid.whatsapp.repository.WhatsAppConversationRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -704,6 +706,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private WhatsAppMessageResponse promptRentalDates(
       WhatsAppConversation conv, WhatsAppConversationContext context) {
     conv.setState(WhatsAppState.ENTERING_DATES);
+    context.setStartDate(null);
+    context.setEndDate(null);
+    context.setRentalDays(null);
 
     String catStr =
         "AGRICULTURE".equalsIgnoreCase(context.getAssetCategory())
@@ -716,27 +721,36 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String hubStr =
         context.getSelectedHubName() != null ? " at *" + context.getSelectedHubName() + "*" : "";
 
+    LocalDate today = LocalDate.now();
+    LocalDate tomorrow = today.plusDays(1);
+    LocalDate dayAfter = today.plusDays(2);
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy");
+    DateTimeFormatter shortFmt = DateTimeFormatter.ofPattern("dd MMM");
+
     String msg =
         String.format(
             """
-                        📅 *Select Rental Duration for %s%s:*
-                        _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
+            📅 *Select Rental Duration & Start Date for %s%s:*
+            _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
 
-                        • For how many days do you need the machinery?
-                        • Available starting from tomorrow (*%s*)
+            • *Starting Date Options (शुरू करने की तारीख):*
+              • *Tomorrow (कल से)* — %s (Standard)
+              • *Today (आज से)* — %s
+              • *Day After (परसों से)* — %s
+              • *Any Future Date (अपनी पसंद की तारीख)* — जैसे: *25 Oct*, *28/10*, *28 तारीख*
 
-                        👉 *Reply with number of days* (e.g. *1*, *2*, *3*, *5*, or *7*):
-                        _(उदाहरण: *2* दिन के लिए *2* या *3* दिन के लिए *3* लिखकर भेजें)_
-                        """,
-            catStr,
-            hubStr,
-            LocalDate.now().plusDays(1).format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
+            👉 *Quick Ways to Reply (जवाब कैसे दें):*
+            • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5, 7*) to start from tomorrow.
+            • *Specific Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*).
+            • *Choose Date First:* Type date (जैसे: *25 Oct*, *Today*, *कल*), then enter days.
+            """,
+            catStr, hubStr, tomorrow.format(fmt), today.format(fmt), dayAfter.format(fmt));
 
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
         .message(msg)
         .state(WhatsAppState.ENTERING_DATES)
-        .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "7 Days (1 Week)"))
+        .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "📅 Custom Date (तारीख)"))
         .hubName(context.getSelectedHubName())
         .cityName(context.getSelectedCityName())
         .build();
@@ -818,19 +832,41 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             : "";
 
     if (filtered.isEmpty()) {
-      conv.setState(WhatsAppState.MAIN_MENU);
+      conv.setState(WhatsAppState.ENTERING_DATES);
       String datesStr =
           (context.getStartDate() != null && context.getEndDate() != null)
               ? String.format("for *%s to %s*", context.getStartDate(), context.getEndDate())
               : "at this time";
+      // Clear dates so the user can immediately pick a different date
+      context.setStartDate(null);
+      context.setEndDate(null);
+      context.setRentalDays(null);
+
+      LocalDate today = LocalDate.now();
+      LocalDate tomorrow = today.plusDays(1);
+      LocalDate dayAfter = today.plusDays(2);
+      DateTimeFormatter shortFmt = DateTimeFormatter.ofPattern("dd MMM");
+
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(
               String.format(
-                  "⚠️ All machinery in this yard is currently booked %s.\n\nPlease reply *1* to try another date range, or call our Kisan & Contractor Helpline (+91 94674 79922) for advance reservation.",
+                  """
+                  ⚠️ All machinery in this yard is currently booked %s.
+                  _(इस तारीख पर इस यार्ड की सभी मशीनें पहले से बुक हैं)_
+
+                  👉 *Reply with another Start Date or Duration* (e.g. *25 Oct*, *25 Oct se 3 din*, *28/10*, or *कल से 2 दिन*),
+                  or reply *STATION* to select another yard, or call our Kisan & Contractor Helpline (+91 94674 79922).
+                  """,
                   datesStr))
-          .state(WhatsAppState.MAIN_MENU)
-          .suggestedOptions(List.of("1. Try Other Dates", "6. Kisan Helpline", "MENU"))
+          .state(WhatsAppState.ENTERING_DATES)
+          .suggestedOptions(
+              List.of(
+                  "Today (" + today.format(shortFmt) + ")",
+                  "Tomorrow (" + tomorrow.format(shortFmt) + ")",
+                  "Day After (" + dayAfter.format(shortFmt) + ")",
+                  "STATION (Other Yard)",
+                  "MENU"))
           .build();
     }
 
@@ -1341,14 +1377,41 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private WhatsAppMessageResponse promptDateInput(
       WhatsAppConversation conv, WhatsAppConversationContext context) {
     conv.setState(WhatsAppState.ENTERING_DATES);
-    String msg =
-        "📅 *For how many days do you need this equipment?*\n"
-            + "_(कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_";
+    LocalDate today = LocalDate.now();
+    LocalDate tomorrow = today.plusDays(1);
+    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy");
+
+    String msg;
+    if (context.getStartDate() != null) {
+      msg =
+          String.format(
+              """
+              🗓️ *Selected Start Date: %s*
+              _(आरंभ तिथि दर्ज है)_
+
+              📅 *For how many days do you need this equipment?*
+              _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
+              """,
+              context.getStartDate().format(fmt));
+    } else {
+      msg =
+          String.format(
+              """
+              📅 *Select Rental Duration & Start Date:*
+              _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
+
+              • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5*) to start tomorrow (*%s*)
+              • *Any Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*)
+              • *Or choose a date first* (जैसे: *25 Oct*, *Today*)
+              """,
+              tomorrow.format(fmt));
+    }
+
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
         .message(msg)
         .state(WhatsAppState.ENTERING_DATES)
-        .suggestedOptions(List.of("1 Day", "3 Days", "5 Days", "7 Days (1 Week)"))
+        .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "📅 Custom Date (तारीख)"))
         .previewImageUrl(context.getPreviewImageUrl())
         .demoVideoUrl(context.getDemoVideoUrl())
         .mediaUrls(context.getMediaUrls())
@@ -1390,23 +1453,114 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       WhatsAppConversation conv,
       Customer customer,
       WhatsAppConversationContext context) {
-    int days = extractDays(input);
-    if (days <= 0) {
+    if (input == null || input.isBlank()) {
+      return promptDateInput(conv, context);
+    }
+
+    String trimmed = input.trim();
+
+    // Check if user requested yard/station change
+    if (trimmed.equalsIgnoreCase("STATION")
+        || trimmed.equalsIgnoreCase("HUB")
+        || trimmed.equalsIgnoreCase("YARD")
+        || trimmed.equalsIgnoreCase("STATIONS")) {
+      return displayHubOptions(conv, context);
+    }
+
+    // Check if user clicked or typed 'Custom Date' prompt trigger
+    if (isCustomDatePromptKeyword(trimmed)) {
+      LocalDate today = LocalDate.now();
+      DateTimeFormatter shortFmt = DateTimeFormatter.ofPattern("dd MMM");
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(
-              "⚠️ Please specify a valid duration in days, for example: *1*, *2*, *3*, or *7*.\n_(कृपया मान्य दिन संख्या दर्ज करें)_")
+              """
+              📅 *अपनी पसंद की कोई भी तारीख लिखें (Choose Any Specific Date):*
+              _(उपकरण किस तारीख से चाहिए?)_
+
+              उदाहरण (Examples):
+              • *25 Oct* या *25 October*
+              • *28/10* या *28-10*
+              • *28 तारीख*
+              • *Today (आज से)* या *Tomorrow (कल से)*
+              • या तारीख व दिन एक साथ लिखें (जैसे: *25 Oct se 3 din* / *कल से 2 दिन*)
+              """)
           .state(WhatsAppState.ENTERING_DATES)
-          .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "7 Days"))
+          .suggestedOptions(
+              List.of(
+                  "Today (" + today.format(shortFmt) + ")",
+                  "Tomorrow (" + today.plusDays(1).format(shortFmt) + ")",
+                  "Day After (" + today.plusDays(2).format(shortFmt) + ")",
+                  "MENU"))
           .build();
     }
 
-    LocalDate startDate = LocalDate.now().plusDays(1); // Default to tomorrow morning
-    LocalDate endDate = startDate.plusDays(days - 1);
+    ParsedDateRange parsed =
+        parseRentalDates(trimmed, context.getStartDate(), context.getRentalDays());
 
-    context.setRentalDays(days);
-    context.setStartDate(startDate);
-    context.setEndDate(endDate);
+    if (parsed.errorMsg() != null) {
+      if (parsed.errorMsg().startsWith("PAST_DATE:")) {
+        String pastDateStr = parsed.errorMsg().substring("PAST_DATE:".length());
+        LocalDate today = LocalDate.now();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy");
+        return WhatsAppMessageResponse.builder()
+            .to(conv.getPhoneNumber())
+            .message(
+                String.format(
+                    "⚠️ The selected date (*%s*) is in the past. Please choose today (*%s*) or a future date.\n_(कृपया आज या भविष्य की कोई तारीख चुनें)_",
+                    pastDateStr, today.format(fmt)))
+            .state(WhatsAppState.ENTERING_DATES)
+            .suggestedOptions(List.of("Today", "Tomorrow", "📅 Custom Date", "MENU"))
+            .build();
+      }
+      return WhatsAppMessageResponse.builder()
+          .to(conv.getPhoneNumber())
+          .message(
+              """
+              ⚠️ Please specify a valid date or duration in days.
+              _(कृपया मान्य तारीख या दिन संख्या दर्ज करें)_
+
+              उदाहरण (Examples):
+              • *3* (कल से 3 दिन के लिए)
+              • *25 Oct se 3 din* (25 Oct से 3 दिन)
+              • *कल से 2 दिन*
+              • *25 Oct* (तारीख दर्ज कर आगे बढ़ें)
+              """)
+          .state(WhatsAppState.ENTERING_DATES)
+          .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "📅 Custom Date"))
+          .build();
+    }
+
+    // If only start date was parsed and duration is still needed
+    if (parsed.startDate() != null && parsed.rentalDays() == null) {
+      context.setStartDate(parsed.startDate());
+      DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd MMM yyyy (EEEE)");
+      return WhatsAppMessageResponse.builder()
+          .to(conv.getPhoneNumber())
+          .message(
+              String.format(
+                  """
+                  🗓️ *Selected Start Date: %s*
+                  _(आरंभ तिथि दर्ज कर ली गई है)_
+
+                  📅 *For how many days do you need this equipment?*
+                  _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
+                  """,
+                  parsed.startDate().format(fmt)))
+          .state(WhatsAppState.ENTERING_DATES)
+          .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "7 Days (1 Week)"))
+          .previewImageUrl(context.getPreviewImageUrl())
+          .demoVideoUrl(context.getDemoVideoUrl())
+          .mediaUrls(context.getMediaUrls())
+          .hubName(context.getSelectedHubName())
+          .cityName(context.getSelectedCityName())
+          .build();
+    }
+
+    // Both start date and duration are fully resolved!
+    context.setStartDate(parsed.startDate());
+    context.setEndDate(parsed.endDate());
+    context.setRentalDays(parsed.rentalDays());
 
     if (context.getSelectedAssetId() == null) {
       // New streamlined funnel: Dates are selected first -> show only collision-free machines!
@@ -3347,17 +3501,296 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         || upper.equals("MEDIA");
   }
 
-  private int extractDays(String input) {
-    try {
-      return Integer.parseInt(input.trim());
-    } catch (NumberFormatException e) {
-      Pattern pattern = Pattern.compile("(\\d+)");
-      Matcher matcher = pattern.matcher(input);
-      if (matcher.find()) {
-        return Integer.parseInt(matcher.group(1));
-      }
-      return 0;
+  public record ParsedDateRange(
+      LocalDate startDate, LocalDate endDate, Integer rentalDays, String errorMsg) {}
+
+  private boolean isCustomDatePromptKeyword(String text) {
+    if (text == null) return false;
+    String clean = text.trim().toLowerCase();
+    return clean.equals("custom date")
+        || clean.equals("custom")
+        || clean.equals("choose date")
+        || clean.equals("other date")
+        || clean.equals("date")
+        || clean.equals("तारीख")
+        || clean.equals("तारिख")
+        || clean.equals("तारीख चुनें")
+        || clean.contains("custom date")
+        || clean.contains("other date");
+  }
+
+  private ParsedDateRange parseRentalDates(
+      String input, LocalDate existingStartDate, Integer existingRentalDays) {
+    if (input == null || input.isBlank()) {
+      return new ParsedDateRange(null, null, null, "EMPTY_INPUT");
     }
+
+    String text = input.trim();
+
+    // Check for two-date range e.g. "25 Oct to 28 Oct" or "25/10 se 28/10"
+    String[] parts = text.split("\\s+(?:to|till|se|तक)\\s+");
+    if (parts.length == 2) {
+      LocalDate d1 = parseCustomDate(parts[0]);
+      LocalDate d2 = parseCustomDate(parts[1]);
+      if (d1 != null && d2 != null) {
+        if (d2.isBefore(d1)) {
+          return new ParsedDateRange(null, null, null, "INVALID_RANGE");
+        }
+        if (d1.isBefore(LocalDate.now())) {
+          return new ParsedDateRange(
+              null,
+              null,
+              null,
+              "PAST_DATE:" + d1.format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
+        }
+        int days = (int) ChronoUnit.DAYS.between(d1, d2) + 1;
+        return new ParsedDateRange(d1, d2, days, null);
+      }
+    }
+
+    LocalDate parsedDate = parseCustomDate(text);
+    if (parsedDate != null && parsedDate.isBefore(LocalDate.now())) {
+      return new ParsedDateRange(
+          null,
+          null,
+          null,
+          "PAST_DATE:" + parsedDate.format(DateTimeFormatter.ofPattern("dd MMM yyyy")));
+    }
+
+    int durationDays = extractDurationDays(text);
+
+    // Case 1: Both date and duration provided in message (e.g. "25 Oct se 3 din" or "कल से 2 दिन")
+    if (parsedDate != null && durationDays > 0) {
+      LocalDate end = parsedDate.plusDays(durationDays - 1);
+      return new ParsedDateRange(parsedDate, end, durationDays, null);
+    }
+
+    // Case 2: Only date provided (e.g. "25 Oct", "28/10", "today", "tomorrow")
+    if (parsedDate != null && durationDays <= 0) {
+      if (existingRentalDays != null && existingRentalDays > 0) {
+        LocalDate end = parsedDate.plusDays(existingRentalDays - 1);
+        return new ParsedDateRange(parsedDate, end, existingRentalDays, null);
+      }
+      return new ParsedDateRange(parsedDate, null, null, null);
+    }
+
+    // Case 3: Only duration provided (e.g. "3", "3 days", "2 दिन के लिए")
+    if (parsedDate == null && durationDays > 0) {
+      LocalDate start = existingStartDate != null ? existingStartDate : LocalDate.now().plusDays(1);
+      LocalDate end = start.plusDays(durationDays - 1);
+      return new ParsedDateRange(start, end, durationDays, null);
+    }
+
+    return new ParsedDateRange(null, null, null, "INVALID_INPUT");
+  }
+
+  private LocalDate parseCustomDate(String text) {
+    if (text == null || text.isBlank()) return null;
+    String lower = text.trim().toLowerCase();
+    LocalDate today = LocalDate.now();
+
+    // 1. Relative keywords
+    if (lower.contains("today") || lower.contains("aaj") || lower.contains("आज")) {
+      return today;
+    }
+    if (lower.contains("tomorrow") || lower.contains("kal") || lower.contains("कल")) {
+      return today.plusDays(1);
+    }
+    if (lower.contains("parso")
+        || lower.contains("parson")
+        || lower.contains("परसों")
+        || lower.contains("day after")) {
+      return today.plusDays(2);
+    }
+
+    // 2. ISO format: YYYY-MM-DD or YYYY/MM/DD
+    Pattern isoPattern = Pattern.compile("\\b(\\d{4})[\\/\\-](\\d{1,2})[\\/\\-](\\d{1,2})\\b");
+    Matcher isoMatcher = isoPattern.matcher(text);
+    if (isoMatcher.find()) {
+      try {
+        int y = Integer.parseInt(isoMatcher.group(1));
+        int m = Integer.parseInt(isoMatcher.group(2));
+        int d = Integer.parseInt(isoMatcher.group(3));
+        return LocalDate.of(y, m, d);
+      } catch (DateTimeException ignored) {
+      }
+    }
+
+    // 3. DD MonthName [YYYY]: e.g. "25 Oct", "25 October", "25th Oct 2026", "25 अक्टूबर"
+    Pattern ddMonthPattern =
+        Pattern.compile(
+            "\\b(\\d{1,2})(?:st|nd|rd|th)?\\s+([A-Za-z\\u0900-\\u097F]+)(?:\\s+(\\d{2,4}))?\\b");
+    Matcher ddMonthMatcher = ddMonthPattern.matcher(text);
+    if (ddMonthMatcher.find()) {
+      int month = parseMonthName(ddMonthMatcher.group(2));
+      if (month > 0) {
+        try {
+          int d = Integer.parseInt(ddMonthMatcher.group(1));
+          int y = today.getYear();
+          if (ddMonthMatcher.group(3) != null) {
+            y = Integer.parseInt(ddMonthMatcher.group(3));
+            if (y < 100) y += 2000;
+          }
+          LocalDate dt = LocalDate.of(y, month, d);
+          if (ddMonthMatcher.group(3) == null && dt.isBefore(today)) {
+            dt = dt.plusYears(1);
+          }
+          return dt;
+        } catch (DateTimeException ignored) {
+        }
+      }
+    }
+
+    // 4. MonthName DD [YYYY]: e.g. "Oct 25", "October 25"
+    Pattern monthDdPattern =
+        Pattern.compile(
+            "\\b([A-Za-z\\u0900-\\u097F]+)\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s+(\\d{2,4}))?\\b");
+    Matcher monthDdMatcher = monthDdPattern.matcher(text);
+    if (monthDdMatcher.find()) {
+      int month = parseMonthName(monthDdMatcher.group(1));
+      if (month > 0) {
+        try {
+          int d = Integer.parseInt(monthDdMatcher.group(2));
+          int y = today.getYear();
+          if (monthDdMatcher.group(3) != null) {
+            y = Integer.parseInt(monthDdMatcher.group(3));
+            if (y < 100) y += 2000;
+          }
+          LocalDate dt = LocalDate.of(y, month, d);
+          if (monthDdMatcher.group(3) == null && dt.isBefore(today)) {
+            dt = dt.plusYears(1);
+          }
+          return dt;
+        } catch (DateTimeException ignored) {
+        }
+      }
+    }
+
+    // 5. DD/MM/YYYY or DD/MM or DD-MM: e.g. "25/10", "25-10", "25/10/2026"
+    Pattern numDatePattern =
+        Pattern.compile("\\b(\\d{1,2})[\\/\\-\\.](\\d{1,2})(?:[\\/\\-\\.](\\d{2,4}))?\\b");
+    Matcher numDateMatcher = numDatePattern.matcher(text);
+    if (numDateMatcher.find()) {
+      try {
+        int d = Integer.parseInt(numDateMatcher.group(1));
+        int m = Integer.parseInt(numDateMatcher.group(2));
+        int y = today.getYear();
+        if (numDateMatcher.group(3) != null) {
+          y = Integer.parseInt(numDateMatcher.group(3));
+          if (y < 100) y += 2000;
+        }
+        LocalDate dt = LocalDate.of(y, m, d);
+        if (numDateMatcher.group(3) == null && dt.isBefore(today)) {
+          dt = dt.plusYears(1);
+        }
+        return dt;
+      } catch (DateTimeException ignored) {
+      }
+    }
+
+    // 6. DD + "तारीख" or "tarik" / "tareekh": e.g. "25 तारीख", "28 तारीख को", "25 tareekh"
+    Pattern tarikPattern =
+        Pattern.compile("\\b(\\d{1,2})\\s*(?:तारीख|तारीक|तारिक|tarik|tareekh|tarikh)\\b");
+    Matcher tarikMatcher = tarikPattern.matcher(text);
+    if (tarikMatcher.find()) {
+      try {
+        int d = Integer.parseInt(tarikMatcher.group(1));
+        int m = today.getMonthValue();
+        int y = today.getYear();
+        if (d < today.getDayOfMonth()) {
+          m += 1;
+          if (m > 12) {
+            m = 1;
+            y += 1;
+          }
+        }
+        return LocalDate.of(y, m, d);
+      } catch (DateTimeException ignored) {
+      }
+    }
+
+    return null;
+  }
+
+  private int parseMonthName(String monthStr) {
+    if (monthStr == null || monthStr.isBlank()) return -1;
+    String s = monthStr.trim().toLowerCase();
+    // English months
+    if (s.startsWith("jan")) return 1;
+    if (s.startsWith("feb")) return 2;
+    if (s.startsWith("mar")) return 3;
+    if (s.startsWith("apr")) return 4;
+    if (s.startsWith("may")) return 5;
+    if (s.startsWith("jun")) return 6;
+    if (s.startsWith("jul")) return 7;
+    if (s.startsWith("aug")) return 8;
+    if (s.startsWith("sep")) return 9;
+    if (s.startsWith("oct")) return 10;
+    if (s.startsWith("nov")) return 11;
+    if (s.startsWith("dec")) return 12;
+
+    // Hindi months
+    if (s.startsWith("जन")) return 1;
+    if (s.startsWith("फर") || s.startsWith("फ़र")) return 2;
+    if (s.startsWith("मार्च")) return 3;
+    if (s.startsWith("अप्रै") || s.startsWith("अप्रैल")) return 4;
+    if (s.startsWith("मई")) return 5;
+    if (s.startsWith("जून")) return 6;
+    if (s.startsWith("जुला") || s.startsWith("जुलाई")) return 7;
+    if (s.startsWith("अग") || s.startsWith("अगस्त")) return 8;
+    if (s.startsWith("सितं") || s.startsWith("सितम")) return 9;
+    if (s.startsWith("अक्टू") || s.startsWith("अक्तू")) return 10;
+    if (s.startsWith("नवं") || s.startsWith("नवम")) return 11;
+    if (s.startsWith("दिसं") || s.startsWith("दिसम")) return 12;
+
+    return -1;
+  }
+
+  private int extractDurationDays(String input) {
+    if (input == null || input.isBlank()) return 0;
+
+    // 1. Duration with explicit unit: e.g. "3 din", "2 दिन", "5 days", "1 day", "2 दिन के लिए", "2
+    // shift", "3 d"
+    Pattern unitPattern =
+        Pattern.compile(
+            "(\\d+)\\s*(?:दिनों|दिन|दिनो|days|day|din|diwas|shift|shifts|shift/दिन|घंटे|hours|hr|hrs|d)\\b",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CHARACTER_CLASS);
+    Matcher unitMatcher = unitPattern.matcher(input);
+    if (unitMatcher.find()) {
+      try {
+        int d = Integer.parseInt(unitMatcher.group(1));
+        if (d > 0) return d;
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
+    // 2. "for X" or "se X" or "तक X": e.g. "for 3", "for 5 days", "se 2 din"
+    Pattern forPattern =
+        Pattern.compile("(?:for|se|till|तक)\\s+(\\d+)\\b", Pattern.CASE_INSENSITIVE);
+    Matcher forMatcher = forPattern.matcher(input);
+    if (forMatcher.find()) {
+      try {
+        int d = Integer.parseInt(forMatcher.group(1));
+        if (d > 0) return d;
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
+    // 3. Clean numeric response: e.g. "1", "2", "3", "5", "7"
+    String trimmed = input.trim();
+    if (trimmed.matches("^\\d{1,3}$")) {
+      try {
+        int d = Integer.parseInt(trimmed);
+        if (d > 0) return d;
+      } catch (NumberFormatException ignored) {
+      }
+    }
+
+    return 0;
+  }
+
+  private int extractDays(String input) {
+    return extractDurationDays(input);
   }
 
   private String formatBookingStatus(BookingStatus status) {
