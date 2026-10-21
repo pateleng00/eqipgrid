@@ -59,6 +59,11 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   public List<EquipmentType> getAllEquipmentTypes(
       Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
     List<EquipmentType> list = masterQueryRepository.fetchEquipmentTypes(includeInactive);
+    list.forEach(t -> {
+      if (t.getImageUrl() != null && t.getImageUrl().startsWith("s3://")) {
+        t.setImageUrl(resolveS3Url(t.getImageUrl()));
+      }
+    });
     if (category != null) {
       return list.stream()
           .filter(t -> category.equals(t.getCategory()))
@@ -70,12 +75,31 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
   @Override
   @Transactional(readOnly = true)
   public EquipmentType getEquipmentTypeById(Long id) {
-    return equipmentTypeRepository
+    EquipmentType type = equipmentTypeRepository
         .findById(id)
         .orElseThrow(
             () ->
                 new Exceptions.ResourceNotFoundException(
                     "Equipment type not found with ID: " + id));
+    if (type.getImageUrl() != null && type.getImageUrl().startsWith("s3://")) {
+      type.setImageUrl(resolveS3Url(type.getImageUrl()));
+    }
+    return type;
+  }
+
+  private String resolveS3Url(String url) {
+    if (url == null || url.isBlank() || !url.startsWith("s3://")) {
+      return url;
+    }
+    String path = url.substring("s3://".length());
+    int firstSlash = path.indexOf('/');
+    if (firstSlash != -1) {
+      String bucket = path.substring(0, firstSlash);
+      String key = path.substring(firstSlash + 1);
+      String encodedKey = key.replace(" ", "%20");
+      return String.format("https://%s.s3.ap-south-1.amazonaws.com/%s", bucket, encodedKey);
+    }
+    return url;
   }
 
   @Override
