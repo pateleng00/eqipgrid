@@ -522,7 +522,16 @@ public class AssetServiceImpl implements IAssetService {
 
   @Override
   public List<WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId) {
-    List<Asset> all = assetQueryRepository.fetchAssets(category, null);
+    List<Asset> all =
+        assetQueryRepository.fetchAssets(category, null).stream()
+            .filter(a -> a.getStatus() != AssetStatus.RETIRED)
+            .filter(a -> a.getType() == null || Boolean.TRUE.equals(a.getType().getActive()))
+            .filter(
+                a ->
+                    a.getManufacturer() == null
+                        || Boolean.TRUE.equals(a.getManufacturer().getActive()))
+            .filter(a -> a.getModel() == null || Boolean.TRUE.equals(a.getModel().getActive()))
+            .toList();
     all.forEach(
         a -> {
           populateMedia(a);
