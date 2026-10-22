@@ -107,7 +107,7 @@ class WhatsAppFlowIntegrationTest {
                           com.equipgrid.location.entity.City.builder()
                               .name("Hardoi")
                               .state(state)
-                              .pinCode("241001")
+                              .pinCode("241303")
                               .active(true)
                               .build()));
 
@@ -116,7 +116,7 @@ class WhatsAppFlowIntegrationTest {
               .name("Hardoi Central Yard")
               .code("HUB-HRD-01")
               .city(city)
-              .address("Plot 12, Industrial Area, Bilgram Road, Hardoi")
+              .address("Village & Post Bansa, P/S Mallawan, Hardoi, UP 241303")
               .operatingRadiusKm(new BigDecimal("40.0"))
               .latitude(new BigDecimal("27.3984"))
               .longitude(new BigDecimal("80.1287"))
