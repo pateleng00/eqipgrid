@@ -5,6 +5,7 @@ import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.booking.service.PricingEngine;
 import com.equipgrid.intelligence.dto.model.EquipmentCardDto;
+import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -35,6 +36,7 @@ public class FleetIntelligenceTools {
   private final HubRepository hubRepository;
   private final PricingEngine pricingEngine;
   private final ObjectMapper objectMapper;
+  private final IAssetVectorEmbeddingService assetVectorEmbeddingService;
 
   /** Builds the Google Gemini functionDeclarations tools schema array. */
   public ArrayNode buildGeminiToolDeclarations() {
@@ -162,10 +164,41 @@ public class FleetIntelligenceTools {
     String lowerQuery = query.toLowerCase(Locale.ROOT);
     String lowerHub = hubName != null ? hubName.toLowerCase(Locale.ROOT) : "";
 
+    AssetCategory catFilter = null;
+    if (StringUtils.isNotBlank(category)) {
+      try {
+        catFilter = AssetCategory.valueOf(category.toUpperCase(Locale.ROOT));
+      } catch (Exception ignored) {
+      }
+    }
+
+    // 1. First priority: High-dimensional Vector Cosine Similarity Search (pgvector)
+    if (StringUtils.isNotBlank(query) && assetVectorEmbeddingService != null) {
+      try {
+        List<Asset> vectorMatches =
+            assetVectorEmbeddingService.searchAssetsByVector(query, catFilter, null, 4);
+        if (vectorMatches != null && !vectorMatches.isEmpty()) {
+          for (Asset a : vectorMatches) {
+            if (StringUtils.isBlank(lowerHub)
+                || (a.getHub() != null
+                    && a.getHub().getName().toLowerCase(Locale.ROOT).contains(lowerHub))) {
+              matched.add(a);
+            }
+          }
+        }
+      } catch (Exception e) {
+        log.warn("[FleetIntelligenceTools] Vector similarity search fallback: {}", e.getMessage());
+      }
+    }
+
+    // 2. Complement with rule-based keyword & semantic dictionary matching
     for (Asset a : allAssets) {
+      if (matched.contains(a)) {
+        continue;
+      }
       // Category filter
-      if (StringUtils.isNotBlank(category)) {
-        if (!a.getCategory().name().equalsIgnoreCase(category)) {
+      if (catFilter != null) {
+        if (!a.getCategory().equals(catFilter)) {
           continue;
         }
       }

@@ -78,7 +78,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
 
           return IntelligenceChatResponse.builder()
               .reply(geminiReply)
-              .modelUsed("EquipBot AI (Gemini + Live Fleet Tools)")
+              .modelUsed("Kisan Mitra (किसान मित्र)")
               .matchedEquipment(matchedCards)
               .suggestedQuestions(buildDynamicSuggestions(userMessage, matchedCards))
               .primaryActionUrl(determinePrimaryAction(matchedCards))
@@ -104,7 +104,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
     String localReply = generateLocalDomainReply(userMessage, allAssets, allHubs, matchedCards);
     return IntelligenceChatResponse.builder()
         .reply(localReply)
-        .modelUsed("EquipBot Assistant (Local Knowledge)")
+        .modelUsed("Kisan Mitra (किसान मित्र)")
         .matchedEquipment(matchedCards)
         .suggestedQuestions(buildDynamicSuggestions(userMessage, matchedCards))
         .primaryActionUrl(determinePrimaryAction(matchedCards))
@@ -344,10 +344,10 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
   private String buildSystemPrompt(List<Asset> assets, List<Hub> hubs) {
     StringBuilder sb = new StringBuilder();
     sb.append(
-        "You are the official EquipGrid AI Assistant for EquipGrid (equipgrid.com), India's premier rural and urban heavy machinery rental network operating across Uttar Pradesh (Hardoi, Sandila, Bilgram, and surrounding districts).\n\n");
+        "You are Kisan Mitra (किसान मित्र), the official AI Machinery Assistant for EquipGrid (equipgrid.in), India's premier rural and semi urban machinery rental network operating across Uttar Pradesh (Hardoi, Sandila, Bilgram, and surrounding districts).\n\n");
     sb.append("### Core Brand Guarantees & Features:\n");
     sb.append(
-        "1. **2-Hour Security Deposit Refund Guarantee**: Refundable deposits paid via UPI are automatically returned within 120 minutes of machine return inspection with zero deductions.\n");
+        "1. **2-Hour Security Deposit Refund Guarantee**: Refundable deposits paid are automatically returned within 120 minutes of machine return inspection with zero deductions.\n");
     sb.append(
         "2. **90-Minute Zero Breakdown SLA**: If a machine faces mechanical failure, our certified mobile technician or replacement machine arrives within 90 minutes.\n");
     sb.append(
@@ -725,7 +725,8 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
         || lower.contains("pranam")) {
       StringBuilder sb = new StringBuilder();
       sb.append("### Namaste! Welcome to EquipGrid 🙏\n\n");
-      sb.append("I am your EquipBot Assistant. Here is what I can do for you:\n\n");
+      sb.append(
+          "I am Kisan Mitra (किसान मित्र), your personal EquipGrid Machinery Assistant. Here is what I can do for you:\n\n");
       sb.append(
           "1. **🚜 Browse & Book Machinery**: Agriculture, Construction & Multipurpose equipment.\n");
       sb.append(

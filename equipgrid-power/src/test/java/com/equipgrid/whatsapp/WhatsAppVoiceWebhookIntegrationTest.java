@@ -3,7 +3,10 @@ package com.equipgrid.whatsapp;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyString;
 
+import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.common.dto.rest.ApiResponse;
+import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
 import com.equipgrid.whatsapp.controller.WhatsAppWebhookController;
 import com.equipgrid.whatsapp.dto.model.VoiceBookingIntent;
 import com.equipgrid.whatsapp.dto.request.WhatsAppInboundRequest;
@@ -12,8 +15,9 @@ import com.equipgrid.whatsapp.enums.WhatsAppState;
 import com.equipgrid.whatsapp.service.IWhatsAppBotService;
 import com.equipgrid.whatsapp.service.MetaWhatsAppClientService;
 import com.equipgrid.whatsapp.service.VoiceNoteProcessingService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,9 +39,8 @@ class WhatsAppVoiceWebhookIntegrationTest {
 
   @Autowired private VoiceNoteProcessingService voiceNoteProcessingService;
 
-  @Autowired private ObjectMapper objectMapper;
-
   @MockBean private MetaWhatsAppClientService metaWhatsAppClientService;
+  @MockBean private IAssetVectorEmbeddingService assetVectorEmbeddingService;
 
   @Test
   @DisplayName(
@@ -184,5 +187,76 @@ class WhatsAppVoiceWebhookIntegrationTest {
         response.getMessage().contains("आवाज़ सन्देश नहीं समझ आया")
             || response.getMessage().contains("दोबारा आवाज़ भेजें"),
         "Should guide user with clear retry instructions when no audio content is received");
+  }
+
+  @Test
+  @DisplayName("WhatsApp Bot: Direct Hindi text search uses vector embedding to find machinery")
+  void testDirectHindiTextSearch() {
+    whatsAppBotService.resetConversation(SENDER_PHONE);
+
+    Asset mockRotavator =
+        Asset.builder()
+            .id(56L)
+            .assetTag("AG-ROT-001")
+            .name("Rotavator / Rotary Tiller (7-Feet)")
+            .category(AssetCategory.AGRICULTURE)
+            .dailyRate(BigDecimal.valueOf(1800))
+            .depositAmount(BigDecimal.valueOf(3500))
+            .build();
+
+    Mockito.when(
+            assetVectorEmbeddingService.searchAssetsByVector(
+                Mockito.contains("रोटावेटर"), Mockito.any(), Mockito.any(), Mockito.anyInt()))
+        .thenReturn(List.of(mockRotavator));
+
+    WhatsAppInboundRequest request =
+        WhatsAppInboundRequest.builder()
+            .from(SENDER_PHONE)
+            .userName("Kisan Bhai")
+            .message("मुझे रोटावेटर चाहिए")
+            .build();
+
+    WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
+    assertNotNull(response);
+    assertEquals(WhatsAppState.SELECTING_ASSET, response.getState());
+    assertTrue(
+        response.getMessage().contains("किसान मित्र AI - मिली मशीनें")
+            || response.getMessage().contains("Rotavator"));
+    assertTrue(response.getMessage().contains("AG-ROT-001"));
+  }
+
+  @Test
+  @DisplayName("WhatsApp Bot: Voice Note with specific equipment matches via vector embeddings")
+  void testVoiceNoteWithSemanticVectorMatch() {
+    whatsAppBotService.resetConversation(SENDER_PHONE);
+
+    Asset mockMixer =
+        Asset.builder()
+            .id(73L)
+            .assetTag("CN-MIX-001")
+            .name("Portable Concrete Mixer 10/7")
+            .category(AssetCategory.CONSTRUCTION)
+            .dailyRate(BigDecimal.valueOf(1200))
+            .depositAmount(BigDecimal.valueOf(2500))
+            .build();
+
+    Mockito.when(
+            assetVectorEmbeddingService.searchAssetsByVector(
+                Mockito.contains("chhat"), Mockito.any(), Mockito.any(), Mockito.anyInt()))
+        .thenReturn(List.of(mockMixer));
+
+    WhatsAppInboundRequest request =
+        WhatsAppInboundRequest.builder()
+            .from(SENDER_PHONE)
+            .userName("Contractor Sahab")
+            .mediaType("audio")
+            .transcribedText("chhat ki dhalai ke liye mixer machine")
+            .build();
+
+    WhatsAppMessageResponse response = whatsAppBotService.processIncomingMessage(request);
+    assertNotNull(response);
+    assertEquals(WhatsAppState.SELECTING_ASSET, response.getState());
+    assertTrue(response.getMessage().contains("आवाज़ सन्देश प्राप्त हुआ"));
+    assertTrue(response.getMessage().contains("Portable Concrete Mixer 10/7"));
   }
 }

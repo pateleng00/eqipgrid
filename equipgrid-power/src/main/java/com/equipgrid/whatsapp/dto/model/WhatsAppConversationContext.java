@@ -50,11 +50,12 @@ public class WhatsAppConversationContext {
   private String demoVideoUrl;
   private List<String> mediaUrls;
 
-  // ─── Voice Note Processing ──────────────────────────────────────────
+  // ─── Voice Note & Semantic Search Processing ────────────────────────
   private String lastVoiceTranscript;
   private String detectedLanguage;
   private Boolean voiceNoteReceived;
   private Integer voiceRetryCount;
+  private List<Long> candidateAssetIds;
 
   // ─── Damage Checklist (Return Inspection) ───────────────────────────
   private Integer checklistCurrentItemIndex;

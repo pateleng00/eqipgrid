@@ -27,6 +27,7 @@ import com.equipgrid.farmlocation.repository.FarmLocationRepository;
 import com.equipgrid.fulfillment.entity.ReturnPickupJob;
 import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
 import com.equipgrid.fulfillment.repository.ReturnPickupJobRepository;
+import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.location.repository.LocationQueryRepository;
@@ -97,6 +98,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
   private final RentalConfigurationRepository rentalConfigurationRepository;
   private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
   private final AwsProperties awsProperties;
+  private final IAssetVectorEmbeddingService assetVectorEmbeddingService;
+
+  private AssetCategory parseAssetCategory(String categoryStr) {
+    if (categoryStr == null) return null;
+    if ("AGRICULTURE".equalsIgnoreCase(categoryStr)) return AssetCategory.AGRICULTURE;
+    if ("CONSTRUCTION".equalsIgnoreCase(categoryStr)) return AssetCategory.CONSTRUCTION;
+    if ("MULTIPURPOSE_FLEET".equalsIgnoreCase(categoryStr)) return AssetCategory.MULTIPURPOSE_FLEET;
+    return null;
+  }
 
   public String getEquipmentHindiName(String name, String tag) {
     if (tag != null && !tag.isBlank()) {
@@ -489,6 +499,13 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         || trimmed.contains("CALL")) {
       return showHelplineResponse(conv);
     } else {
+      if (input != null && input.trim().length() >= 2 && !isMenuKeyword(input)) {
+        WhatsAppMessageResponse vectorSearchResp =
+            tryVectorSearchAndDisplay(input.trim(), conv, context);
+        if (vectorSearchResp != null) {
+          return vectorSearchResp;
+        }
+      }
       return resetAndShowMainMenu(conv, customer, input);
     }
   }
@@ -556,6 +573,13 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       context.setAssetCategory("MULTIPURPOSE_FLEET");
       context.setSelectedCategory("MULTIPURPOSE_FLEET");
     } else {
+      if (input != null && input.trim().length() >= 2 && !isMenuKeyword(input)) {
+        WhatsAppMessageResponse vectorSearchResp =
+            tryVectorSearchAndDisplay(input.trim(), conv, context);
+        if (vectorSearchResp != null) {
+          return vectorSearchResp;
+        }
+      }
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(
@@ -874,6 +898,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     sb.append(String.format("🚜 *Available %s%s:*%s\n", catLabel, stationHeader, dateSub));
     sb.append("_(उपलब्ध उपकरण - फोटो व 10-सेकंड वीडियो डेमो सहित)_\n\n");
 
+    // Persist candidate asset IDs for direct index matching
+    context.setCandidateAssetIds(filtered.stream().map(Asset::getId).toList());
+
     List<String> options = new ArrayList<>();
     int index = 1;
     for (Asset asset : filtered) {
@@ -916,6 +943,133 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     sb.append(
         "👉 *Reply with Machine Number (e.g. 1)* or Tag (e.g. `C-MIX-001`) to inspect video, photos & proceed.");
+
+    conv.setState(WhatsAppState.SELECTING_ASSET);
+
+    return WhatsAppMessageResponse.builder()
+        .to(conv.getPhoneNumber())
+        .message(sb.toString())
+        .state(WhatsAppState.SELECTING_ASSET)
+        .suggestedOptions(options)
+        .hubName(context.getSelectedHubName())
+        .cityName(context.getSelectedCityName())
+        .build();
+  }
+
+  // ─── Semantic Vector Search Machinery Presentation ────────────────────────
+
+  private WhatsAppMessageResponse tryVectorSearchAndDisplay(
+      String searchQuery, WhatsAppConversation conv, WhatsAppConversationContext context) {
+    if (searchQuery == null || searchQuery.trim().length() < 2) {
+      return null;
+    }
+    try {
+      AssetCategory catFilter = parseAssetCategory(context.getAssetCategory());
+      List<Asset> matchedAssets =
+          assetVectorEmbeddingService.searchAssetsByVector(
+              searchQuery.trim(), catFilter, context.getSelectedHubId(), 4);
+
+      if (matchedAssets != null && !matchedAssets.isEmpty()) {
+        log.info(
+            "[WhatsApp Vector Search] Query '{}' matched {} assets via pgvector",
+            searchQuery,
+            matchedAssets.size());
+        return displaySemanticMatchedMachinery(conv, context, matchedAssets, searchQuery.trim());
+      }
+    } catch (Exception e) {
+      log.warn(
+          "[WhatsApp Vector Search] Vector search failed for '{}': {}",
+          searchQuery,
+          e.getMessage());
+    }
+    return null;
+  }
+
+  private WhatsAppMessageResponse displaySemanticMatchedMachinery(
+      WhatsAppConversation conv,
+      WhatsAppConversationContext context,
+      List<Asset> matchedAssets,
+      String query) {
+
+    // Store candidate asset IDs in context so replying '1', '2' directly selects matched machine
+    List<Long> matchedIds = matchedAssets.stream().map(Asset::getId).toList();
+    context.setCandidateAssetIds(matchedIds);
+
+    // If dates are already set, filter out conflicting bookings
+    List<Asset> displayPool = matchedAssets;
+    if (context.getStartDate() != null && context.getEndDate() != null) {
+      List<Asset> collisionFree =
+          matchedAssets.stream()
+              .filter(
+                  a ->
+                      bookingQueryRepository.countConflictingBookings(
+                              a.getId(), context.getStartDate(), context.getEndDate())
+                          == 0)
+              .toList();
+      if (!collisionFree.isEmpty()) {
+        displayPool = collisionFree;
+        context.setCandidateAssetIds(displayPool.stream().map(Asset::getId).toList());
+      }
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append("🎯 *किसान मित्र AI - मिली मशीनें (Matched Machinery)*\n");
+    sb.append("━━━━━━━━━━━━━━━━━━━━━━\n");
+    sb.append(String.format("🔍 आपकी मांग: _\"%s\"_\n", query));
+    if (context.getSelectedHubName() != null) {
+      sb.append(String.format("📍 Station Hub: *%s*\n", context.getSelectedHubName()));
+    }
+    if (context.getStartDate() != null && context.getEndDate() != null) {
+      sb.append(
+          String.format(
+              "🗓️ तारीखें: *%s से %s (%d दिन)*\n",
+              context.getStartDate(), context.getEndDate(), context.getRentalDays()));
+    }
+    sb.append("\n");
+
+    List<String> options = new ArrayList<>();
+    int index = 1;
+    for (Asset asset : displayPool) {
+      String hubStr = asset.getHub() != null ? asset.getHub().getName() : null;
+      String hindiName = getEquipmentHindiName(asset.getName(), asset.getAssetTag());
+
+      sb.append(
+          String.format("*%d.* 🚜 *%s* (`%s`)\n", index, asset.getName(), asset.getAssetTag()));
+      if (hindiName != null && !hindiName.isBlank()) {
+        sb.append(String.format("   👉 *%s*\n", hindiName));
+      }
+      if (hubStr != null && !hubStr.isBlank() && context.getSelectedHubName() == null) {
+        sb.append(String.format("   • 📍 Yard: %s\n", hubStr));
+      }
+
+      List<RentalConfiguration> assetConfigs =
+          rentalConfigurationQueryRepository.fetchByAssetId(asset.getId());
+      if (assetConfigs.size() > 1) {
+        sb.append(
+            String.format(
+                "   • ⚡ Multi-Mode: %d Plans (प्रति एकड़ / प्रति चक्कर / प्रति दिन)\n",
+                assetConfigs.size()));
+      } else if (assetConfigs.size() == 1) {
+        RentalConfiguration singleCfg = assetConfigs.get(0);
+        String uLabel =
+            formatBillingUnitLabel(
+                singleCfg.getBillingUnit() != null ? singleCfg.getBillingUnit().name() : null);
+        sb.append(
+            String.format("   • 💰 Rate: ₹%,.0f / %s\n", singleCfg.getBaseDailyRate(), uLabel));
+      } else {
+        sb.append(String.format("   • 💰 Daily Rent: ₹%,.0f/day\n", asset.getDailyRate()));
+      }
+      sb.append(
+          String.format(
+              "   • 🛡️ Deposit: ₹%,.0f (100%% Refundable via UPI)\n\n", asset.getDepositAmount()));
+
+      options.add(String.format("%d. %s", index, asset.getName()));
+      index++;
+    }
+
+    options.add("MENU (मुख्य मेनू)");
+
+    sb.append("👉 *मशीन चुनने के लिए 1, 2... भेजें* या विवरण/फोटो देखने के लिए टैग भेजें।");
 
     conv.setState(WhatsAppState.SELECTING_ASSET);
 
@@ -990,19 +1144,44 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
               .toList();
     }
 
+    List<Asset> candidatePool;
+    if (context.getCandidateAssetIds() != null && !context.getCandidateAssetIds().isEmpty()) {
+      candidatePool =
+          context.getCandidateAssetIds().stream()
+              .map(assetQueryRepository::fetchById)
+              .filter(Optional::isPresent)
+              .map(Optional::get)
+              .toList();
+    } else {
+      candidatePool = availableAssets;
+    }
+
     Asset selected = null;
 
-    // Try numeric index matching (1, 2, 3)
+    // Try numeric index matching (1, 2, 3) against candidate pool
     try {
       int choice = Integer.parseInt(input.trim());
-      if (choice >= 1 && choice <= availableAssets.size()) {
-        selected = availableAssets.get(choice - 1);
+      if (choice >= 1 && choice <= candidatePool.size()) {
+        selected = candidatePool.get(choice - 1);
       }
     } catch (NumberFormatException ignored) {
     }
 
-    // Try tag or name match
+    // Try tag or name match in candidatePool
     if (selected == null) {
+      String search = input.trim().toLowerCase();
+      for (Asset a : candidatePool) {
+        if (a.getAssetTag().equalsIgnoreCase(input.trim())
+            || a.getName().toLowerCase().contains(search)
+            || (a.getModel() != null && a.getModel().getName().toLowerCase().contains(search))) {
+          selected = a;
+          break;
+        }
+      }
+    }
+
+    // Fallback: Try tag or name match across all availableAssets
+    if (selected == null && candidatePool != availableAssets) {
       String search = input.trim().toLowerCase();
       for (Asset a : availableAssets) {
         if (a.getAssetTag().equalsIgnoreCase(input.trim())
@@ -1014,7 +1193,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       }
     }
 
+    // Fallback: Try vector semantic search if user typed a machine/task name instead of an index
     if (selected == null) {
+      if (input != null && input.trim().length() >= 2 && !isMenuKeyword(input)) {
+        WhatsAppMessageResponse vectorSearchResp =
+            tryVectorSearchAndDisplay(input.trim(), conv, context);
+        if (vectorSearchResp != null) {
+          return vectorSearchResp;
+        }
+      }
+
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(
@@ -2878,6 +3066,30 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
         // Emit acknowledgment first, then route to appropriate state
         conv.setState(WhatsAppState.MAIN_MENU);
+
+        // 1. Vector semantic search using voice transcript or machine hint
+        String searchTarget =
+            (intent.getMachineNameHint() != null && !intent.getMachineNameHint().isBlank())
+                ? intent.getMachineNameHint()
+                : intent.getTranscript();
+
+        if (searchTarget != null && !searchTarget.isBlank()) {
+          AssetCategory catFilter = parseAssetCategory(context.getAssetCategory());
+          List<Asset> matched =
+              assetVectorEmbeddingService.searchAssetsByVector(
+                  searchTarget, catFilter, context.getSelectedHubId(), 4);
+
+          if (matched != null && !matched.isEmpty()) {
+            return ackResponseThenState(
+                conv,
+                customer,
+                context,
+                ack,
+                displaySemanticMatchedMachinery(conv, context, matched, searchTarget));
+          }
+        }
+
+        // 2. Standard Category / Dates / Catalog fallback
         if (context.getAssetCategory() != null && !context.getAssetCategory().isBlank()) {
           if (context.getRentalDays() != null) {
             // Both category and days known — route to machine listing with voice ack

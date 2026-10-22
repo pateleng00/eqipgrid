@@ -5,6 +5,7 @@ import com.equipgrid.core.botshield.RequireBotShield;
 import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.intelligence.dto.request.IntelligenceChatRequest;
 import com.equipgrid.intelligence.dto.response.IntelligenceChatResponse;
+import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
 import com.equipgrid.intelligence.service.IIntelligenceChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,9 +29,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class IntelligenceChatController {
 
   private final IIntelligenceChatService intelligenceChatService;
+  private final IAssetVectorEmbeddingService assetVectorEmbeddingService;
 
   @Operation(
-      summary = "Chat with EquipGrid Intelligence Assistant",
+      summary = "Chat with Kisan Mitra Intelligence Assistant",
       description =
           "Answers user questions using website data and Gemini AI, finds machinery, and facilitates booking")
   @PostMapping("/chat")
@@ -41,5 +43,22 @@ public class IntelligenceChatController {
     log.info("Received Intelligence chat request: message='{}'", request.getMessage());
     IntelligenceChatResponse response = intelligenceChatService.chat(request);
     return ResponseEntity.ok(ApiResponse.buildSuccess(response));
+  }
+
+  @Operation(
+      summary = "Sync all asset vector embeddings",
+      description =
+          "Batch generates 768-dimensional embeddings for all assets and stores them in PostgreSQL pgvector")
+  @PostMapping("/embeddings/sync")
+  public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> syncEmbeddings() {
+    log.info("Received request to sync all asset vector embeddings");
+    int count = assetVectorEmbeddingService.syncAllAssetEmbeddings();
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess(
+            java.util.Map.of(
+                "syncedCount",
+                count,
+                "message",
+                "Successfully generated and stored embeddings for " + count + " assets")));
   }
 }
