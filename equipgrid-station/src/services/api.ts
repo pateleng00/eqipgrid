@@ -796,9 +796,9 @@ export class ApiStore {
   async refreshAll(): Promise<void> {
     try {
       const results = await Promise.allSettled([
-        request<any[]>('/locations/states'),
-        request<any[]>('/locations/cities'),
-        request<any[]>('/locations/hubs'),
+        request<any[]>('/locations/states?includeInactive=true'),
+        request<any[]>('/locations/cities?includeInactive=true'),
+        request<any[]>('/locations/hubs?includeInactive=true'),
         request<any>('/reports/dashboard-summary'),
       ]);
 
@@ -862,8 +862,8 @@ export class ApiStore {
   }
 
   // --- LOCATION MASTER METHODS ---
-  getStates(): State[] {
-    return this.states.filter((s) => s.active);
+  getStates(includeInactive: boolean = false): State[] {
+    return includeInactive ? [...this.states] : this.states.filter((s) => s.active);
   }
 
   addState(name: string, code: string): State {
@@ -889,11 +889,61 @@ export class ApiStore {
     return newState;
   }
 
-  getCities(stateId?: number): City[] {
-    if (stateId) {
-      return this.cities.filter((c) => c.stateId === stateId && c.active);
+  async createState(name: string, code: string): Promise<State> {
+    const raw = await request<any>('/locations/states', {
+      method: 'POST',
+      body: JSON.stringify({ name, code: code.toUpperCase() }),
+    });
+    const newState: State = {
+      id: raw.id || Date.now(),
+      name: raw.name || name,
+      code: (raw.code || code).toUpperCase(),
+      active: raw.active ?? true,
+    };
+    this.states.push(newState);
+    this.notify();
+    return newState;
+  }
+
+  async toggleStateStatus(stateId: number, active: boolean): Promise<State> {
+    const raw = await request<any>(`/locations/states/${stateId}/status?active=${active}`, {
+      method: 'PATCH',
+    });
+    const idx = this.states.findIndex((s) => s.id === stateId);
+    if (idx !== -1) {
+      this.states[idx] = { ...this.states[idx], active };
+      this.notify();
     }
-    return this.cities.filter((c) => c.active);
+    return raw;
+  }
+
+  async updateState(stateId: number, data: { name: string; code: string }): Promise<State> {
+    const raw = await request<any>(`/locations/states/${stateId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ name: data.name, code: data.code.toUpperCase() }),
+    });
+    const idx = this.states.findIndex((s) => s.id === stateId);
+    if (idx !== -1) {
+      this.states[idx] = { ...this.states[idx], name: data.name, code: data.code.toUpperCase() };
+      this.notify();
+    }
+    return raw;
+  }
+
+  async deleteState(stateId: number): Promise<void> {
+    await request<void>(`/locations/states/${stateId}`, {
+      method: 'DELETE',
+    });
+    this.states = this.states.filter((s) => s.id !== stateId);
+    this.notify();
+  }
+
+  getCities(stateId?: number, includeInactive: boolean = false): City[] {
+    let list = includeInactive ? this.cities : this.cities.filter((c) => c.active);
+    if (stateId) {
+      list = list.filter((c) => c.stateId === stateId);
+    }
+    return list;
   }
 
   addCity(stateId: number, name: string, pinCode?: string): City {
@@ -920,11 +970,67 @@ export class ApiStore {
     return newCity;
   }
 
-  getHubs(cityId?: number): Hub[] {
-    if (cityId) {
-      return this.hubs.filter((h) => h.cityId === cityId && h.active);
+  async createCity(stateId: number, name: string, pinCode?: string): Promise<City> {
+    const raw = await request<any>('/locations/cities', {
+      method: 'POST',
+      body: JSON.stringify({ stateId, name, pinCode }),
+    });
+    const newCity: City = {
+      id: raw.id || Date.now(),
+      stateId: raw.state?.id || raw.stateId || stateId,
+      name: raw.name || name,
+      pinCode: raw.pinCode || pinCode,
+      active: raw.active ?? true,
+    };
+    this.cities.push(newCity);
+    this.notify();
+    return newCity;
+  }
+
+  async toggleCityStatus(cityId: number, active: boolean): Promise<City> {
+    const raw = await request<any>(`/locations/cities/${cityId}/status?active=${active}`, {
+      method: 'PATCH',
+    });
+    const idx = this.cities.findIndex((c) => c.id === cityId);
+    if (idx !== -1) {
+      this.cities[idx] = { ...this.cities[idx], active };
+      this.notify();
     }
-    return this.hubs.filter((h) => h.active);
+    return raw;
+  }
+
+  async updateCity(cityId: number, data: { stateId: number; name: string; pinCode?: string }): Promise<City> {
+    const raw = await request<any>(`/locations/cities/${cityId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const idx = this.cities.findIndex((c) => c.id === cityId);
+    if (idx !== -1) {
+      this.cities[idx] = {
+        ...this.cities[idx],
+        stateId: data.stateId,
+        name: data.name,
+        pinCode: data.pinCode,
+      };
+      this.notify();
+    }
+    return raw;
+  }
+
+  async deleteCity(cityId: number): Promise<void> {
+    await request<void>(`/locations/cities/${cityId}`, {
+      method: 'DELETE',
+    });
+    this.cities = this.cities.filter((c) => c.id !== cityId);
+    this.notify();
+  }
+
+  getHubs(cityId?: number, includeInactive: boolean = false): Hub[] {
+    let list = includeInactive ? this.hubs : this.hubs.filter((h) => h.active);
+    if (cityId) {
+      list = list.filter((h) => h.cityId === cityId);
+    }
+    return list;
   }
 
   addHub(data: {
@@ -972,6 +1078,101 @@ export class ApiStore {
       .catch((e) => console.error('Failed to persist hub:', e));
 
     return newHub;
+  }
+
+  async createHub(data: {
+    cityId: number;
+    name: string;
+    code: string;
+    address: string;
+    contactPhone?: string;
+    operatingRadiusKm?: number;
+    latitude: number;
+    longitude: number;
+  }): Promise<Hub> {
+    const raw = await request<any>('/locations/hubs', {
+      method: 'POST',
+      body: JSON.stringify({
+        cityId: data.cityId,
+        name: data.name,
+        code: data.code.toUpperCase(),
+        address: data.address,
+        contactPhone: data.contactPhone,
+        operatingRadiusKm: data.operatingRadiusKm || 25.0,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      }),
+    });
+    const newHub: Hub = {
+      id: raw.id || Date.now(),
+      cityId: raw.city?.id || raw.cityId || data.cityId,
+      name: raw.name || data.name,
+      code: (raw.code || data.code).toUpperCase(),
+      address: raw.address || data.address,
+      contactPhone: raw.contactPhone || data.contactPhone,
+      operatingRadiusKm: raw.operatingRadiusKm || data.operatingRadiusKm || 25.0,
+      latitude: raw.latitude ?? data.latitude,
+      longitude: raw.longitude ?? data.longitude,
+      active: raw.active ?? true,
+    };
+    this.hubs.push(newHub);
+    this.notify();
+    return newHub;
+  }
+
+  async toggleHubStatus(hubId: number, active: boolean): Promise<Hub> {
+    const raw = await request<any>(`/locations/hubs/${hubId}/status?active=${active}`, {
+      method: 'PATCH',
+    });
+    const idx = this.hubs.findIndex((h) => h.id === hubId);
+    if (idx !== -1) {
+      this.hubs[idx] = { ...this.hubs[idx], active };
+      this.notify();
+    }
+    return raw;
+  }
+
+  async updateHub(
+    hubId: number,
+    data: {
+      cityId: number;
+      name: string;
+      code: string;
+      address: string;
+      contactPhone?: string;
+      operatingRadiusKm?: number;
+      latitude: number;
+      longitude: number;
+    },
+  ): Promise<Hub> {
+    const raw = await request<any>(`/locations/hubs/${hubId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    const idx = this.hubs.findIndex((h) => h.id === hubId);
+    if (idx !== -1) {
+      this.hubs[idx] = {
+        ...this.hubs[idx],
+        cityId: data.cityId,
+        name: data.name,
+        code: data.code.toUpperCase(),
+        address: data.address,
+        contactPhone: data.contactPhone,
+        operatingRadiusKm: data.operatingRadiusKm || 25.0,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      };
+      this.notify();
+    }
+    return raw;
+  }
+
+  async deleteHub(hubId: number): Promise<void> {
+    await request<void>(`/locations/hubs/${hubId}`, {
+      method: 'DELETE',
+    });
+    this.hubs = this.hubs.filter((h) => h.id !== hubId);
+    this.notify();
   }
 
   // --- CUSTOMER MASTER METHODS ---

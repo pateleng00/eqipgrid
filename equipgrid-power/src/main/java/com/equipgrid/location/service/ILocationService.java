@@ -12,11 +12,15 @@ public interface ILocationService {
 
   List<State> getStates();
 
+  List<State> getStates(boolean includeInactive);
+
   State createState(State state);
 
   List<City> getCitiesByState(Long stateId);
 
   List<City> getAllCities();
+
+  List<City> getAllCities(boolean includeInactive);
 
   City createCity(CityRequest request);
 
@@ -24,7 +28,27 @@ public interface ILocationService {
 
   List<Hub> getAllHubs();
 
+  List<Hub> getAllHubs(boolean includeInactive);
+
   Hub createHub(HubRequest request);
 
   List<StateHierarchyResponse> getLocationHierarchy();
+
+  State updateStateStatus(Long stateId, boolean active);
+
+  City updateCityStatus(Long cityId, boolean active);
+
+  Hub updateHubStatus(Long hubId, boolean active);
+
+  State updateState(Long stateId, State state);
+
+  City updateCity(Long cityId, CityRequest request);
+
+  Hub updateHub(Long hubId, HubRequest request);
+
+  void deleteHub(Long hubId);
+
+  void deleteCity(Long cityId);
+
+  void deleteState(Long stateId);
 }

@@ -2,6 +2,7 @@ package com.equipgrid.intelligence.tool;
 
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetCategory;
+import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.booking.service.PricingEngine;
 import com.equipgrid.intelligence.dto.model.EquipmentCardDto;
@@ -143,7 +144,7 @@ public class FleetIntelligenceTools {
 
   private List<Asset> fetchAssetsSafe() {
     try {
-      List<Asset> assets = assetQueryRepository.fetchAssets(null, null);
+      List<Asset> assets = assetQueryRepository.fetchAssets(null, AssetStatus.AVAILABLE);
       if (assets != null && !assets.isEmpty()) {
         return assets;
       }

@@ -1,6 +1,7 @@
 package com.equipgrid.location.service;
 
 import com.equipgrid.asset.entity.Asset;
+import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.config.CacheConfig;
 import com.equipgrid.location.dto.request.CityRequest;
 import com.equipgrid.location.dto.request.HubRequest;
@@ -41,7 +42,15 @@ public class LocationServiceImpl implements ILocationService {
   @Transactional(readOnly = true)
   @Cacheable(value = CacheConfig.CACHE_STATES)
   public List<State> getStates() {
-    return locationQueryRepository.findActiveStates();
+    return getStates(false);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<State> getStates(boolean includeInactive) {
+    return includeInactive
+        ? locationQueryRepository.findAllStates()
+        : locationQueryRepository.findActiveStates();
   }
 
   @Override
@@ -67,7 +76,15 @@ public class LocationServiceImpl implements ILocationService {
   @Transactional(readOnly = true)
   @Cacheable(value = CacheConfig.CACHE_CITIES, key = "'all'")
   public List<City> getAllCities() {
-    return locationQueryRepository.findAllActiveCities();
+    return getAllCities(false);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<City> getAllCities(boolean includeInactive) {
+    return includeInactive
+        ? locationQueryRepository.findAllCities()
+        : locationQueryRepository.findAllActiveCities();
   }
 
   @Override
@@ -105,7 +122,15 @@ public class LocationServiceImpl implements ILocationService {
   @Transactional(readOnly = true)
   @Cacheable(value = CacheConfig.CACHE_HUBS, key = "'all'")
   public List<Hub> getAllHubs() {
-    return locationQueryRepository.findAllActiveHubs();
+    return getAllHubs(false);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Hub> getAllHubs(boolean includeInactive) {
+    return includeInactive
+        ? locationQueryRepository.findAllHubs()
+        : locationQueryRepository.findAllActiveHubs();
   }
 
   @Override
@@ -233,5 +258,295 @@ public class LocationServiceImpl implements ILocationService {
     }
 
     return result;
+  }
+
+  // ─── Active Machine Guards & Status Management ──────────────────────────────
+
+  private void validateHubCanBeDeactivated(Hub hub) {
+    long activeAssets = locationQueryRepository.countActiveAssetsByHubId(hub.getId());
+    if (activeAssets > 0) {
+      throw new Exceptions.BusinessRuleViolationException(
+          String.format(
+              "Cannot deactivate Hub '%s' (ID: %d): %d active machine(s) are currently stationed in this yard. Reassign or retire all machines before deactivating the hub.",
+              hub.getName(), hub.getId(), activeAssets));
+    }
+  }
+
+  private void validateCityCanBeDeactivated(City city) {
+    long activeAssets = locationQueryRepository.countActiveAssetsByCityId(city.getId());
+    if (activeAssets > 0) {
+      throw new Exceptions.BusinessRuleViolationException(
+          String.format(
+              "Cannot deactivate City '%s' (ID: %d): %d active machine(s) currently exist in hubs under this city. Reassign or retire all machines before deactivating the city.",
+              city.getName(), city.getId(), activeAssets));
+    }
+  }
+
+  private void validateStateCanBeDeactivated(State state) {
+    long activeAssets = locationQueryRepository.countActiveAssetsByStateId(state.getId());
+    if (activeAssets > 0) {
+      throw new Exceptions.BusinessRuleViolationException(
+          String.format(
+              "Cannot deactivate State '%s' (ID: %d): %d active machine(s) currently exist across hubs in this state. Reassign or retire all machines before deactivating the state.",
+              state.getName(), state.getId(), activeAssets));
+    }
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
+  public Hub updateHubStatus(Long hubId, boolean active) {
+    Hub hub =
+        hubRepository
+            .findById(hubId)
+            .orElseThrow(
+                () -> new Exceptions.ResourceNotFoundException("Hub not found with ID: " + hubId));
+
+    if (!active && Boolean.TRUE.equals(hub.getActive())) {
+      validateHubCanBeDeactivated(hub);
+    }
+
+    hub.setActive(active);
+    log.info(
+        "[LocationService] Hub '{}' (ID: {}) status updated to active={}",
+        hub.getName(),
+        hub.getId(),
+        active);
+    return hubRepository.save(hub);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true)
+      })
+  public City updateCityStatus(Long cityId, boolean active) {
+    City city =
+        cityRepository
+            .findById(cityId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException("City not found with ID: " + cityId));
+
+    if (!active && Boolean.TRUE.equals(city.getActive())) {
+      validateCityCanBeDeactivated(city);
+    }
+
+    city.setActive(active);
+    log.info(
+        "[LocationService] City '{}' (ID: {}) status updated to active={}",
+        city.getName(),
+        city.getId(),
+        active);
+    return cityRepository.save(city);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_STATES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true)
+      })
+  public State updateStateStatus(Long stateId, boolean active) {
+    State state =
+        stateRepository
+            .findById(stateId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException(
+                        "State not found with ID: " + stateId));
+
+    if (!active && Boolean.TRUE.equals(state.getActive())) {
+      validateStateCanBeDeactivated(state);
+    }
+
+    state.setActive(active);
+    log.info(
+        "[LocationService] State '{}' (ID: {}) status updated to active={}",
+        state.getName(),
+        state.getId(),
+        active);
+    return stateRepository.save(state);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
+  public Hub updateHub(Long hubId, HubRequest request) {
+    Hub hub =
+        hubRepository
+            .findById(hubId)
+            .orElseThrow(
+                () -> new Exceptions.ResourceNotFoundException("Hub not found with ID: " + hubId));
+
+    if (request.getCityId() != null && !request.getCityId().equals(hub.getCity().getId())) {
+      City newCity =
+          cityRepository
+              .findById(request.getCityId())
+              .orElseThrow(
+                  () ->
+                      new Exceptions.ResourceNotFoundException(
+                          "City not found with ID: " + request.getCityId()));
+      hub.setCity(newCity);
+    }
+
+    if (request.getName() != null && !request.getName().isBlank()) {
+      hub.setName(request.getName().trim());
+    }
+    if (request.getHindiName() != null) {
+      hub.setHindiName(request.getHindiName().trim());
+    }
+    if (request.getCode() != null && !request.getCode().isBlank()) {
+      hub.setCode(request.getCode().trim().toUpperCase());
+    }
+    if (request.getAddress() != null && !request.getAddress().isBlank()) {
+      hub.setAddress(request.getAddress().trim());
+    }
+    if (request.getContactPhone() != null) {
+      hub.setContactPhone(request.getContactPhone().trim());
+    }
+    if (request.getOperatingRadiusKm() != null) {
+      hub.setOperatingRadiusKm(request.getOperatingRadiusKm());
+    }
+    if (request.getLatitude() != null) {
+      hub.setLatitude(request.getLatitude());
+    }
+    if (request.getLongitude() != null) {
+      hub.setLongitude(request.getLongitude());
+    }
+
+    return hubRepository.save(hub);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true)
+      })
+  public City updateCity(Long cityId, CityRequest request) {
+    City city =
+        cityRepository
+            .findById(cityId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException("City not found with ID: " + cityId));
+
+    if (request.getStateId() != null && !request.getStateId().equals(city.getState().getId())) {
+      State newState =
+          stateRepository
+              .findById(request.getStateId())
+              .orElseThrow(
+                  () ->
+                      new Exceptions.ResourceNotFoundException(
+                          "State not found with ID: " + request.getStateId()));
+      city.setState(newState);
+    }
+    if (request.getName() != null && !request.getName().isBlank()) {
+      city.setName(request.getName().trim());
+    }
+    if (request.getHindiName() != null) {
+      city.setHindiName(request.getHindiName().trim());
+    }
+    if (request.getPinCode() != null) {
+      city.setPinCode(request.getPinCode().trim());
+    }
+
+    return cityRepository.save(city);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_STATES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true)
+      })
+  public State updateState(Long stateId, State request) {
+    State state =
+        stateRepository
+            .findById(stateId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException(
+                        "State not found with ID: " + stateId));
+
+    if (request.getName() != null && !request.getName().isBlank()) {
+      state.setName(request.getName().trim());
+    }
+    if (request.getHindiName() != null) {
+      state.setHindiName(request.getHindiName().trim());
+    }
+    if (request.getCode() != null && !request.getCode().isBlank()) {
+      state.setCode(request.getCode().trim().toUpperCase());
+    }
+
+    return stateRepository.save(state);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true)
+      })
+  public void deleteHub(Long hubId) {
+    Hub hub =
+        hubRepository
+            .findById(hubId)
+            .orElseThrow(
+                () -> new Exceptions.ResourceNotFoundException("Hub not found with ID: " + hubId));
+    validateHubCanBeDeactivated(hub);
+    hubRepository.delete(hub);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true)
+      })
+  public void deleteCity(Long cityId) {
+    City city =
+        cityRepository
+            .findById(cityId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException("City not found with ID: " + cityId));
+    validateCityCanBeDeactivated(city);
+    cityRepository.delete(city);
+  }
+
+  @Override
+  @Caching(
+      evict = {
+        @CacheEvict(value = CacheConfig.CACHE_STATES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_CITIES, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_HUBS, allEntries = true),
+        @CacheEvict(value = CacheConfig.CACHE_LOCATION_HIERARCHY, allEntries = true)
+      })
+  public void deleteState(Long stateId) {
+    State state =
+        stateRepository
+            .findById(stateId)
+            .orElseThrow(
+                () ->
+                    new Exceptions.ResourceNotFoundException(
+                        "State not found with ID: " + stateId));
+    validateStateCanBeDeactivated(state);
+    stateRepository.delete(state);
   }
 }

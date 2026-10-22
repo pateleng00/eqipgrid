@@ -2,6 +2,7 @@ package com.equipgrid.location.repository;
 
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.entity.QAsset;
+import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.location.entity.City;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.entity.QCity;
@@ -36,6 +37,13 @@ public class LocationQueryRepository {
         .fetch();
   }
 
+  public List<State> findAllStates() {
+    return queryFactory
+        .selectFrom(qState)
+        .orderBy(qState.name.asc())
+        .fetch();
+  }
+
   public Optional<State> findStateByCode(String code) {
     if (code == null || code.isBlank()) {
       return Optional.empty();
@@ -58,7 +66,18 @@ public class LocationQueryRepository {
   public List<City> findAllActiveCities() {
     return queryFactory
         .selectFrom(qCity)
+        .leftJoin(qCity.state, qState)
+        .fetchJoin()
         .where(qCity.active.isTrue())
+        .orderBy(qCity.name.asc())
+        .fetch();
+  }
+
+  public List<City> findAllCities() {
+    return queryFactory
+        .selectFrom(qCity)
+        .leftJoin(qCity.state, qState)
+        .fetchJoin()
         .orderBy(qCity.name.asc())
         .fetch();
   }
@@ -86,6 +105,17 @@ public class LocationQueryRepository {
         .leftJoin(qCity.state, qState)
         .fetchJoin()
         .where(qHub.active.isTrue())
+        .orderBy(qHub.name.asc())
+        .fetch();
+  }
+
+  public List<Hub> findAllHubs() {
+    return queryFactory
+        .selectFrom(qHub)
+        .leftJoin(qHub.city, qCity)
+        .fetchJoin()
+        .leftJoin(qCity.state, qState)
+        .fetchJoin()
         .orderBy(qHub.name.asc())
         .fetch();
   }
@@ -125,5 +155,47 @@ public class LocationQueryRepository {
         .selectFrom(qAsset)
         .where(qAsset.hub.isNotNull().and(qAsset.hub.active.isTrue()))
         .fetch();
+  }
+
+  public long countActiveAssetsByHubId(Long hubId) {
+    if (hubId == null) {
+      return 0L;
+    }
+    Long count =
+        queryFactory
+            .select(qAsset.count())
+            .from(qAsset)
+            .where(qAsset.hub.id.eq(hubId).and(qAsset.status.ne(AssetStatus.RETIRED)))
+            .fetchOne();
+    return count != null ? count : 0L;
+  }
+
+  public long countActiveAssetsByCityId(Long cityId) {
+    if (cityId == null) {
+      return 0L;
+    }
+    Long count =
+        queryFactory
+            .select(qAsset.count())
+            .from(qAsset)
+            .join(qAsset.hub, qHub)
+            .where(qHub.city.id.eq(cityId).and(qAsset.status.ne(AssetStatus.RETIRED)))
+            .fetchOne();
+    return count != null ? count : 0L;
+  }
+
+  public long countActiveAssetsByStateId(Long stateId) {
+    if (stateId == null) {
+      return 0L;
+    }
+    Long count =
+        queryFactory
+            .select(qAsset.count())
+            .from(qAsset)
+            .join(qAsset.hub, qHub)
+            .join(qHub.city, qCity)
+            .where(qCity.state.id.eq(stateId).and(qAsset.status.ne(AssetStatus.RETIRED)))
+            .fetchOne();
+    return count != null ? count : 0L;
   }
 }

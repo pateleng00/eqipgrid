@@ -15,6 +15,7 @@ import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
+import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.master.repository.BillingUnitMasterRepository;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
@@ -24,6 +25,7 @@ import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -47,6 +49,7 @@ public class AssetServiceImpl implements IAssetService {
   private final BillingUnitMasterRepository billingUnitMasterRepository;
   private final RentalConfigurationRepository rentalConfigurationRepository;
   private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
+  private final IAssetVectorEmbeddingService assetVectorEmbeddingService;
 
   @Override
   public List<Asset> getAllAssets(AssetCategory category, AssetStatus status) {
@@ -315,6 +318,27 @@ public class AssetServiceImpl implements IAssetService {
         "CREATE",
         performedBy != null ? performedBy : "SYSTEM",
         "Created asset: " + saved.getName());
+
+    // Automatically generate and persist 768-dim vector embedding asynchronously
+    try {
+      CompletableFuture.runAsync(
+          () -> {
+            try {
+              assetVectorEmbeddingService.updateAssetEmbedding(saved.getId());
+            } catch (Exception ex) {
+              log.warn(
+                  "[AssetService] Automatic vector embedding generation failed for new asset ID={}: {}",
+                  saved.getId(),
+                  ex.getMessage());
+            }
+          });
+    } catch (Exception e) {
+      log.warn(
+          "[AssetService] Could not schedule vector embedding generation for new asset ID={}: {}",
+          saved.getId(),
+          e.getMessage());
+    }
+
     return saved;
   }
 
@@ -403,6 +427,27 @@ public class AssetServiceImpl implements IAssetService {
         "UPDATE",
         performedBy != null ? performedBy : "SYSTEM",
         "Updated asset: " + updated.getName() + ", billingUnit=" + updated.getBillingUnit());
+
+    // Automatically refresh vector embedding asynchronously when asset attributes change
+    try {
+      CompletableFuture.runAsync(
+          () -> {
+            try {
+              assetVectorEmbeddingService.updateAssetEmbedding(updated.getId());
+            } catch (Exception ex) {
+              log.warn(
+                  "[AssetService] Automatic vector embedding refresh failed for asset ID={}: {}",
+                  updated.getId(),
+                  ex.getMessage());
+            }
+          });
+    } catch (Exception e) {
+      log.warn(
+          "[AssetService] Could not schedule vector embedding refresh for asset ID={}: {}",
+          updated.getId(),
+          e.getMessage());
+    }
+
     return updated;
   }
 
