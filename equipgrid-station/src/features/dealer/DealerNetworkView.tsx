@@ -348,7 +348,6 @@ export const DealerNetworkView: React.FC = () => {
                 onClick={() => {
                   setFilterStateId('ALL');
                   setFilterCityId('ALL');
-                  setFilterHubId('ALL');
                 }}
                 className="mt-3 text-xs text-amber-600 hover:text-amber-500 font-bold underline cursor-pointer"
               >

@@ -46,7 +46,12 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
   const [selectedDealerId, setSelectedDealerId] = useState<number | ''>('');
 
   const dealerOptions = useMemo(() => {
-    const list = [
+    const list: Array<{
+      value: string | number;
+      label: string;
+      badge: string;
+      subLabel: string;
+    }> = [
       {
         value: '',
         label: 'EquipGrid Fleet (Own / Central Company Fleet)',

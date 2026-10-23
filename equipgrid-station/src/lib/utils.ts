@@ -14,9 +14,10 @@ export function formatINR(amount: number | null | undefined): string {
   }).format(amount);
 }
 
-export function formatDate(dateStr: string): string {
-  if (!dateStr) return '';
+export function formatDate(dateStr?: string | null): string {
+  if (!dateStr) return '—';
   const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
