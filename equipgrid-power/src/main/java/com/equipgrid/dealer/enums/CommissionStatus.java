@@ -8,8 +8,9 @@ import lombok.Getter;
 
 @Getter
 public enum CommissionStatus {
-  PENDING((short) 1, "Pending Settlement (लंबित)"),
-  SETTLED((short) 2, "Settled & Disbursed (भुगतान संपन्न)");
+  PENDING((short) 1, "Pending (लंबित)"),
+  SETTLED((short) 2, "Settled (निपटाया गया)"),
+  DECLINED((short) 3, "Declined (अस्वीकृत)");
 
   @JsonValue private final Short value;
   private final String description;

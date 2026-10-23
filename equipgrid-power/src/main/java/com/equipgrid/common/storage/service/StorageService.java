@@ -15,6 +15,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Date;
@@ -46,8 +48,6 @@ public class StorageService {
   private final AmazonS3 s3client;
   private final AwsProperties awsProperties;
   private final Environment environment;
-
-  public record StoragePromotionResult(String key, String url) {}
 
   public Map<String, Object> uploadFileTemporary(MultipartFile file) {
     String mediaType = validateMediaFile(file);
@@ -190,7 +190,7 @@ public class StorageService {
             parsedUrl.getPath().startsWith("/")
                 ? parsedUrl.getPath().substring(1)
                 : parsedUrl.getPath();
-        key = java.net.URLDecoder.decode(rawKey, java.nio.charset.StandardCharsets.UTF_8);
+        key = URLDecoder.decode(rawKey, StandardCharsets.UTF_8);
       } else {
         key = fileUrl.startsWith("/") ? fileUrl.substring(1) : fileUrl;
       }
@@ -419,4 +419,6 @@ public class StorageService {
         + ".amazonaws.com/"
         + key;
   }
+
+  public record StoragePromotionResult(String key, String url) {}
 }

@@ -8,10 +8,10 @@ import lombok.Getter;
 
 @Getter
 public enum PaymentType {
-  ADVANCE((short) 1, "Advance Rental Payment (अग्रिम किराया)"),
+  ADVANCE((short) 1, "Advance Payment (अग्रिम भुगतान)"),
   DEPOSIT((short) 2, "Security Deposit (सुरक्षा राशि)"),
   FINAL_SETTLEMENT((short) 3, "Final Settlement (अंतिम निपटान)"),
-  DAMAGE_CHARGE((short) 4, "Damage Recovery Charge (क्षति शुल्क)"),
+  DAMAGE_CHARGE((short) 4, "Damage Charge (क्षति शुल्क)"),
   REFUND((short) 5, "Deposit Refund (जमानत वापसी)");
 
   @JsonValue private final Short value;

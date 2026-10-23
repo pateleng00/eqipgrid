@@ -9,11 +9,7 @@ import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
 import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
-import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
-import com.equipgrid.maintenance.dto.CreateDamageComponentRequest;
-import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
-import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
-import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
+import com.equipgrid.maintenance.dto.*;
 import com.equipgrid.maintenance.entity.MaintenanceDamageComponent;
 import com.equipgrid.maintenance.entity.MaintenanceRecord;
 import com.equipgrid.maintenance.enums.MaintenancePriority;
@@ -24,6 +20,7 @@ import com.equipgrid.maintenance.repository.MaintenanceQueryRepository;
 import com.equipgrid.maintenance.repository.MaintenanceRecordRepository;
 import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -32,6 +29,8 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -42,6 +41,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class MaintenanceServiceImpl implements IMaintenanceService {
 
+  private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
   private final MaintenanceRecordRepository maintenanceRecordRepository;
   private final MaintenanceDamageComponentRepository damageComponentRepository;
   private final MaintenanceQueryRepository maintenanceQueryRepository;
@@ -49,10 +49,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
   private final AssetRepository assetRepository;
   private final HubRepository hubRepository;
   private final StorageService storageService;
-  private final org.springframework.beans.factory.ObjectProvider<CacheManager> cacheManagerProvider;
-
-  private static final com.fasterxml.jackson.databind.ObjectMapper JSON_MAPPER =
-      new com.fasterxml.jackson.databind.ObjectMapper();
+  private final ObjectProvider<CacheManager> cacheManagerProvider;
 
   @Override
   @Transactional
@@ -490,7 +487,7 @@ public class MaintenanceServiceImpl implements IMaintenanceService {
       CacheManager cacheManager = cacheManagerProvider.getIfAvailable();
       if (cacheManager != null) {
         for (String cacheName : cacheManager.getCacheNames()) {
-          org.springframework.cache.Cache cache = cacheManager.getCache(cacheName);
+          Cache cache = cacheManager.getCache(cacheName);
           if (cache != null) {
             cache.clear();
           }

@@ -1,5 +1,6 @@
 package com.equipgrid.master.service;
 
+import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.auth.entity.User;
 import com.equipgrid.master.dto.request.EquipmentTypeRequest;
 import com.equipgrid.master.dto.request.ManufacturerRequest;
@@ -16,8 +17,7 @@ public interface IMachineMasterService {
   // --- Equipment Types ---
   List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive);
 
-  List<EquipmentType> getAllEquipmentTypes(
-      Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category);
+  List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive, AssetCategory category);
 
   EquipmentType getEquipmentTypeById(Long id);
 

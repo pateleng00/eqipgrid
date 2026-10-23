@@ -1,13 +1,11 @@
 package com.equipgrid.whatsapp.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.HashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -89,12 +87,8 @@ public class MetaWhatsAppClientService {
     HttpEntity<Void> entity = new HttpEntity<>(headers);
 
     try {
-      ResponseEntity<com.fasterxml.jackson.databind.JsonNode> response =
-          restTemplate.exchange(
-              url,
-              org.springframework.http.HttpMethod.GET,
-              entity,
-              com.fasterxml.jackson.databind.JsonNode.class);
+      ResponseEntity<JsonNode> response =
+          restTemplate.exchange(url, HttpMethod.GET, entity, JsonNode.class);
       if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
         String downloadUrl = response.getBody().path("url").asText(null);
         log.info(
@@ -133,8 +127,7 @@ public class MetaWhatsAppClientService {
 
     try {
       ResponseEntity<byte[]> response =
-          restTemplate.exchange(
-              mediaUrl, org.springframework.http.HttpMethod.GET, entity, byte[].class);
+          restTemplate.exchange(mediaUrl, HttpMethod.GET, entity, byte[].class);
       if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
         log.info(
             "[Meta WhatsApp] Successfully downloaded {} bytes from Meta media URL",

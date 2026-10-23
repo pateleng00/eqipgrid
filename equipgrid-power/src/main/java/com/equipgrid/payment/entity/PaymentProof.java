@@ -34,4 +34,9 @@ public class PaymentProof {
 
   @Column(columnDefinition = "TEXT")
   private String verificationNotes;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
 }

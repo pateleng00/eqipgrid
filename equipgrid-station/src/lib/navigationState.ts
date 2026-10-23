@@ -19,7 +19,10 @@ export const VALID_TABS = [
   'return',
   'payments',
   'dealers',
+  'support',
+  'leads',
   'cash',
+  'reporting',
   'users',
 ] as const;
 

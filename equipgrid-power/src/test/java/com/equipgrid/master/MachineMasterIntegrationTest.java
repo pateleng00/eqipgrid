@@ -25,21 +25,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class MachineMasterIntegrationTest {
 
-  @Autowired private IMachineMasterService machineMasterService;
-
   private final User adminCaller =
       User.builder()
           .id(101L)
           .username("station.admin")
           .role(com.equipgrid.auth.enums.Role.ADMIN)
           .build();
-
   private final User rootCaller =
       User.builder()
           .id(1L)
           .username("root.superadmin")
           .role(com.equipgrid.auth.enums.Role.ROOT)
           .build();
+  @Autowired private IMachineMasterService machineMasterService;
 
   // ==================== MANUFACTURERS (OEM) ====================
 

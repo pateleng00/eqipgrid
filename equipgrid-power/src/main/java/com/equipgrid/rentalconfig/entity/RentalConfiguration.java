@@ -4,6 +4,7 @@ import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.location.entity.Hub;
+import com.equipgrid.master.entity.BillingUnitMaster;
 import com.equipgrid.master.entity.EquipmentType;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -54,7 +55,7 @@ public class RentalConfiguration extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "billing_unit_id")
-  private com.equipgrid.master.entity.BillingUnitMaster billingUnitMaster;
+  private BillingUnitMaster billingUnitMaster;
 
   @Column(name = "working_hours_limit", precision = 6, scale = 2)
   private BigDecimal workingHoursLimit;

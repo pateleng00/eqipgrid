@@ -45,6 +45,15 @@ const LocationMasterView = lazy(() =>
 const UserManagementView = lazy(() =>
   import('../features/users/UserManagementView').then((m) => ({ default: m.UserManagementView })),
 );
+const CustomerSupportTicketsView = lazy(() =>
+  import('../features/support/CustomerSupportTicketsView').then((m) => ({ default: m.CustomerSupportTicketsView })),
+);
+const DealerLeadsView = lazy(() =>
+  import('../features/dealer/DealerLeadsView').then((m) => ({ default: m.DealerLeadsView })),
+);
+const ReportingAnalyticsView = lazy(() =>
+  import('../features/reporting/ReportingAnalyticsView').then((m) => ({ default: m.ReportingAnalyticsView })),
+);
 
 const ViewLoadingFallback: React.FC = () => (
   <div className="space-y-4 animate-pulse p-4">
@@ -157,6 +166,8 @@ export const App: React.FC = () => {
             onCreateModalOpened={() => setTriggerNewDeployment(false)}
           />
         )}
+        {activeTab === 'support' && <CustomerSupportTicketsView onNavigateToBooking={handleTabChange} />}
+        {activeTab === 'leads' && <DealerLeadsView onNavigateToDealers={() => handleTabChange('dealers')} />}
         {activeTab === 'dispatch' && <DispatchYardView onNavigateToPayment={() => handleTabChange('payments')} />}
         {activeTab === 'rental-configs' && <RentalConfigView />}
         {activeTab === 'locations' && <LocationMasterView />}
@@ -164,6 +175,12 @@ export const App: React.FC = () => {
         {activeTab === 'payments' && <PaymentLedgerView />}
         {activeTab === 'dealers' && <DealerNetworkView />}
         {activeTab === 'cash' && <DailyCashReconciliationView />}
+        {activeTab === 'reporting' && (
+          <ReportingAnalyticsView
+            onNavigateToCashRegister={() => handleTabChange('cash')}
+            onNavigateToCatalog={() => handleTabChange('catalog')}
+          />
+        )}
         {activeTab === 'users' && <UserManagementView />}
       </Suspense>
 

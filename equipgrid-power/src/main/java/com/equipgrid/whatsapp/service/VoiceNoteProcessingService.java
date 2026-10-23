@@ -12,6 +12,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -141,7 +144,7 @@ public class VoiceNoteProcessingService {
             }
           }
           String base64Data = audioSource.substring(commaIdx + 1);
-          audioBytes = java.util.Base64.getDecoder().decode(base64Data);
+          audioBytes = Base64.getDecoder().decode(base64Data);
         }
       } catch (Exception e) {
         log.warn("[VoiceBot] Failed to decode data URI audio: {}", e.getMessage());
@@ -151,7 +154,7 @@ public class VoiceNoteProcessingService {
     } else {
       // Attempt decoding as raw base64 string
       try {
-        audioBytes = java.util.Base64.getDecoder().decode(audioSource.trim());
+        audioBytes = Base64.getDecoder().decode(audioSource.trim());
       } catch (Exception ignored) {
       }
     }
@@ -241,7 +244,7 @@ public class VoiceNoteProcessingService {
       effectiveMime = mimeType.split(";")[0].trim().toLowerCase();
     }
 
-    String base64Audio = java.util.Base64.getEncoder().encodeToString(audioBytes);
+    String base64Audio = Base64.getEncoder().encodeToString(audioBytes);
 
     // Build the Gemini multimodal request using inline_data
     ObjectNode root = objectMapper.createObjectNode();
@@ -421,8 +424,7 @@ public class VoiceNoteProcessingService {
 
   private VoiceBookingIntent recoverTruncatedVoiceResponse(String rawText) {
     String transcript = "";
-    java.util.regex.Matcher m =
-        java.util.regex.Pattern.compile("\"transcript\"\\s*:\\s*\"([^\"]*)").matcher(rawText);
+    Matcher m = Pattern.compile("\"transcript\"\\s*:\\s*\"([^\"]*)").matcher(rawText);
     if (m.find()) {
       transcript = m.group(1).trim();
     }
@@ -641,9 +643,8 @@ public class VoiceNoteProcessingService {
     }
 
     Integer days = null;
-    java.util.regex.Matcher dayMatcher =
-        java.util.regex.Pattern.compile("(\\d+)\\s*(din|day|days|dino|दिन)")
-            .matcher(text.toLowerCase());
+    Matcher dayMatcher =
+        Pattern.compile("(\\d+)\\s*(din|day|days|dino|दिन)").matcher(text.toLowerCase());
     if (dayMatcher.find()) {
       try {
         days = Integer.parseInt(dayMatcher.group(1));

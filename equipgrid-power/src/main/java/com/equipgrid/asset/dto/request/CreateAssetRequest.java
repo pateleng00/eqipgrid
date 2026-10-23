@@ -5,6 +5,7 @@ import com.equipgrid.asset.enums.BillingUnit;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -36,9 +37,11 @@ public class CreateAssetRequest {
   @NotNull(message = "Hub / Yard station selection is required")
   private Long hubId;
 
+  private Long dealerPartnerId;
+
   private String imageUrl;
 
-  private java.util.List<String> galleryImageUrls;
+  private List<String> galleryImageUrls;
 
   private String videoUrl;
 

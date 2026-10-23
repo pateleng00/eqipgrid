@@ -2,6 +2,7 @@ package com.equipgrid.customer.repository;
 
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.customer.entity.QCustomer;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Optional;
@@ -48,7 +49,7 @@ public class CustomerQueryRepository {
     String trimmed = phone.trim();
     String digits = trimmed.replaceAll("[^0-9]", "");
 
-    com.querydsl.core.BooleanBuilder predicate = new com.querydsl.core.BooleanBuilder();
+    BooleanBuilder predicate = new BooleanBuilder();
     predicate.or(qCustomer.phone.eq(trimmed));
     if (!digits.isBlank()) {
       predicate.or(qCustomer.phone.eq(digits));

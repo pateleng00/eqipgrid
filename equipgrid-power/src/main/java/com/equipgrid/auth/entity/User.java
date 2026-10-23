@@ -2,6 +2,8 @@ package com.equipgrid.auth.entity;
 
 import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.BaseEntity;
+import com.equipgrid.location.entity.Hub;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,7 +26,7 @@ public class User extends BaseEntity {
   @Column(unique = true, length = 128)
   private String email;
 
-  @com.fasterxml.jackson.annotation.JsonIgnore
+  @JsonIgnore
   @Column(name = "password_hash", nullable = false)
   private String passwordHash;
 
@@ -39,9 +41,14 @@ public class User extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "hub_id")
-  private com.equipgrid.location.entity.Hub hub;
+  private Hub hub;
 
   @Builder.Default
   @Column(nullable = false)
   private Boolean active = true;
+
+  @Transient
+  public String getRoleDescription() {
+    return role != null ? role.getDescription() : null;
+  }
 }

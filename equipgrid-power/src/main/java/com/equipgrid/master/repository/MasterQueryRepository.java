@@ -1,13 +1,6 @@
 package com.equipgrid.master.repository;
 
-import com.equipgrid.master.entity.BillingUnitMaster;
-import com.equipgrid.master.entity.EquipmentType;
-import com.equipgrid.master.entity.MachineModel;
-import com.equipgrid.master.entity.Manufacturer;
-import com.equipgrid.master.entity.QBillingUnitMaster;
-import com.equipgrid.master.entity.QEquipmentType;
-import com.equipgrid.master.entity.QMachineModel;
-import com.equipgrid.master.entity.QManufacturer;
+import com.equipgrid.master.entity.*;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;

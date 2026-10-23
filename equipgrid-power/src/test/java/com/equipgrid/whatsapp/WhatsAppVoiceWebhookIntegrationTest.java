@@ -55,47 +55,47 @@ class WhatsAppVoiceWebhookIntegrationTest {
 
     String metaPayload =
         """
-                {
-                  "object": "whatsapp_business_account",
-                  "entry": [
-                    {
-                      "id": "1795175008399502",
-                      "changes": [
                         {
-                          "value": {
-                            "messaging_product": "whatsapp",
-                            "metadata": {
-                              "display_phone_number": "15556300171",
-                              "phone_number_id": "1450975934758555"
-                            },
-                            "contacts": [
-                              {
-                                "profile": { "name": "Ramesh Kumar" },
-                                "wa_id": "%s"
-                              }
-                            ],
-                            "messages": [
-                              {
-                                "from": "%s",
-                                "id": "wamid.HBgLMjA2M...",
-                                "timestamp": "1712345678",
-                                "type": "audio",
-                                "audio": {
-                                  "id": "voice_media_9999",
-                                  "mime_type": "audio/ogg; codecs=opus",
-                                  "voice": true,
-                                  "transcription": "Mujhe 3 din ke liye tractor chahiye Sandila hub pe"
+                          "object": "whatsapp_business_account",
+                          "entry": [
+                            {
+                              "id": "1795175008399502",
+                              "changes": [
+                                {
+                                  "value": {
+                                    "messaging_product": "whatsapp",
+                                    "metadata": {
+                                      "display_phone_number": "15556300171",
+                                      "phone_number_id": "1450975934758555"
+                                    },
+                                    "contacts": [
+                                      {
+                                        "profile": { "name": "Ramesh Kumar" },
+                                        "wa_id": "%s"
+                                      }
+                                    ],
+                                    "messages": [
+                                      {
+                                        "from": "%s",
+                                        "id": "wamid.HBgLMjA2M...",
+                                        "timestamp": "1712345678",
+                                        "type": "audio",
+                                        "audio": {
+                                          "id": "voice_media_9999",
+                                          "mime_type": "audio/ogg; codecs=opus",
+                                          "voice": true,
+                                          "transcription": "Mujhe 3 din ke liye tractor chahiye Sandila hub pe"
+                                        }
+                                      }
+                                    ]
+                                  },
+                                  "field": "messages"
                                 }
-                              }
-                            ]
-                          },
-                          "field": "messages"
+                              ]
+                            }
+                          ]
                         }
-                      ]
-                    }
-                  ]
-                }
-                """
+                        """
             .formatted(SENDER_PHONE, SENDER_PHONE);
 
     ResponseEntity<ApiResponse<WhatsAppMessageResponse>> response =

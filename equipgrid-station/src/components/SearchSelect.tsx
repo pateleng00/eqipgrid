@@ -1,14 +1,9 @@
 import React from 'react';
-import Select, {
-  components,
-  ControlProps,
-  OptionProps,
-  SingleValueProps,
+  import Select, {
   StylesConfig,
   ActionMeta,
   SingleValue,
-} from 'react-select';
-import { Search } from 'lucide-react';
+  } from 'react-select';
 import { useTheme } from '../lib/ThemeContext';
 
 export interface SelectOption {
@@ -147,14 +142,21 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
       const isFocused = state.isFocused;
 
       let bgColor = 'transparent';
-      let textColor = isDaylight ? '#020617' : '#f4f4f5';
+      let textColor = isDaylight ? '#1e293b' : '#f1f5f9';
+        let borderColor = 'transparent';
 
-      if (isSelected) {
+      if (isSelected && isFocused) {
+        bgColor = isDaylight ? '#bbf7d0' : 'rgba(15, 118, 110, 0.4)';
+        textColor = isDaylight ? '#065f46' : '#2dd4bf';
+        borderColor = isDaylight ? '#059669' : '#2dd4bf';
+      } else if (isSelected) {
         bgColor = isDaylight ? '#ccfbf1' : 'rgba(15, 118, 110, 0.25)';
         textColor = isDaylight ? '#0f766e' : '#2dd4bf';
+        borderColor = isDaylight ? '#0f766e' : '#2dd4bf';
       } else if (isFocused) {
-        bgColor = isDaylight ? '#f1f5f9' : '#2c2c2c';
-        textColor = isDaylight ? '#020617' : '#f4f4f5';
+        bgColor = isDaylight ? '#e2e8f0' : '#334155';
+        textColor = isDaylight ? '#0f766e' : '#ffffff';
+        borderColor = isDaylight ? '#0f766e' : '#38bdf8';
       }
 
       return {
@@ -162,13 +164,31 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
         backgroundColor: bgColor,
         color: textColor,
         borderRadius: '0.5rem',
-        padding: '8px 10px',
+        padding: '8px 12px',
         margin: '2px 0',
         cursor: 'pointer',
-        fontSize: '0.875rem',
-        transition: 'all 0.12s ease',
+        fontSize: '0.8125rem',
+        fontWeight: isSelected || isFocused ? 700 : 500,
+        borderLeft: `4px solid ${borderColor}`,
+        boxShadow: isFocused
+          ? isDaylight
+            ? '0 1px 3px rgba(0,0,0,0.08)'
+            : '0 1px 3px rgba(0,0,0,0.4)'
+          : 'none',
+        transition: 'all 0.1s ease',
+        '&:hover': {
+          backgroundColor: isSelected
+            ? isDaylight
+              ? '#bbf7d0'
+              : 'rgba(15, 118, 110, 0.4)'
+            : isDaylight
+            ? '#e2e8f0'
+            : '#334155',
+          color: isDaylight ? '#0f766e' : '#38bdf8',
+          borderLeft: isDaylight ? '4px solid #0f766e' : '4px solid #38bdf8',
+        },
         '&:active': {
-          backgroundColor: isDaylight ? '#e2e8f0' : '#2c2c2c',
+          backgroundColor: isDaylight ? '#cbd5e1' : '#475569',
         },
       };
     },
@@ -198,39 +218,12 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
     }),
   };
 
-  // Custom Option rendering: ONLY heading label and badge, no second line
-  const CustomOption = (props: OptionProps<SelectOption, false>) => {
-    const { data } = props;
-    return (
-      <components.Option {...props}>
-        <div className="flex items-center justify-between gap-2 min-w-0">
-          <span className={`font-bold text-xs truncate ${isDaylight ? 'text-slate-950' : 'text-slate-100'}`}>
-            {data.label}
-          </span>
-          {data.badge && (
-            <span
-              className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 border ${
-                data.badgeColor ||
-                (isDaylight
-                  ? 'bg-amber-100 text-amber-950 border-amber-400'
-                  : 'bg-slate-800 text-slate-300 border-slate-700')
-              }`}
-            >
-              {data.badge}
-            </span>
-          )}
-        </div>
-      </components.Option>
-    );
-  };
-
-  // Custom SingleValue rendering: clean single-line heading
-  const CustomSingleValue = (props: SingleValueProps<SelectOption, false>) => {
-    const { data } = props;
-    const isAllOption = data.value === 'ALL' || data.value === '' || data.label.startsWith('All ');
-    return (
-      <components.SingleValue {...props}>
-        <div className="flex items-center gap-1.5 truncate min-w-0 max-w-full overflow-hidden">
+  // Format Option and Value without remounting custom components
+  const formatOption = (data: SelectOption, { context }: { context: 'menu' | 'value' }) => {
+    if (context === 'value') {
+      const isAllOption = data.value === 'ALL' || data.value === '' || String(data.label || '').startsWith('All ');
+      return (
+        <div className="flex items-center gap-1.5 truncate min-w-0 max-w-full overflow-hidden pointer-events-none">
           <span
             className={`truncate min-w-0 ${
               isAllOption
@@ -257,7 +250,34 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
             </span>
           )}
         </div>
-      </components.SingleValue>
+      );
+    }
+
+    const isSelected = String(data.value) === String(value);
+
+    return (
+      <div className="flex items-center justify-between gap-2 min-w-0 pointer-events-none w-full">
+        <div className="flex items-center gap-1.5 min-w-0 truncate">
+          <span className="font-bold text-xs truncate">
+            {data.label}
+          </span>
+          {isSelected && (
+            <span className="text-[11px] text-teal-600 dark:text-teal-400 font-black">✓</span>
+          )}
+        </div>
+        {data.badge && (
+          <span
+            className={`text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0 border ${
+              data.badgeColor ||
+              (isDaylight
+                ? 'bg-amber-100 text-amber-950 border-amber-400'
+                : 'bg-slate-800 text-slate-300 border-slate-700')
+            }`}
+          >
+            {data.badge}
+          </span>
+        )}
+      </div>
     );
   };
 
@@ -282,10 +302,7 @@ export const SearchSelect: React.FC<SearchSelectProps> = ({
         isLoading={isLoading}
         isSearchable={isSearchable}
         styles={customStyles}
-        components={{
-          Option: CustomOption,
-          SingleValue: CustomSingleValue,
-        }}
+        formatOptionLabel={formatOption}
         menuPlacement={menuPlacement}
         noOptionsMessage={() => noOptionsMessage}
         classNamePrefix="eg-select"

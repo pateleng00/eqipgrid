@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -46,9 +47,9 @@ public class CreateMaintenanceRequest {
   private String periodicServiceNotes;
 
   // Repair Work fields
-  private java.util.List<String> damagedComponents;
+  private List<String> damagedComponents;
   private String otherDamageDescription;
-  private java.util.List<String> damageImageUrls;
+  private List<String> damageImageUrls;
 
   private BigDecimal estimatedCost;
 

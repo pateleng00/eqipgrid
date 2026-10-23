@@ -34,4 +34,9 @@ public class ReturnPickupJob {
 
   @Column(columnDefinition = "TEXT")
   private String pickupNotes;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
 }

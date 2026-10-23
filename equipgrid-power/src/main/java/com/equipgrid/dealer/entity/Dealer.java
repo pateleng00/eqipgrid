@@ -1,6 +1,7 @@
 package com.equipgrid.dealer.entity;
 
 import com.equipgrid.common.BaseEntity;
+import com.equipgrid.location.entity.City;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import lombok.*;
@@ -29,6 +30,10 @@ public class Dealer extends BaseEntity {
 
   @Column(nullable = false, length = 128)
   private String location;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "city_id")
+  private City city;
 
   @Column(name = "commission_rate", precision = 5, scale = 4)
   private BigDecimal commissionRate;

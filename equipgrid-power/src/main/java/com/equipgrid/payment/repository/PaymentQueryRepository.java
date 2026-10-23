@@ -1,11 +1,6 @@
 package com.equipgrid.payment.repository;
 
-import com.equipgrid.payment.entity.Payment;
-import com.equipgrid.payment.entity.PaymentProof;
-import com.equipgrid.payment.entity.QPayment;
-import com.equipgrid.payment.entity.QPaymentProof;
-import com.equipgrid.payment.entity.QRefundTransaction;
-import com.equipgrid.payment.entity.RefundTransaction;
+import com.equipgrid.payment.entity.*;
 import com.equipgrid.payment.enums.PaymentMode;
 import com.equipgrid.payment.enums.RefundStatus;
 import com.equipgrid.payment.enums.VerificationStatus;

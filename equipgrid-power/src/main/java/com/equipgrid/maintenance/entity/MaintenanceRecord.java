@@ -133,4 +133,19 @@ public class MaintenanceRecord extends BaseEntity {
 
   @Column(name = "assigned_technician", length = 128)
   private String assignedTechnician;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
+
+  @Transient
+  public String getPriorityDescription() {
+    return priority != null ? priority.getDescription() : null;
+  }
+
+  @Transient
+  public String getServiceTypeDescription() {
+    return serviceType != null ? serviceType.getDescription() : null;
+  }
 }

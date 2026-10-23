@@ -20,6 +20,7 @@ import com.equipgrid.payment.entity.Payment;
 import com.equipgrid.payment.enums.PaymentType;
 import com.equipgrid.payment.repository.PaymentQueryRepository;
 import com.equipgrid.payment.repository.PaymentRepository;
+import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -41,8 +42,7 @@ public class PaymentServiceImpl implements IPaymentService {
   private final IAuditService auditService;
   private final DeliveryJobRepository deliveryJobRepository;
   private final FulfillmentQueryRepository fulfillmentQueryRepository;
-  private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
-      whatsAppNotificationService;
+  private final IWhatsAppNotificationService whatsAppNotificationService;
 
   @Override
   public List<Payment> getPaymentsByBooking(Long bookingId) {

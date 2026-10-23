@@ -26,7 +26,13 @@ import {
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { City, Hub, State, Customer, FarmLocation } from '../../types';
-import { SearchSelect } from '../../components/SearchSelect';
+import { SearchSelect, SelectOption } from '../../components/SearchSelect';
+
+const LOCATION_STATUS_OPTIONS: SelectOption[] = [
+  { value: 'ALL', label: 'All Statuses (सभी)', subLabel: 'Active & Deactivated' },
+  { value: 'ACTIVE', label: 'Active Only (सक्रिय)', badge: 'Active', badgeColor: '#16a34a' },
+  { value: 'INACTIVE', label: 'Deactivated Only (निष्क्रिय)', badge: 'Inactive', badgeColor: '#dc2626' },
+];
 import { SkeletonTable } from '../../components/SkeletonTable';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { getUrlParam, setUrlParam } from '../../lib/navigationState';
@@ -899,19 +905,14 @@ export const LocationMasterView: React.FC = () => {
 
               {/* Status Filter */}
               <div>
-                <select
+                <SearchSelect
+                  options={LOCATION_STATUS_OPTIONS}
                   value={hubStatusFilter}
-                  onChange={(e) => setHubStatusFilter(e.target.value as any)}
-                  className={`w-full rounded-lg border px-3 py-1.5 text-xs transition-colors focus:outline-none ${
-                    isDaylight
-                      ? 'border-slate-300 bg-white text-slate-950 font-medium'
-                      : 'border-slate-800 bg-slate-950 text-white font-medium'
-                  }`}
-                >
-                  <option value="ALL">All Statuses (सभी)</option>
-                  <option value="ACTIVE">Active Yards Only</option>
-                  <option value="INACTIVE">Deactivated Yards Only</option>
-                </select>
+                  onChange={(val) => setHubStatusFilter((val as any) || 'ALL')}
+                  isClearable={false}
+                  isSearchable={false}
+                  placeholder="Filter by Status"
+                />
               </div>
 
               {/* Search */}
@@ -1151,19 +1152,14 @@ export const LocationMasterView: React.FC = () => {
               </div>
 
               <div>
-                <select
+                <SearchSelect
+                  options={LOCATION_STATUS_OPTIONS}
                   value={cityStatusFilter}
-                  onChange={(e) => setCityStatusFilter(e.target.value as any)}
-                  className={`w-full rounded-lg border px-3 py-1.5 text-xs transition-colors focus:outline-none ${
-                    isDaylight
-                      ? 'border-slate-300 bg-white text-slate-950 font-medium'
-                      : 'border-slate-800 bg-slate-950 text-white font-medium'
-                  }`}
-                >
-                  <option value="ALL">All Statuses (सभी)</option>
-                  <option value="ACTIVE">Active Cities Only</option>
-                  <option value="INACTIVE">Deactivated Cities Only</option>
-                </select>
+                  onChange={(val) => setCityStatusFilter((val as any) || 'ALL')}
+                  isClearable={false}
+                  isSearchable={false}
+                  placeholder="Filter by Status"
+                />
               </div>
 
               <div>
@@ -1355,19 +1351,14 @@ export const LocationMasterView: React.FC = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div>
-                <select
+                <SearchSelect
+                  options={LOCATION_STATUS_OPTIONS}
                   value={stateStatusFilter}
-                  onChange={(e) => setStateStatusFilter(e.target.value as any)}
-                  className={`w-full rounded-lg border px-3 py-1.5 text-xs transition-colors focus:outline-none ${
-                    isDaylight
-                      ? 'border-slate-300 bg-white text-slate-950 font-medium'
-                      : 'border-slate-800 bg-slate-950 text-white font-medium'
-                  }`}
-                >
-                  <option value="ALL">All Statuses (सभी)</option>
-                  <option value="ACTIVE">Active States Only</option>
-                  <option value="INACTIVE">Deactivated States Only</option>
-                </select>
+                  onChange={(val) => setStateStatusFilter((val as any) || 'ALL')}
+                  isClearable={false}
+                  isSearchable={false}
+                  placeholder="Filter by Status"
+                />
               </div>
 
               <div>

@@ -25,6 +25,8 @@ public class CreateDealerRequest {
   @NotBlank(message = "Location is required (e.g. Hardoi, Sandila, Bilgram)")
   private String location;
 
+  private Long cityId;
+
   @NotNull(message = "Commission rate is required")
   private BigDecimal commissionRate;
 }

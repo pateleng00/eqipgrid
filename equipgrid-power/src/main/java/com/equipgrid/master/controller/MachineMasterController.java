@@ -1,5 +1,6 @@
 package com.equipgrid.master.controller;
 
+import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.auth.entity.User;
 import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.master.dto.request.EquipmentTypeRequest;
@@ -37,7 +38,7 @@ public class MachineMasterController {
   @Operation(summary = "Get all equipment types")
   public ResponseEntity<ApiResponse<List<EquipmentType>>> getTypes(
       @RequestParam(required = false, defaultValue = "false") Boolean includeInactive,
-      @RequestParam(required = false) com.equipgrid.asset.enums.AssetCategory category) {
+      @RequestParam(required = false) AssetCategory category) {
     return ResponseEntity.ok(
         ApiResponse.buildSuccess(
             "Equipment types fetched",

@@ -2,7 +2,8 @@
 -- Adds 66 distinct OEM machinery manufacturers across Civil Infra, Agricultural, and Dual-Use domains
 -- Includes domestic leaders, global MNCs, and certified regional implement fabricators
 
-INSERT INTO manufacturers (code, name, country, active) VALUES
+INSERT INTO manufacturers (code, name, country, active)
+VALUES
 -- 1. Dual-Use & Heavy Earthmoving OEMs
 ('BULL', 'Bull Machines Private Limited', 'India', true),
 ('ACE', 'Action Construction Equipment (ACE)', 'India', true),
@@ -81,9 +82,8 @@ INSERT INTO manufacturers (code, name, country, active) VALUES
 ('KARCHER', 'Kärcher India', 'Germany', true),
 ('HAWK-PUMPS', 'Hawk Pumps (Leucon India)', 'Italy', true),
 ('CRI-PUMPS', 'C.R.I. Pumps', 'India', true),
-('CROMPTON', 'Crompton Greaves', 'India', true)
-
-ON CONFLICT (code) DO UPDATE SET
+('CROMPTON', 'Crompton Greaves', 'India', true) ON CONFLICT (code) DO
+UPDATE SET
     name = EXCLUDED.name,
     country = EXCLUDED.country,
     active = true;

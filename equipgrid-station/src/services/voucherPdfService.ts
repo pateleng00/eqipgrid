@@ -15,7 +15,21 @@ import {
   getBillingUnitDisplayName,
   getBillingUnitShiftTerms,
   resolveBillingUnitCode,
+  DailyCashReconciliation,
 } from '../types';
+
+export interface FleetReportData {
+  dateRange: string;
+  totalAssets: number;
+  onRentCount: number;
+  availableCount: number;
+  maintenanceCount: number;
+  utilizationRate: number;
+  totalGrossRevenue: number;
+  totalCollectedRevenue: number;
+  categoryStats: Record<string, { count: number; onRent: number; totalRevenue: number; nameHindi: string }>;
+  hubStats: Array<{ id: number; name: string; code: string; totalAssets: number; onRent: number; utilizationRate: number; revenue: number }>;
+}
 
 export interface BookingVoucherData {
   booking: Booking;
@@ -246,7 +260,7 @@ const COMMON_CSS = `
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 2px solid #f59e0b;
+    border-bottom: 2px solid #0d5c46;
     padding-bottom: 16px;
     margin-bottom: 20px;
   }
@@ -266,7 +280,7 @@ const COMMON_CSS = `
     color: #0f172a;
   }
   .brand-title span {
-    color: #d97706;
+    color: #0d5c46;
   }
   .brand-sub {
     font-size: 11px;
@@ -287,11 +301,13 @@ const COMMON_CSS = `
     border-radius: 6px;
     letter-spacing: 0.3px;
   }
-  .badge-emerald { background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+  .badge-emerald { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+  .badge-slate { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
   .badge-amber { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
   .badge-purple { background: #faf5ff; color: #7e22ce; border: 1px solid #e9d5ff; }
   .badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
   .badge-sky { background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd; }
+  .badge-rose { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
   .voucher-no {
     font-family: monospace;
     font-size: 14px;
@@ -385,8 +401,8 @@ const COMMON_CSS = `
   }
   .official-seal {
     display: inline-block;
-    border: 2px solid #059669;
-    color: #059669;
+    border: 2px solid #0d5c46;
+    color: #0d5c46;
     font-weight: 900;
     font-size: 9.5px;
     padding: 3px 8px;
@@ -415,8 +431,8 @@ const COMMON_CSS = `
     z-index: 9999;
   }
   .btn-print {
-    background: #f59e0b;
-    color: #0f172a;
+    background: #0d5c46;
+    color: #ffffff;
     border: none;
     padding: 7px 16px;
     border-radius: 20px;
@@ -1022,3 +1038,384 @@ export function printReturnSettlementPdf(data: SettlementVoucherData) {
 
   openPrintWindow(`Settlement_Voucher_${booking.bookingNumber}`, bodyHtml);
 }
+
+/**
+ * 4. Daily Cash Register & Drawer Balance Reconciliation Statement (Form F-005)
+ * Official audit document for station cash counter closing, mode-wise receipts,
+ * refunds, and reconciliation sign-off.
+ */
+export function printDailyCashRegisterPdf(data: DailyCashReconciliation, stationName = 'EquipGrid Regional Yard') {
+  const nowStr = new Date().toLocaleString('en-IN');
+  const isBalanced = data.reconciliationStatus === 'BALANCED';
+
+  const bodyHtml = `
+    <div class="header">
+      <div>
+        <img src="${getLogoUrl()}" alt="EquipGrid" class="brand-logo" onerror="this.onerror=null; this.src='/logo-rectangle.png';" />
+        <div class="brand-sub">Daily Cash Register & Drawer Reconciliation (दैनिक रोकड़ बही व गल्ला मिलान - Form F-005)</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Accounts Desk</div>
+      </div>
+      <div class="voucher-badge">
+        <span class="badge-tag ${isBalanced ? 'badge-emerald' : 'badge-rose'}">
+          ${isBalanced ? '✅ हिसाब चुकता · BALANCED' : '⚠️ अंतर जांच आवश्यक · UNBALANCED'}
+        </span>
+        <div class="voucher-no">CR-${escapeHtml(data.date)}</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Close Date: ${escapeHtml(data.date)} · ${escapeHtml(nowStr)}</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Opening & Net Inflows (आरंभिक रोकड़ व आवक)</div>
+        <div class="info-row"><span class="info-label">Opening Cash Float (08:00 AM):</span><span class="info-val">${formatINR(data.openingCash)}</span></div>
+        <div class="info-row"><span class="info-label">Gross Collections Received:</span><span class="info-val" style="color: #047857;">+${formatINR(data.totalReceipts)}</span></div>
+        <div class="info-row"><span class="info-label">Audit Statement Date:</span><span class="info-val font-mono">${escapeHtml(data.date)}</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Outflows & Closing Balance (निकासी व अंतिम गल्ला)</div>
+        <div class="info-row"><span class="info-label">Total Deposit Refunds:</span><span class="info-val" style="color: #b91c1c;">-${formatINR(data.totalRefunds)}</span></div>
+        <div class="info-row"><span class="info-label">Station Petty & Fuel Expenses:</span><span class="info-val" style="color: #b91c1c;">-${formatINR(data.totalExpenses)}</span></div>
+        <div class="info-row"><span class="info-label">Net Closing Drawer Position:</span><span class="info-val" style="color: #0d5c46; font-size: 13px;">${formatINR(data.closingPosition)}</span></div>
+      </div>
+    </div>
+
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Transaction Channel & Movement (लेन-देन मद)</th>
+          <th>Mode Category</th>
+          <th style="text-align: right;">Net Inflow / Outflow (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>UPI Digital Receipts (PhonePe, GooglePay, Paytm, BHIM)</strong>
+            <div style="font-size: 10px; color: #64748b;">Direct gateway & counter QR payments</div>
+          </td>
+          <td><span class="badge-tag badge-blue" style="font-size: 9.5px; padding: 2px 7px;">Digital UPI</span></td>
+          <td style="text-align: right; font-weight: 700; color: #047857;">+${formatINR(data.upiReceipts)}</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Yard Counter Cash Collected (नकद प्राप्ति)</strong>
+            <div style="font-size: 10px; color: #64748b;">Physical currency accepted at desk</div>
+          </td>
+          <td><span class="badge-tag badge-emerald" style="font-size: 9.5px; padding: 2px 7px;">Physical Cash</span></td>
+          <td style="text-align: right; font-weight: 700; color: #047857;">+${formatINR(data.cashReceipts)}</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Bank NEFT / RTGS Direct Transfers</strong>
+            <div style="font-size: 10px; color: #64748b;">Bulk customer & contractor settlements</div>
+          </td>
+          <td><span class="badge-tag badge-purple" style="font-size: 9.5px; padding: 2px 7px;">Bank Transfer</span></td>
+          <td style="text-align: right; font-weight: 700; color: #047857;">+${formatINR(data.bankReceipts)}</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Security Deposit Escrow Refunds (वापस की गई जमानत राशि)</strong>
+            <div style="font-size: 10px; color: #64748b;">Disbursed to farmers post inward inspection</div>
+          </td>
+          <td><span class="badge-tag badge-amber" style="font-size: 9.5px; padding: 2px 7px;">Escrow Refund</span></td>
+          <td style="text-align: right; font-weight: 700; color: #b91c1c;">-${formatINR(data.totalRefunds)}</td>
+        </tr>
+        <tr>
+          <td>
+            <strong>Yard Operational & Fuel Petty Cash Expenses (दैनिक व्यय)</strong>
+            <div style="font-size: 10px; color: #64748b;">Flatbed diesel, maintenance minor spares & workshop tools</div>
+          </td>
+          <td><span class="badge-tag badge-slate" style="font-size: 9.5px; padding: 2px 7px;">Petty Outflow</span></td>
+          <td style="text-align: right; font-weight: 700; color: #b91c1c;">-${formatINR(data.totalExpenses)}</td>
+        </tr>
+        <tr class="total-row" style="background: #f8fafc; font-size: 13px;">
+          <td colspan="2"><strong>Net Closing Cash Position in Drawer (अंतिम गल्ला रोकड़ स्थिति)</strong></td>
+          <td style="text-align: right; color: #0d5c46; font-size: 15px; font-weight: 900; font-family: monospace;">
+            ${formatINR(data.closingPosition)}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="background: ${isBalanced ? '#f0fdf4' : '#fff1f2'}; border: 1px solid ${isBalanced ? '#bbf7d0' : '#fecaca'}; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px;">
+      <div style="font-weight: 800; color: ${isBalanced ? '#166534' : '#991b1b'}; font-size: 11.5px; margin-bottom: 3px;">
+        ${isBalanced ? '✓ Daily Cash Verification Complete (दैनिक रोकड़ सत्यापन सफल)' : '⚠️ Variance Flagged for Hub Internal Audit'}
+      </div>
+      <div style="font-size: 10.5px; color: ${isBalanced ? '#15803d' : '#b91c1c'}; line-height: 1.5;">
+        ${
+          isBalanced
+            ? 'All counter receipts, online UPI transfers, and security deposit returns match the verified ledger balances. Physical currency verified and safely vaulted.'
+            : 'A discrepancy exists between system collections and physical cash in the drawer. Station Manager must investigate and log incident before next morning shift.'
+        }
+      </div>
+    </div>
+
+    <div class="footer">
+      <div class="sign-box">
+        Cash Counter Cashier<br>
+        <span style="font-size: 9px; color: #64748b;">Closing Cashier</span>
+      </div>
+      <div class="sign-box">
+        Station Yard Manager<br>
+        <span style="font-size: 9px; color: #64748b;">Reconciliation Verified</span>
+      </div>
+      <div class="sign-box">
+        Internal Auditor<br>
+        <span style="font-size: 9px; color: #64748b;">EquipGrid Central Accounts</span>
+      </div>
+    </div>
+  `;
+
+  openPrintWindow(`Cash_Reconciliation_${data.date}`, bodyHtml);
+}
+
+/**
+ * 5. Executive Fleet Utilization & Operational Revenue Audit (Form F-006)
+ * Comprehensive analytics report covering fleet deployment, gross turnover,
+ * yard readiness, and hub operational metrics.
+ */
+export function printExecutiveFleetReportPdf(data: FleetReportData, stationName = 'EquipGrid Regional Central Hub') {
+  const nowStr = new Date().toLocaleString('en-IN');
+
+  const categories = Object.entries(data.categoryStats);
+
+  const bodyHtml = `
+    <div class="header">
+      <div>
+        <img src="${getLogoUrl()}" alt="EquipGrid" class="brand-logo" onerror="this.onerror=null; this.src='/logo-rectangle.png';" />
+        <div class="brand-sub">Executive Fleet Utilization & Operational Revenue Audit (बेड़ा व परिचालन रिपोर्ट - Form F-006)</div>
+        <div style="font-size: 11px; color: #475569; margin-top: 3px;">${escapeHtml(stationName)} · Fleet Command & Logistics</div>
+      </div>
+      <div class="voucher-badge">
+        <span class="badge-tag badge-emerald">Audited Report · परिचालन लेखा</span>
+        <div class="voucher-no">AUD-${escapeHtml(data.dateRange.toUpperCase())}</div>
+        <div style="font-size: 10px; color: #64748b; margin-top: 2px;">Period: ${escapeHtml(data.dateRange)} · Issued: ${escapeHtml(nowStr)}</div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Fleet Deployment Metrics (मशीन उपयोगिता)</div>
+        <div class="info-row"><span class="info-label">Total Fleet Units:</span><span class="info-val">${data.totalAssets} Machines</span></div>
+        <div class="info-row"><span class="info-label">Active On-Rent Units:</span><span class="info-val" style="color: #047857;">${data.onRentCount} Units (${data.utilizationRate.toFixed(1)}%)</span></div>
+        <div class="info-row"><span class="info-label">Yard Standby (Available):</span><span class="info-val" style="color: #0369a1;">${data.availableCount} Units</span></div>
+        <div class="info-row"><span class="info-label">Service & Maintenance:</span><span class="info-val" style="color: #b45309;">${data.maintenanceCount} Units</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Commercial Revenue Position (राजस्व स्थिति)</div>
+        <div class="info-row"><span class="info-label">Gross Booked Value:</span><span class="info-val" style="font-weight: 800; color: #0d5c46;">${formatINR(data.totalGrossRevenue)}</span></div>
+        <div class="info-row"><span class="info-label">Advance Revenue Received:</span><span class="info-val" style="color: #047857;">${formatINR(data.totalCollectedRevenue)}</span></div>
+        <div class="info-row"><span class="info-label">Fleet Utilization Rate:</span><span class="info-val" style="color: #0d5c46; font-size: 13px;">${data.utilizationRate.toFixed(1)}%</span></div>
+      </div>
+    </div>
+
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th>Machinery Category (उपकरण वर्ग)</th>
+          <th style="text-align: center;">Total Fleet</th>
+          <th style="text-align: center;">Active On Rent</th>
+          <th style="text-align: center;">Utilization (%)</th>
+          <th style="text-align: right;">Turnover (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${categories
+          .map(([key, stat]) => {
+            const util = stat.count > 0 ? ((stat.onRent / stat.count) * 100).toFixed(1) : '0.0';
+            return `
+            <tr>
+              <td>
+                <strong>${escapeHtml(key)} (${escapeHtml(stat.nameHindi)})</strong>
+              </td>
+              <td style="text-align: center; font-weight: 600;">${stat.count}</td>
+              <td style="text-align: center; color: #047857; font-weight: 700;">${stat.onRent}</td>
+              <td style="text-align: center;">
+                <span class="badge-tag ${Number(util) >= 50 ? 'badge-emerald' : 'badge-slate'}" style="font-size: 9px; padding: 2px 6px;">
+                  ${util}%
+                </span>
+              </td>
+              <td style="text-align: right; font-weight: 700;">${formatINR(stat.totalRevenue)}</td>
+            </tr>`;
+          })
+          .join('')}
+      </tbody>
+    </table>
+
+    <table class="ledger-table" style="margin-top: 14px;">
+      <thead>
+        <tr>
+          <th>Hub Yard (केंद्र स्थल)</th>
+          <th>Hub Code</th>
+          <th style="text-align: center;">Fleet Capacity</th>
+          <th style="text-align: center;">On Rent</th>
+          <th style="text-align: center;">Hub Utilization</th>
+          <th style="text-align: right;">Revenue (₹)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${data.hubStats
+          .map((h) => {
+            return `
+            <tr>
+              <td><strong>${escapeHtml(h.name)}</strong></td>
+              <td><span style="font-family: monospace; font-size: 10px; color: #475569;">${escapeHtml(h.code)}</span></td>
+              <td style="text-align: center;">${h.totalAssets}</td>
+              <td style="text-align: center; color: #047857; font-weight: 700;">${h.onRent}</td>
+              <td style="text-align: center;">
+                <span class="badge-tag ${h.utilizationRate >= 50 ? 'badge-emerald' : 'badge-slate'}" style="font-size: 9px; padding: 2px 6px;">
+                  ${h.utilizationRate.toFixed(1)}%
+                </span>
+              </td>
+              <td style="text-align: right; font-weight: 700;">${formatINR(h.revenue)}</td>
+            </tr>`;
+          })
+          .join('')}
+      </tbody>
+    </table>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; font-size: 10.5px; line-height: 1.5; color: #475569;">
+      <strong>Operational Safety & Utilization Notice (सुरक्षा व उपयोगिता निर्देश):</strong><br>
+      All active machinery on-rent is tracked with digital outward delivery challans (Form F-002) and pre-dispatch 28-point checklists. Daily cash turnover is reconciled via Form F-005. Report compiled from live fleet telemetry and station records.
+    </div>
+
+    <div class="footer">
+      <div class="sign-box">
+        Operations Director<br>
+        <span style="font-size: 9px; color: #64748b;">Fleet Command</span>
+      </div>
+      <div class="sign-box">
+        Regional Yard Manager<br>
+        <span style="font-size: 9px; color: #64748b;">Station Logistics</span>
+      </div>
+      <div class="sign-box">
+        Audit & Finance Controller<br>
+        <span style="font-size: 9px; color: #64748b;">EquipGrid Management</span>
+      </div>
+    </div>
+  `;
+
+  openPrintWindow(`Fleet_Analytics_Audit_${data.dateRange}`, bodyHtml);
+}
+
+export interface ReportPrintOptions {
+  reportTitle: string;
+  reportSubtitle: string;
+  reportNumber: string;
+  filters: {
+    state?: string;
+    city?: string;
+    hub?: string;
+    dateRange?: string;
+  };
+  headers: string[];
+  rows: (string | number)[][];
+  summaryStats?: Array<{ label: string; value: string }>;
+}
+
+export function printReportDataPdf(data: ReportPrintOptions) {
+  const generatedTime = new Date().toLocaleString('en-IN', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  });
+
+  const filterItems = [
+    `<strong>State:</strong> ${escapeHtml(data.filters.state || 'All States')}`,
+    `<strong>City:</strong> ${escapeHtml(data.filters.city || 'All Cities')}`,
+    `<strong>Hub:</strong> ${escapeHtml(data.filters.hub || 'All Hubs')}`,
+    data.filters.dateRange ? `<strong>Date Scope:</strong> ${escapeHtml(data.filters.dateRange)}` : null,
+  ].filter(Boolean);
+
+  const bodyHtml = `
+    <div class="header">
+      <div class="logo">
+        <span class="logo-text">Equip<span>Grid</span></span>
+        <span class="tagline">AGRO & CIVIL FLEET OPERATIONS STATION</span>
+      </div>
+      <div class="doc-meta">
+        <div class="doc-title">${escapeHtml(data.reportTitle)}</div>
+        <div class="doc-number">${escapeHtml(data.reportNumber)}</div>
+        <div class="doc-date">Generated: ${escapeHtml(generatedTime)}</div>
+      </div>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; font-size: 11px;">
+      <div style="font-weight: 700; color: #0f766e; margin-bottom: 4px;">${escapeHtml(data.reportSubtitle)}</div>
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; color: #475569;">
+        ${filterItems.map((f) => `<span>${f}</span>`).join(' • ')}
+      </div>
+    </div>
+
+    ${
+      data.summaryStats && data.summaryStats.length > 0
+        ? `
+      <div class="kpi-grid" style="margin-bottom: 14px;">
+        ${data.summaryStats
+          .map(
+            (s) => `
+          <div class="kpi-box">
+            <span class="kpi-val">${escapeHtml(s.value)}</span>
+            <span class="kpi-lbl">${escapeHtml(s.label)}</span>
+          </div>
+        `,
+          )
+          .join('')}
+      </div>
+    `
+        : ''
+    }
+
+    <table class="ledger-table" style="margin-top: 8px;">
+      <thead>
+        <tr>
+          ${data.headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}
+        </tr>
+      </thead>
+      <tbody>
+        ${
+          data.rows.length === 0
+            ? `<tr><td colspan="${data.headers.length}" style="text-align: center; color: #94a3b8; padding: 24px;">No records found matching selected criteria.</td></tr>`
+            : data.rows
+                .map(
+                  (row) => `
+              <tr>
+                ${row
+                  .map((cell, idx) => {
+                    const str = String(cell ?? '');
+                    const isNum = !isNaN(Number(cell)) && str !== '' && !str.includes('-') && !str.startsWith('0');
+                    return `<td style="${isNum || str.startsWith('₹') ? 'text-align: right; font-weight: 600;' : ''}">${escapeHtml(str)}</td>`;
+                  })
+                  .join('')}
+              </tr>
+            `,
+                )
+                .join('')
+        }
+      </tbody>
+    </table>
+
+    <div style="margin-top: 16px; font-size: 10px; color: #64748b; line-height: 1.4;">
+      <em>EquipGrid Enterprise Reporting Service • Confidential Internal Operational Document • Total Records: ${data.rows.length}</em>
+    </div>
+
+    <div class="footer" style="margin-top: 24px;">
+      <div class="sign-box">
+        Operations Manager<br>
+        <span style="font-size: 9px; color: #64748b;">EquipGrid Logistics</span>
+      </div>
+      <div class="sign-box">
+        Station Lead / Hub Incharge<br>
+        <span style="font-size: 9px; color: #64748b;">Yard Management</span>
+      </div>
+      <div class="sign-box">
+        Internal Auditor<br>
+        <span style="font-size: 9px; color: #64748b;">Finance & Accounts</span>
+      </div>
+    </div>
+  `;
+
+  openPrintWindow(data.reportNumber || 'EquipGrid_Report', bodyHtml);
+}
+

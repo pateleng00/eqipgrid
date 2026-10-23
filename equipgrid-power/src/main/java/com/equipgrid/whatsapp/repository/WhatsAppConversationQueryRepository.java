@@ -2,6 +2,7 @@ package com.equipgrid.whatsapp.repository;
 
 import com.equipgrid.whatsapp.entity.QWhatsAppConversation;
 import com.equipgrid.whatsapp.entity.WhatsAppConversation;
+import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Optional;
@@ -26,7 +27,7 @@ public class WhatsAppConversationQueryRepository {
     String trimmed = phone.trim();
     String digits = trimmed.replaceAll("[^0-9]", "");
 
-    com.querydsl.core.BooleanBuilder predicate = new com.querydsl.core.BooleanBuilder();
+    BooleanBuilder predicate = new BooleanBuilder();
     predicate.or(qConversation.phoneNumber.eq(trimmed));
     if (!digits.isBlank()) {
       predicate.or(qConversation.phoneNumber.eq(digits));

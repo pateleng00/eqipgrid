@@ -26,9 +26,14 @@ public class OtpVerificationService {
   // Map: proofToken -> ProofEntry (phone, expiresAt)
   private final ConcurrentHashMap<String, ProofEntry> activeProofs = new ConcurrentHashMap<>();
 
-  private record OtpEntry(String code, LocalDateTime expiresAt, int attempts) {}
-
-  private record ProofEntry(String phone, LocalDateTime expiresAt) {}
+  public static String normalizePhone(String raw) {
+    if (raw == null) return "";
+    String cleaned = raw.replaceAll("[^0-9]", "");
+    if (cleaned.length() > 10 && cleaned.startsWith("91")) {
+      return cleaned.substring(cleaned.length() - 10);
+    }
+    return cleaned.length() >= 10 ? cleaned.substring(cleaned.length() - 10) : cleaned;
+  }
 
   /** Generates a 6-digit OTP, stores it with expiry, and dispatches via SMS/WhatsApp. */
   public String sendOtp(String rawPhone) {
@@ -187,15 +192,6 @@ public class OtpVerificationService {
     return proofToken;
   }
 
-  public static String normalizePhone(String raw) {
-    if (raw == null) return "";
-    String cleaned = raw.replaceAll("[^0-9]", "");
-    if (cleaned.length() > 10 && cleaned.startsWith("91")) {
-      return cleaned.substring(cleaned.length() - 10);
-    }
-    return cleaned.length() >= 10 ? cleaned.substring(cleaned.length() - 10) : cleaned;
-  }
-
   private String maskPhone(String phone) {
     if (phone.length() == 10) {
       return phone.substring(0, 2) + "******" + phone.substring(8);
@@ -209,4 +205,8 @@ public class OtpVerificationService {
     activeOtps.entrySet().removeIf(e -> now.isAfter(e.getValue().expiresAt()));
     activeProofs.entrySet().removeIf(e -> now.isAfter(e.getValue().expiresAt()));
   }
+
+  private record OtpEntry(String code, LocalDateTime expiresAt, int attempts) {}
+
+  private record ProofEntry(String phone, LocalDateTime expiresAt) {}
 }

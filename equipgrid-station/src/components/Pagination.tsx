@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { useTheme } from '../lib/ThemeContext';
 import { cn } from '../lib/utils';
+import { SearchSelect } from './SearchSelect';
 
 export interface PaginationProps {
   currentPage: number;
@@ -72,22 +73,15 @@ export const Pagination: React.FC<PaginationProps> = ({
         {onPageSizeChange && (
           <div className="flex items-center gap-1.5 ml-2">
             <span className={cn('text-[11px]', isDaylight ? 'text-slate-500' : 'text-slate-400')}>Per page:</span>
-            <select
-              value={pageSize}
-              onChange={(e) => onPageSizeChange(Number(e.target.value))}
-              className={cn(
-                'rounded-lg border px-2 py-1 text-xs font-semibold focus:outline-none transition-colors cursor-pointer',
-                isDaylight
-                  ? 'border-slate-300 bg-white text-slate-950 hover:border-slate-400'
-                  : 'border-slate-700 bg-slate-900 text-slate-200 hover:border-slate-600',
-              )}
-            >
-              {pageSizeOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
-              ))}
-            </select>
+            <div className="w-20">
+              <SearchSelect
+                options={pageSizeOptions.map((opt) => ({ value: opt, label: String(opt) }))}
+                value={pageSize}
+                onChange={(val) => onPageSizeChange(Number(val))}
+                isClearable={false}
+                isSearchable={false}
+              />
+            </div>
           </div>
         )}
       </div>

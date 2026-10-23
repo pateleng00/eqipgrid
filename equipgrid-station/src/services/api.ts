@@ -20,6 +20,11 @@ import {
   DashboardSummary,
   Dealer,
   DealerCommission,
+  DealerLead,
+  DealerLeadStatus,
+  SupportTicket,
+  SupportTicketStatus,
+  SupportTicketPriority,
   DispatchRecord,
   EquipmentType,
   Hub,
@@ -55,6 +60,12 @@ import {
   UpdateMaintenanceProgressPayload,
   CompleteMaintenancePayload,
   MaintenanceStatus,
+  ReportingKpiSummaryResponse,
+  MachinesOnRentReportItem,
+  CollectionsReportItem,
+  MaintenanceReportItem,
+  DealerRevenueReportItem,
+  FutureBookingReportItem,
 } from '../types';
 
 // Verified AWS S3 assets bucket base URL
@@ -365,6 +376,91 @@ function mapVerificationStatus(status: any): VerificationStatus {
   return map[status] || 'PENDING';
 }
 
+function mapDealerLeadStatus(status: any): DealerLeadStatus {
+  if (typeof status === 'string') return status as DealerLeadStatus;
+  const map: Record<number, DealerLeadStatus> = {
+    1: 'ENQUIRY',
+    2: 'IN_DISCUSSION',
+    3: 'IN_DOCUMENTATION',
+    4: 'ONBOARDED',
+    5: 'DENIED',
+    6: 'CLOSED',
+  };
+  return map[status] || 'ENQUIRY';
+}
+
+function mapSupportTicketStatus(status: any): SupportTicketStatus {
+  if (typeof status === 'string') return status as SupportTicketStatus;
+  const map: Record<number, SupportTicketStatus> = {
+    1: 'OPEN',
+    2: 'IN_DISCUSSION',
+    3: 'IN_PROGRESS',
+    4: 'RESOLVED',
+    5: 'CLOSED',
+  };
+  return map[status] || 'OPEN';
+}
+
+function mapSupportTicketPriority(priority: any): SupportTicketPriority {
+  if (typeof priority === 'string') return priority as SupportTicketPriority;
+  const map: Record<number, SupportTicketPriority> = {
+    1: 'LOW',
+    2: 'NORMAL',
+    3: 'HIGH',
+    4: 'URGENT',
+  };
+  return map[priority] || 'NORMAL';
+}
+
+function mapDealerLead(l: any): DealerLead {
+  return {
+    id: l.id,
+    fullName: l.fullName || l.name || '',
+    phoneNumber: l.phoneNumber || l.phone || '',
+    alternatePhone: l.alternatePhone,
+    district: l.district || '',
+    tehsilOrBlock: l.tehsilOrBlock,
+    villageOrArea: l.villageOrArea,
+    machineryOwned: l.machineryOwned || l.machineCategory || 'General Machinery',
+    machineryCount: l.machineryCount != null ? Number(l.machineryCount) : (parseInt(l.fleetCount, 10) || 1),
+    makeModelYear: l.makeModelYear,
+    operatorAvailable: Boolean(l.operatorAvailable ?? true),
+    expectedMonthlyIncome: l.expectedMonthlyIncome,
+    status: mapDealerLeadStatus(l.status),
+    statusDescription: l.statusDescription,
+    statusRemarks: l.statusRemarks || l.remarks,
+    reviewedBy: l.reviewedBy,
+    reviewedAt: l.reviewedAt,
+    createdAt: l.createdAt,
+    updatedAt: l.updatedAt,
+  };
+}
+
+function mapSupportTicket(t: any): SupportTicket {
+  return {
+    id: t.id,
+    ticketNumber: t.ticketNumber || `TCK-${t.id}`,
+    customerName: t.customerName || '',
+    phoneNumber: t.phoneNumber || t.customerPhone || '',
+    villageOrCity: t.villageOrCity,
+    district: t.district,
+    category: t.category || t.topic || 'General Inquiry',
+    subject: t.subject || t.topic || 'Website Inquiry',
+    message: t.message,
+    priority: mapSupportTicketPriority(t.priority),
+    priorityDescription: t.priorityDescription,
+    status: mapSupportTicketStatus(t.status),
+    statusDescription: t.statusDescription,
+    source: t.source || (t.topic?.includes('AVAILABILITY') ? 'AVAILABILITY_FALLBACK' : 'WEBSITE'),
+    equipmentId: t.equipmentId || t.assetId || t.asset?.id,
+    statusRemarks: t.statusRemarks || t.remarks,
+    resolvedBy: t.resolvedBy,
+    resolvedAt: t.resolvedAt,
+    createdAt: t.createdAt,
+    updatedAt: t.updatedAt,
+  };
+}
+
 function mapAsset(a: any): Asset {
   let media: AssetMedia[] = [];
   if (Array.isArray(a.mediaItems) && a.mediaItems.length > 0) {
@@ -409,6 +505,8 @@ function mapAsset(a: any): Asset {
     purchaseCost: a.purchaseCost ? Number(a.purchaseCost) : undefined,
     operatorRequired: Boolean(a.operatorRequired),
     status: mapStatus(a.status),
+    statusDescription: a.statusDescription,
+    categoryDescription: a.categoryDescription,
     conditionNotes: a.conditionNotes || '',
     engineHours: Number(a.engineHours || 0),
     accessoriesIncluded: a.accessoriesIncluded || '',
@@ -420,6 +518,17 @@ function mapAsset(a: any): Asset {
     hindiUnitLabel: a.billingUnitMaster?.hindiUnitLabel || a.hindiUnitLabel || getBillingUnitHindiLabel(a.billingUnit),
     workingHoursLimit: a.workingHoursLimit ? Number(a.workingHoursLimit) : undefined,
     shiftTerms: a.shiftTerms || a.billingUnitMaster?.defaultShiftTerms,
+    dealerPartnerId: a.dealerPartner?.id || (a.dealerPartnerId != null ? Number(a.dealerPartnerId) : undefined),
+    dealerPartnerName: a.dealerPartner?.name,
+    dealerPartnerTradeName: a.dealerPartner?.tradeName,
+    dealerPartner: a.dealerPartner ? {
+      id: a.dealerPartner.id,
+      name: a.dealerPartner.name,
+      tradeName: a.dealerPartner.tradeName,
+      phone: a.dealerPartner.phone,
+      location: a.dealerPartner.location,
+      active: a.dealerPartner.active,
+    } : null,
   };
 }
 
@@ -492,6 +601,8 @@ function mapBooking(b: any): Booking {
     rentalConfigId: b.rentalConfig?.id || b.rentalConfigId,
     dailyRate: b.dailyRate != null ? Number(b.dailyRate) : b.asset ? Number(b.asset.dailyRate) : undefined,
     status: mapBookingStatus(b.status),
+    statusDescription: b.statusDescription,
+    bookingSourceDescription: b.bookingSourceDescription,
     dealerId: b.dealerId,
     notes: b.notes,
     createdAt: b.createdAt || '',
@@ -707,6 +818,10 @@ export class ApiStore {
           tradeName: d.tradeName,
           phone: d.phone,
           location: d.location,
+          stateId: d.stateId,
+          stateName: d.stateName,
+          cityId: d.cityId,
+          cityName: d.cityName,
           commissionRate: d.commissionRate != null ? Number(d.commissionRate) : 0,
           totalCommissionEarned: Number(d.totalCommissionEarned || 0),
           totalReferrals: Number(d.totalReferrals || 0),
@@ -719,6 +834,48 @@ export class ApiStore {
   }
   set dealers(v) {
     this._dealers = v;
+  }
+
+  private _dealerLeads: DealerLead[] = [];
+  private _dealerLeadsLoading = false;
+  get dealerLeads(): DealerLead[] {
+    if (this._dealerLeads.length === 0 && !this._dealerLeadsLoading) {
+      this._dealerLeadsLoading = true;
+      request<any[]>('/dealer-leads')
+        .then((res) => {
+          this._dealerLeads = (res || []).map(mapDealerLead);
+          this.notify();
+        })
+        .catch(() => {})
+        .finally(() => {
+          this._dealerLeadsLoading = false;
+        });
+    }
+    return this._dealerLeads;
+  }
+  set dealerLeads(v) {
+    this._dealerLeads = v;
+  }
+
+  private _supportTickets: SupportTicket[] = [];
+  private _supportTicketsLoading = false;
+  get supportTickets(): SupportTicket[] {
+    if (this._supportTickets.length === 0 && !this._supportTicketsLoading) {
+      this._supportTicketsLoading = true;
+      request<any[]>('/support-tickets')
+        .then((res) => {
+          this._supportTickets = (res || []).map(mapSupportTicket);
+          this.notify();
+        })
+        .catch(() => {})
+        .finally(() => {
+          this._supportTicketsLoading = false;
+        });
+    }
+    return this._supportTickets;
+  }
+  set supportTickets(v) {
+    this._supportTickets = v;
   }
 
   private _bookings: Booking[] = [];
@@ -1776,6 +1933,7 @@ export class ApiStore {
     billingUnitId?: number;
     workingHoursLimit?: number;
     shiftTerms?: string;
+    dealerPartnerId?: number | null;
   }): Promise<Asset> {
     const type = this.types.find((t) => t.id === data.typeId);
     const mfg = this.manufacturers.find((m) => m.id === data.manufacturerId);
@@ -1783,6 +1941,7 @@ export class ApiStore {
     const hub = this.hubs.find((h) => h.id === data.hubId);
     const city = hub ? this.cities.find((c) => c.id === hub.cityId) : undefined;
     const state = city ? this.states.find((s) => s.id === city.stateId) : undefined;
+    const dealer = data.dealerPartnerId ? this.dealers.find((d) => d.id === Number(data.dealerPartnerId)) : undefined;
 
     const matchingConfig =
       this.rentalConfigs.find((rc) => rc.typeId === data.typeId && rc.hubId === data.hubId && rc.active) ||
@@ -1858,6 +2017,10 @@ export class ApiStore {
       hubName: hub?.name,
       cityName: city?.name,
       stateName: state?.name,
+      dealerPartnerId: data.dealerPartnerId ? Number(data.dealerPartnerId) : undefined,
+      dealerPartnerName: dealer?.name,
+      dealerPartnerTradeName: dealer?.tradeName,
+      dealerPartner: dealer || null,
       imageUrl: effectiveImageUrl,
       serialNumber: data.serialNumber || `SN-${Date.now().toString().slice(-6)}`,
       dailyRate: resolvedDailyRate,
@@ -1892,6 +2055,7 @@ export class ApiStore {
           manufacturerId: data.manufacturerId,
           modelId: data.modelId,
           hubId: data.hubId,
+          dealerPartnerId: data.dealerPartnerId ? Number(data.dealerPartnerId) : undefined,
           imageUrl: effectiveImageUrl,
           galleryImageUrls: data.galleryImageUrls,
           videoUrl: data.videoUrl,
@@ -1951,6 +2115,7 @@ export class ApiStore {
     const cat = data.category !== undefined ? data.category : existing.category;
     const catInt = cat === 'MULTIPURPOSE_FLEET' ? 3 : cat === 'AGRICULTURE' ? 2 : 1;
 
+    // Note: dealerPartner is immutable once created and cannot be updated
     const payload: any = {
       name: data.name ?? existing.name,
       category: catInt,
@@ -1978,6 +2143,10 @@ export class ApiStore {
     const updatedAsset: Asset = {
       ...existing,
       ...data,
+      dealerPartnerId: existing.dealerPartnerId,
+      dealerPartnerName: existing.dealerPartnerName,
+      dealerPartnerTradeName: existing.dealerPartnerTradeName,
+      dealerPartner: existing.dealerPartner,
       billingUnit: data.billingUnit !== undefined ? resolveBillingUnitCode(data.billingUnit) : existing.billingUnit,
       billingUnitId:
         (data as any).billingUnitId ||
@@ -2835,6 +3004,7 @@ export class ApiStore {
       tradeName: data.tradeName,
       phone: data.phone,
       location: data.location || data.address || '',
+      cityId: data.cityId,
       commissionRate: data.commissionRate != null ? Number(data.commissionRate) : 0,
     };
     const raw = await request<any>('/dealers', {
@@ -2848,10 +3018,10 @@ export class ApiStore {
       tradeName: raw?.tradeName || data.tradeName,
       phone: raw?.phone || data.phone,
       location: raw?.location || data.location,
-      stateId: data.stateId,
-      cityId: data.cityId,
-      hubId: data.hubId,
-      hubName: data.hubName,
+      stateId: raw?.stateId || data.stateId,
+      stateName: raw?.stateName || data.stateName,
+      cityId: raw?.cityId || data.cityId,
+      cityName: raw?.cityName || data.cityName,
       address: data.address,
       notes: data.notes,
       commissionRate: Number(raw?.commissionRate ?? data.commissionRate ?? 0),
@@ -2884,6 +3054,74 @@ export class ApiStore {
       method: 'PATCH',
     });
     this.notify();
+  }
+
+  // --- DEALER LEADS & HOST ONBOARDING ---
+  async fetchDealerLeads(status?: DealerLeadStatus): Promise<DealerLead[]> {
+    const query = status ? `?status=${status}` : '';
+    const res = await request<any[]>(`/dealer-leads${query}`);
+    this._dealerLeads = (res || []).map(mapDealerLead);
+    this.notify();
+    return this._dealerLeads;
+  }
+
+  getDealerLeads(): DealerLead[] {
+    return this.dealerLeads;
+  }
+
+  async updateDealerLeadStatus(
+    id: number,
+    status: DealerLeadStatus,
+    statusRemarks?: string,
+    reviewedBy?: string,
+  ): Promise<DealerLead> {
+    const raw = await request<any>(`/dealer-leads/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, statusRemarks, reviewedBy }),
+    });
+    const updated = mapDealerLead(raw);
+    const idx = this._dealerLeads.findIndex((l) => l.id === id);
+    if (idx !== -1) {
+      this._dealerLeads[idx] = updated;
+    } else {
+      this._dealerLeads.push(updated);
+    }
+    this.notify();
+    return updated;
+  }
+
+  // --- SUPPORT TICKETS & AVAILABILITY ASSISTANCE ---
+  async fetchSupportTickets(status?: SupportTicketStatus): Promise<SupportTicket[]> {
+    const query = status ? `?status=${status}` : '';
+    const res = await request<any[]>(`/support-tickets${query}`);
+    this._supportTickets = (res || []).map(mapSupportTicket);
+    this.notify();
+    return this._supportTickets;
+  }
+
+  getSupportTickets(): SupportTicket[] {
+    return this.supportTickets;
+  }
+
+  async updateSupportTicketStatus(
+    id: number,
+    status: SupportTicketStatus,
+    statusRemarks?: string,
+    resolvedBy?: string,
+  ): Promise<SupportTicket> {
+    const raw = await request<any>(`/support-tickets/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, statusRemarks, resolvedBy }),
+    });
+    const updated = mapSupportTicket(raw);
+    const idx = this._supportTickets.findIndex((t) => t.id === id);
+    if (idx !== -1) {
+      this._supportTickets[idx] = updated;
+    } else {
+      this._supportTickets.push(updated);
+    }
+    this.notify();
+    return updated;
   }
 
   // --- REPORTING & DASHBOARD ---
@@ -3253,6 +3491,331 @@ export class ApiStore {
     const json = await res.json();
     return (json?.data !== undefined ? json.data : json) as string;
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // REPORTING MODULE APIS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  async getReportingKpis(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<ReportingKpiSummaryResponse> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/kpis${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (data) {
+        return {
+          machinesOnRentCount: Number(data.machinesOnRentCount || 0),
+          totalCollections: Number(data.totalCollections || 0),
+          machinesInMaintenanceCount: Number(data.machinesInMaintenanceCount || 0),
+          dealersRevenue: Number(data.dealersRevenue || 0),
+          futureBookingsCount: Number(data.futureBookingsCount || 0),
+          futureBookingsRevenue: Number(data.futureBookingsRevenue || 0),
+          dateRange: data.dateRange || filters.dateRange || 'today',
+          stateId: data.stateId ?? filters.stateId,
+          cityId: data.cityId ?? filters.cityId,
+          hubId: data.hubId ?? filters.hubId,
+        };
+      }
+    } catch (err) {
+      console.warn('API getReportingKpis failed:', err);
+    }
+    return {
+      machinesOnRentCount: 0,
+      totalCollections: 0,
+      machinesInMaintenanceCount: 0,
+      dealersRevenue: 0,
+      futureBookingsCount: 0,
+      futureBookingsRevenue: 0,
+      dateRange: filters.dateRange || 'today',
+      stateId: filters.stateId,
+      cityId: filters.cityId,
+      hubId: filters.hubId,
+    };
+  }
+
+  async getMachinesOnRentReport(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<MachinesOnRentReportItem[]> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/machines-on-rent${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.warn('API getMachinesOnRentReport failed:', err);
+    }
+    return [];
+  }
+
+  async getCollectionsReport(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<CollectionsReportItem[]> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/collections${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.warn('API getCollectionsReport failed:', err);
+    }
+    return [];
+  }
+
+  async getMachinesInMaintenanceReport(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+  }): Promise<MaintenanceReportItem[]> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/machines-in-maintenance${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.warn('API getMachinesInMaintenanceReport failed:', err);
+    }
+    return [];
+  }
+
+  async getDealerRevenueReport(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<DealerRevenueReportItem[]> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/dealers-revenue${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.warn('API getDealerRevenueReport failed:', err);
+    }
+    return [];
+  }
+
+  async getFutureBookingsReport(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<FutureBookingReportItem[]> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    try {
+      const res = await request<any>(`/reports/future-bookings${query}`);
+      const data = res?.data !== undefined ? res.data : res;
+      if (Array.isArray(data)) return data;
+    } catch (err) {
+      console.warn('API getFutureBookingsReport failed:', err);
+    }
+    return [];
+  }
+
+  /**
+   * Helper to download blob files streamed from the backend API.
+   */
+  private async downloadFileFromUrl(url: string, defaultFilename: string): Promise<void> {
+    const token = localStorage.getItem('token') || '';
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      throw new Error(`Server returned HTTP ${response.status} (${response.statusText})`);
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('content-disposition');
+    let filename = defaultFilename;
+    if (disposition && disposition.indexOf('filename=') !== -1) {
+      const match = disposition.match(/filename="?([^";]+)"?/);
+      if (match && match[1]) filename = match[1];
+    }
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(downloadUrl);
+  }
+
+  /**
+   * Separate Download API 1: Total Machines on Rent Excel (.xlsx)
+   */
+  async downloadMachinesOnRentExcel(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.downloadFileFromUrl(
+      `${API_BASE}/reports/machines-on-rent/download-excel${query}`,
+      `EquipGrid_Machines_On_Rent_${filters.dateRange || 'today'}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  /**
+   * Separate Download API 2: Total Collections Excel (.xlsx)
+   */
+  async downloadCollectionsExcel(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.downloadFileFromUrl(
+      `${API_BASE}/reports/collections/download-excel${query}`,
+      `EquipGrid_Collections_${filters.dateRange || 'today'}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  /**
+   * Separate Download API 3: Machines in Maintenance Excel (.xlsx) - Strictly State/City/Hub only
+   */
+  async downloadMaintenanceExcel(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+  }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.downloadFileFromUrl(
+      `${API_BASE}/reports/machines-in-maintenance/download-excel${query}`,
+      `EquipGrid_Maintenance_Live_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  /**
+   * Separate Download API 4: Partner Dealers Revenue & Commission Excel (.xlsx)
+   */
+  async downloadDealerRevenueExcel(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.downloadFileFromUrl(
+      `${API_BASE}/reports/dealers-revenue/download-excel${query}`,
+      `EquipGrid_Dealers_Revenue_${filters.dateRange || 'today'}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  /**
+   * Separate Download API 5: Future Bookings Schedule Excel (.xlsx)
+   */
+  async downloadFutureBookingsExcel(filters: {
+    stateId?: number | null;
+    cityId?: number | null;
+    hubId?: number | null;
+    dateRange?: string;
+  }): Promise<void> {
+    const params = new URLSearchParams();
+    if (filters.stateId) params.append('stateId', String(filters.stateId));
+    if (filters.cityId) params.append('cityId', String(filters.cityId));
+    if (filters.hubId) params.append('hubId', String(filters.hubId));
+    if (filters.dateRange) params.append('dateRange', filters.dateRange);
+    const query = params.toString() ? `?${params.toString()}` : '';
+    await this.downloadFileFromUrl(
+      `${API_BASE}/reports/future-bookings/download-excel${query}`,
+      `EquipGrid_Future_Bookings_${filters.dateRange || 'today'}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+    );
+  }
+
+  /**
+   * Delegator export method
+   */
+  async downloadReportXlsx(
+    reportType: string,
+    filters: {
+      stateId?: number | null;
+      cityId?: number | null;
+      hubId?: number | null;
+      dateRange?: string;
+    },
+  ): Promise<void> {
+    switch (reportType) {
+      case 'machines_on_rent':
+        return this.downloadMachinesOnRentExcel(filters);
+      case 'collections':
+        return this.downloadCollectionsExcel(filters);
+      case 'maintenance':
+        return this.downloadMaintenanceExcel({
+          stateId: filters.stateId,
+          cityId: filters.cityId,
+          hubId: filters.hubId,
+        });
+      case 'dealer_revenue':
+        return this.downloadDealerRevenueExcel(filters);
+      case 'future_bookings':
+        return this.downloadFutureBookingsExcel(filters);
+      default:
+        return this.downloadMachinesOnRentExcel(filters);
+    }
+  }
 }
 
 export const api = new ApiStore();
+

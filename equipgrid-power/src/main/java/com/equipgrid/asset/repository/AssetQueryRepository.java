@@ -45,6 +45,8 @@ public class AssetQueryRepository {
         .fetchJoin()
         .leftJoin(qAsset.billingUnitMaster)
         .fetchJoin()
+        .leftJoin(qAsset.dealerPartner)
+        .fetchJoin()
         .where(builder)
         .orderBy(qAsset.id.desc())
         .fetch();
@@ -67,6 +69,8 @@ public class AssetQueryRepository {
             .fetchJoin()
             .leftJoin(qAsset.billingUnitMaster)
             .fetchJoin()
+            .leftJoin(qAsset.dealerPartner)
+            .fetchJoin()
             .where(qAsset.id.eq(id))
             .fetchOne());
   }
@@ -87,6 +91,8 @@ public class AssetQueryRepository {
             .leftJoin(qAsset.hub)
             .fetchJoin()
             .leftJoin(qAsset.billingUnitMaster)
+            .fetchJoin()
+            .leftJoin(qAsset.dealerPartner)
             .fetchJoin()
             .where(qAsset.assetTag.equalsIgnoreCase(tag.trim()))
             .fetchOne());

@@ -1,9 +1,12 @@
 package com.equipgrid.asset.service;
 
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
+import com.equipgrid.asset.dto.request.UpdateAssetRequest;
+import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
+import com.equipgrid.auth.entity.User;
 import java.util.List;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -16,8 +19,7 @@ public interface IAssetService {
 
   Asset createAsset(CreateAssetRequest request, String performedBy);
 
-  Asset updateAsset(
-      Long id, com.equipgrid.asset.dto.request.UpdateAssetRequest request, String performedBy);
+  Asset updateAsset(Long id, UpdateAssetRequest request, String performedBy);
 
   Asset updateAssetStatus(Long id, AssetStatus newStatus, String notes, String performedBy);
 
@@ -28,9 +30,8 @@ public interface IAssetService {
   Asset uploadImage(Long id, MultipartFile file, String performedBy);
 
   /** Get distinct machine models grouped for the customer website catalog. */
-  List<com.equipgrid.asset.dto.response.WebsiteMachineModelResponse> getWebsiteCatalog(
-      AssetCategory category, Long hubId);
+  List<WebsiteMachineModelResponse> getWebsiteCatalog(AssetCategory category, Long hubId);
 
   /** Delete an asset from fleet - strictly restricted to ROOT users. */
-  void deleteAsset(Long id, com.equipgrid.auth.entity.User caller);
+  void deleteAsset(Long id, User caller);
 }

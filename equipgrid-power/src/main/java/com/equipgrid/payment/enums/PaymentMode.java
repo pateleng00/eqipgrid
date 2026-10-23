@@ -9,8 +9,8 @@ import lombok.Getter;
 @Getter
 public enum PaymentMode {
   CASH((short) 1, "Cash (नकद)"),
-  UPI((short) 2, "UPI / QR Code (यूपीआई)"),
-  BANK_TRANSFER((short) 3, "Bank Transfer / NEFT / RTGS (बैंक ट्रांसफर)");
+  UPI((short) 2, "UPI Code (यूपीआई)"),
+  BANK_TRANSFER((short) 3, "Bank Transfer (बैंक ट्रांसफर)");
 
   @JsonValue private final Short value;
   private final String description;

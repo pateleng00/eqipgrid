@@ -1,6 +1,7 @@
 package com.equipgrid.asset.service;
 
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
+import com.equipgrid.asset.dto.request.UpdateAssetRequest;
 import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.entity.AssetMedia;
@@ -11,21 +12,23 @@ import com.equipgrid.asset.repository.AssetMediaRepository;
 import com.equipgrid.asset.repository.AssetQueryRepository;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.audit.service.IAuditService;
+import com.equipgrid.auth.entity.User;
 import com.equipgrid.auth.enums.Role;
 import com.equipgrid.common.Exceptions;
 import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
+import com.equipgrid.dealer.repository.DealerRepository;
 import com.equipgrid.intelligence.service.IAssetVectorEmbeddingService;
+import com.equipgrid.location.entity.Hub;
 import com.equipgrid.location.repository.HubRepository;
 import com.equipgrid.master.repository.BillingUnitMasterRepository;
 import com.equipgrid.master.repository.EquipmentTypeRepository;
 import com.equipgrid.master.repository.MachineModelRepository;
 import com.equipgrid.master.repository.ManufacturerRepository;
 import com.equipgrid.rentalconfig.repository.RentalConfigurationQueryRepository;
-import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -46,8 +49,8 @@ public class AssetServiceImpl implements IAssetService {
   private final ManufacturerRepository manufacturerRepository;
   private final MachineModelRepository machineModelRepository;
   private final HubRepository hubRepository;
+  private final DealerRepository dealerRepository;
   private final BillingUnitMasterRepository billingUnitMasterRepository;
-  private final RentalConfigurationRepository rentalConfigurationRepository;
   private final RentalConfigurationQueryRepository rentalConfigurationQueryRepository;
   private final IAssetVectorEmbeddingService assetVectorEmbeddingService;
 
@@ -153,6 +156,10 @@ public class AssetServiceImpl implements IAssetService {
             : null;
     var hub =
         request.getHubId() != null ? hubRepository.findById(request.getHubId()).orElse(null) : null;
+    var dealerPartner =
+        request.getDealerPartnerId() != null
+            ? dealerRepository.findById(request.getDealerPartnerId()).orElse(null)
+            : null;
 
     String initialImage =
         request.getImageUrl() != null && !request.getImageUrl().isBlank()
@@ -194,6 +201,7 @@ public class AssetServiceImpl implements IAssetService {
             .manufacturer(manufacturer)
             .model(model)
             .hub(hub)
+            .dealerPartner(dealerPartner)
             .imageUrl(initialImage)
             .serialNumber(request.getSerialNumber())
             .dailyRate(request.getDailyRate())
@@ -344,8 +352,7 @@ public class AssetServiceImpl implements IAssetService {
 
   @Override
   @Transactional
-  public Asset updateAsset(
-      Long id, com.equipgrid.asset.dto.request.UpdateAssetRequest request, String performedBy) {
+  public Asset updateAsset(Long id, UpdateAssetRequest request, String performedBy) {
     Asset asset = getAssetById(id);
 
     if (request.getName() != null && !request.getName().isBlank()) {
@@ -542,12 +549,12 @@ public class AssetServiceImpl implements IAssetService {
     Map<String, List<Asset>> grouped =
         all.stream()
             .collect(
-                java.util.stream.Collectors.groupingBy(
+                Collectors.groupingBy(
                     a -> a.getName() != null ? a.getName().trim() : a.getAssetTag(),
-                    java.util.LinkedHashMap::new,
-                    java.util.stream.Collectors.toList()));
+                    LinkedHashMap::new,
+                    Collectors.toList()));
 
-    List<WebsiteMachineModelResponse> result = new java.util.ArrayList<>();
+    List<WebsiteMachineModelResponse> result = new ArrayList<>();
 
     for (Map.Entry<String, List<Asset>> entry : grouped.entrySet()) {
       List<Asset> units = entry.getValue();
@@ -573,16 +580,16 @@ public class AssetServiceImpl implements IAssetService {
       List<String> hubNames =
           units.stream()
               .map(Asset::getHub)
-              .filter(java.util.Objects::nonNull)
-              .map(com.equipgrid.location.entity.Hub::getName)
+              .filter(Objects::nonNull)
+              .map(Hub::getName)
               .distinct()
               .toList();
 
       List<Long> hubIds =
           units.stream()
               .map(Asset::getHub)
-              .filter(java.util.Objects::nonNull)
-              .map(com.equipgrid.location.entity.Hub::getId)
+              .filter(Objects::nonNull)
+              .map(Hub::getId)
               .distinct()
               .toList();
 
@@ -591,7 +598,7 @@ public class AssetServiceImpl implements IAssetService {
         demoVideo =
             rep.getMediaItems().stream()
                 .filter(m -> "VIDEO".equalsIgnoreCase(m.getMediaType()))
-                .map(com.equipgrid.asset.entity.AssetMedia::getUrl)
+                .map(AssetMedia::getUrl)
                 .findFirst()
                 .orElse(null);
       }
@@ -683,7 +690,7 @@ public class AssetServiceImpl implements IAssetService {
 
   @Override
   @Transactional
-  public void deleteAsset(Long id, com.equipgrid.auth.entity.User caller) {
+  public void deleteAsset(Long id, User caller) {
     if (caller != null && caller.getRole() != null && caller.getRole() != Role.ROOT) {
       throw new Exceptions.BusinessRuleViolationException(
           "Forbidden: You are not allowed to perform this operation");

@@ -35,49 +35,37 @@ import org.springframework.http.ResponseEntity;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class WhatsAppFlowIntegrationTest {
 
+  private static final String FARMER_PHONE = "9876501234";
   @LocalServerPort private int port;
-
   @Autowired private TestRestTemplate restTemplate;
-
   @Autowired private IWhatsAppBotService whatsAppBotService;
-
   @Autowired private IWhatsAppNotificationService whatsAppNotificationService;
-
   @Autowired private IUpiQrGeneratorService upiQrGeneratorService;
-
   @Autowired private AssetRepository assetRepository;
-
   @Autowired private com.equipgrid.location.repository.StateRepository stateRepository;
 
   @Autowired
   private com.equipgrid.location.repository.LocationQueryRepository locationQueryRepository;
 
   @Autowired private com.equipgrid.location.repository.CityRepository cityRepository;
-
   @Autowired private com.equipgrid.location.repository.HubRepository hubRepository;
 
   @Autowired
   private com.equipgrid.master.repository.EquipmentTypeRepository equipmentTypeRepository;
 
   @Autowired private com.equipgrid.master.repository.ManufacturerRepository manufacturerRepository;
-
   @Autowired private com.equipgrid.master.repository.MachineModelRepository machineModelRepository;
-
   @Autowired private CustomerQueryRepository customerQueryRepository;
-
   @Autowired private com.equipgrid.customer.repository.CustomerRepository customerRepository;
 
   @Autowired
   private com.equipgrid.farmlocation.repository.FarmLocationRepository farmLocationRepository;
 
   @Autowired private BookingQueryRepository bookingQueryRepository;
-
   @Autowired private com.equipgrid.booking.service.IBookingService bookingService;
 
   @Autowired
   private com.equipgrid.whatsapp.service.VoiceNoteProcessingService voiceNoteProcessingService;
-
-  private static final String FARMER_PHONE = "9876501234";
 
   @BeforeEach
   void setUp() {

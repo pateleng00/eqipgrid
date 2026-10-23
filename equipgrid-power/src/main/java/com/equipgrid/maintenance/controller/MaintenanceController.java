@@ -3,10 +3,7 @@ package com.equipgrid.maintenance.controller;
 import com.equipgrid.auth.entity.User;
 import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.core.ratelimiter.RateLimited;
-import com.equipgrid.maintenance.dto.CompleteMaintenanceRequest;
-import com.equipgrid.maintenance.dto.CreateMaintenanceRequest;
-import com.equipgrid.maintenance.dto.MaintenanceRecordResponse;
-import com.equipgrid.maintenance.dto.UpdateMaintenanceProgressRequest;
+import com.equipgrid.maintenance.dto.*;
 import com.equipgrid.maintenance.entity.MaintenanceDamageComponent;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
 import com.equipgrid.maintenance.service.IMaintenanceService;
@@ -137,7 +134,7 @@ public class MaintenanceController {
       description =
           "Adds a new component to the database linked to a specific equipment type or marked as universal.")
   public ResponseEntity<ApiResponse<MaintenanceDamageComponent>> createDamageComponent(
-      @Valid @RequestBody com.equipgrid.maintenance.dto.CreateDamageComponentRequest request,
+      @Valid @RequestBody CreateDamageComponentRequest request,
       @AuthenticationPrincipal User currentUser) {
     Long userId = currentUser != null ? currentUser.getId() : null;
     MaintenanceDamageComponent component =

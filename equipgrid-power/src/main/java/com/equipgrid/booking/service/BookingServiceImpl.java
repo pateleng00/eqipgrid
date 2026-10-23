@@ -28,6 +28,7 @@ import com.equipgrid.rentalconfig.repository.RentalConfigurationRepository;
 import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import lombok.AllArgsConstructor;
@@ -367,7 +368,7 @@ public class BookingServiceImpl implements IBookingService {
 
     Booking saved = bookingRepository.save(booking);
     if (farmLocation != null) {
-      farmLocation.setLastUsedAt(java.time.LocalDateTime.now());
+      farmLocation.setLastUsedAt(LocalDateTime.now());
     }
     auditService.log(
         "BOOKING",

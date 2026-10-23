@@ -18,6 +18,7 @@ import com.equipgrid.returninspection.dto.response.SettlementCalculationResponse
 import com.equipgrid.returninspection.entity.ReturnInspection;
 import com.equipgrid.returninspection.repository.ReturnInspectionQueryRepository;
 import com.equipgrid.returninspection.repository.ReturnInspectionRepository;
+import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.AllArgsConstructor;
@@ -38,8 +39,7 @@ public class ReturnInspectionServiceImpl implements IReturnInspectionService {
   private final IAuditService auditService;
   private final RefundTransactionRepository refundTransactionRepository;
   private final PaymentQueryRepository paymentQueryRepository;
-  private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
-      whatsAppNotificationService;
+  private final IWhatsAppNotificationService whatsAppNotificationService;
 
   @Override
   public List<ReturnInspection> getInspectionsByBooking(Long bookingId) {

@@ -33,7 +33,10 @@ dependencies {
 	implementation platform('com.amazonaws:aws-java-sdk-bom:1.12.448')
 
     // Apache Commons Lang — DateUtils for presigned URL expiry
-    implementation 'org.apache.commons:commons-lang3:3.14.0'
+    implementation 'org.apache.commons:commons-lang3:3.18.0'
+
+    // Apache POI for server-side Excel (.xlsx) workbook generation
+    implementation 'org.apache.poi:poi-ooxml:5.4.0'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-cache'

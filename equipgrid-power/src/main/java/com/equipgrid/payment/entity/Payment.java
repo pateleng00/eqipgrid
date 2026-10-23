@@ -50,4 +50,14 @@ public class Payment {
   @Column(name = "created_at")
   @Builder.Default
   private LocalDateTime createdAt = LocalDateTime.now();
+
+  @Transient
+  public String getPaymentTypeDescription() {
+    return paymentType != null ? paymentType.getDescription() : null;
+  }
+
+  @Transient
+  public String getPaymentModeDescription() {
+    return paymentMode != null ? paymentMode.getDescription() : null;
+  }
 }

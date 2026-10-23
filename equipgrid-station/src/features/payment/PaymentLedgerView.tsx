@@ -23,13 +23,19 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { formatINR, formatDate } from '../../lib/utils';
-import { SearchSelect } from '../../components/SearchSelect';
+import { SearchSelect, SelectOption } from '../../components/SearchSelect';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { useTheme } from '../../lib/ThemeContext';
 import { useAuth } from '../../lib/AuthContext';
 import { api } from '../../services/api';
 import { Payment, PaymentProof, RefundTransaction, PaymentType } from '../../types';
 import { cn } from '../../lib/utils';
+
+const PAYMENT_LEDGER_CATEGORY_OPTIONS: SelectOption[] = [
+  { value: 'ADVANCE', label: 'Advance Rent (अग्रिम किराया)', subLabel: 'Advance Rental Inflow' },
+  { value: 'DEPOSIT', label: 'Security Deposit (सुरक्षा राशि)', subLabel: 'Refundable Security Deposit' },
+  { value: 'FINAL_SETTLEMENT', label: 'Final Settlement (अंतिम निपटान)', subLabel: 'Post-Return Final Balance Settlement' },
+];
 
 const PAYMENT_TYPE_STYLE: Record<string, { label: string; color: string; darkColor: string; isCredit: boolean }> = {
   DEPOSIT: {
@@ -1131,15 +1137,14 @@ export const PaymentLedgerView: React.FC = () => {
 
               <div>
                 <label className="block text-xs font-bold mb-1">Payment Ledger Category</label>
-                <select
+                <SearchSelect
+                  options={PAYMENT_LEDGER_CATEGORY_OPTIONS}
                   value={verifyType}
-                  onChange={(e) => setVerifyType(e.target.value as PaymentType)}
-                  className="w-full rounded-xl border p-2.5 text-xs font-bold focus:border-amber-500 focus:outline-none dark:bg-slate-950"
-                >
-                  <option value="ADVANCE">ADVANCE (Advance Rental Inflow)</option>
-                  <option value="DEPOSIT">DEPOSIT (Security Deposit)</option>
-                  <option value="FINAL_SETTLEMENT">FINAL_SETTLEMENT (Settlement Inflow)</option>
-                </select>
+                  onChange={(val) => setVerifyType((val || 'ADVANCE') as PaymentType)}
+                  isClearable={false}
+                  isSearchable={false}
+                  placeholder="Select payment category..."
+                />
               </div>
 
               <div>

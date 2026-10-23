@@ -38,18 +38,18 @@ import org.springframework.stereotype.Service;
 @Service
 @RequiredArgsConstructor
 public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
-  @Value("${equipgrid.intelligence.gemini.api-key}")
-  private String configuredGeminiApiKey;
-
-  @Value("${equipgrid.intelligence.gemini.model}")
-  private String geminiModel;
-
   private static final HttpClient HTTP_CLIENT =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(20)).build();
   private final AssetQueryRepository assetQueryRepository;
   private final HubRepository hubRepository;
   private final ObjectMapper objectMapper;
   private final FleetIntelligenceTools fleetIntelligenceTools;
+
+  @Value("${equipgrid.intelligence.gemini.api-key}")
+  private String configuredGeminiApiKey;
+
+  @Value("${equipgrid.intelligence.gemini.model}")
+  private String geminiModel;
 
   @Override
   public IntelligenceChatResponse chat(IntelligenceChatRequest request) {
@@ -394,9 +394,7 @@ public class IntelligenceChatServiceImpl implements IIntelligenceChatService {
 
     List<Hub> activeHubs =
         hubs != null
-            ? hubs.stream()
-                .filter(h -> h.getActive() == null || Boolean.TRUE.equals(h.getActive()))
-                .toList()
+            ? hubs.stream().filter(h -> h.getActive() == null || h.getActive()).toList()
             : Collections.emptyList();
 
     // 1. Dynamic check: does the user mention or ask about specific hubs / locations?

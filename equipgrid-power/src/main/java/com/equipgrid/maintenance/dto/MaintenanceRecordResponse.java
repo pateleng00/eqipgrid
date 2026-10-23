@@ -6,10 +6,14 @@ import com.equipgrid.maintenance.enums.MaintenanceLocationType;
 import com.equipgrid.maintenance.enums.MaintenancePriority;
 import com.equipgrid.maintenance.enums.MaintenanceServiceType;
 import com.equipgrid.maintenance.enums.MaintenanceStatus;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,9 +25,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class MaintenanceRecordResponse {
 
+  private static final ObjectMapper MAPPER = new ObjectMapper();
   private Long id;
   private String ticketNumber;
-
   // Asset details
   private Long assetId;
   private String assetName;
@@ -32,11 +36,9 @@ public class MaintenanceRecordResponse {
   private String assetCategory;
   private String assetImageUrl;
   private String assetStatus;
-
   // Hub details
   private Long hubId;
   private String hubName;
-
   // Ticket specifications
   private MaintenanceServiceType serviceType;
   private MaintenanceLocationType locationType;
@@ -47,17 +49,14 @@ public class MaintenanceRecordResponse {
   private MaintenanceStatus status;
   private String issueDescription;
   private String workScope;
-
   // Periodic Service fields
   private Integer serviceNumber;
   private Boolean isFreeService;
   private String periodicServiceNotes;
-
   // Repair Work fields
-  private java.util.List<String> damagedComponents;
+  private List<String> damagedComponents;
   private String otherDamageDescription;
-  private java.util.List<String> damageImageUrls;
-
+  private List<String> damageImageUrls;
   // Financials & Invoices
   private BigDecimal estimatedCost;
   private BigDecimal actualPartsCost;
@@ -68,7 +67,6 @@ public class MaintenanceRecordResponse {
   private String invoiceFileName;
   private String invoiceFileType;
   private OffsetDateTime invoiceUploadedAt;
-
   // Meter readings & timings
   private Integer meterHoursAtService;
   private Integer nextServiceDueHours;
@@ -132,19 +130,13 @@ public class MaintenanceRecordResponse {
         .build();
   }
 
-  private static final com.fasterxml.jackson.databind.ObjectMapper MAPPER =
-      new com.fasterxml.jackson.databind.ObjectMapper();
-
   @SuppressWarnings("unchecked")
-  private static java.util.List<String> parseJsonList(String json) {
-    if (json == null || json.isBlank()) return java.util.Collections.emptyList();
+  private static List<String> parseJsonList(String json) {
+    if (json == null || json.isBlank()) return Collections.emptyList();
     try {
-      return MAPPER.readValue(json, java.util.List.class);
+      return MAPPER.readValue(json, List.class);
     } catch (Exception e) {
-      return java.util.Arrays.stream(json.split(","))
-          .map(String::trim)
-          .filter(s -> !s.isEmpty())
-          .toList();
+      return Arrays.stream(json.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList();
     }
   }
 }

@@ -15,6 +15,7 @@ import { formatINR } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { cn } from '../../lib/utils';
+import { printDailyCashRegisterPdf } from '../../services/voucherPdfService';
 
 export const DailyCashReconciliationView: React.FC = () => {
   const { isDaylight } = useTheme();
@@ -109,7 +110,8 @@ export const DailyCashReconciliationView: React.FC = () => {
             )}
           </span>
           <button
-            onClick={() => window.print()}
+            type="button"
+            onClick={() => printDailyCashRegisterPdf(cashSheet)}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1 rounded-lg border text-xs font-bold cursor-pointer transition-colors',
               isDaylight
@@ -118,7 +120,7 @@ export const DailyCashReconciliationView: React.FC = () => {
             )}
           >
             <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
-            Export Statement
+            <span>Export Statement (PDF)</span>
           </button>
         </div>
       </div>

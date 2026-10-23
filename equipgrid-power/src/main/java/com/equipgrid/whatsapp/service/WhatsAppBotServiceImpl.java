@@ -9,6 +9,7 @@ import com.equipgrid.booking.dto.request.CreateBookingRequest;
 import com.equipgrid.booking.dto.request.QuoteRequest;
 import com.equipgrid.booking.dto.response.QuoteResponse;
 import com.equipgrid.booking.entity.Booking;
+import com.equipgrid.booking.enums.BookingSource;
 import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.booking.repository.BookingQueryRepository;
 import com.equipgrid.booking.service.IBookingService;
@@ -333,19 +334,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String menuText =
         String.format(
             """
-                %s
-                _(ग्रामीण भारत की विश्वसनीय कृषि व निर्माण उपकरण सेवा)_%s
+                                %s
+                                _(ग्रामीण भारत की विश्वसनीय कृषि व निर्माण उपकरण सेवा)_%s
 
-                Please select an option (विकल्प चुनें):
-                *1* 🚜 *Browse Machinery & Rent* (मशीनें देखें और बुक करें)
-                *2* 🏙️ *Select / Change Station Hub* (हब स्टेशन चुनें - %s)
-                *3* 💳 *Pay Rent / Security via UPI QR* (यूपीआई क्यूआर से भुगतान)
-                *4* 📍 *Track Equipment & Outward Challan* (ऑर्डर व मशीन ट्रैक करें)
-                *5* 🔄 *Instant Machine Return & Deposit Refund* (मशीन वापसी व रिफंड)
-                *6* 📞 *Kisan Helpline & Support* (सहायता केंद्र)
+                                Please select an option (विकल्प चुनें):
+                                *1* 🚜 *Browse Machinery & Rent* (मशीनें देखें और बुक करें)
+                                *2* 🏙️ *Select / Change Station Hub* (हब स्टेशन चुनें - %s)
+                                *3* 💳 *Pay Rent / Security via UPI QR* (यूपीआई क्यूआर से भुगतान)
+                                *4* 📍 *Track Equipment & Outward Challan* (ऑर्डर व मशीन ट्रैक करें)
+                                *5* 🔄 *Instant Machine Return & Deposit Refund* (मशीन वापसी व रिफंड)
+                                *6* 📞 *Kisan Helpline & Support* (सहायता केंद्र)
 
-                💡 _Reply with 1, 2, 3, 4, 5, or 6. Type *MENU* anytime to return here._
-                """,
+                                💡 _Reply with 1, 2, 3, 4, 5, or 6. Type *MENU* anytime to return here._
+                                """,
             greeting, hubInfo, getActiveHubCitiesSummary());
 
     return WhatsAppMessageResponse.builder()
@@ -518,18 +519,18 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
     String text =
         """
-                🚜 *What type of machinery are you looking for?*
-                _(आप किस प्रकार के उपकरण ढूंढ रहे हैं?)_
+                        🚜 *What type of machinery are you looking for?*
+                        _(आप किस प्रकार के उपकरण ढूंढ रहे हैं?)_
 
-                *1.* 🌾 *Agriculture Machinery* (कृषि उपकरण - जुताई, बुवाई, कटाई व निराई-गुड़ाई)
-                *2.* 🏗️ *Construction Equipment* (निर्माण उपकरण - कंक्रीट मिक्सर, वाइब्रेटर, पम्प, जनरेटर, जेसीबी)
-                *3.* 🚜 *Multipurpose Fleet* (बहुउद्देशीय वाहन - ट्रैक्टर, ट्रॉली, ट्रेलर, वाटर टैंकर, लोडर)
+                        *1.* 🌾 *Agriculture Machinery* (कृषि उपकरण - जुताई, बुवाई, कटाई व निराई-गुड़ाई)
+                        *2.* 🏗️ *Construction Equipment* (निर्माण उपकरण - कंक्रीट मिक्सर, वाइब्रेटर, पम्प, जनरेटर, जेसीबी)
+                        *3.* 🚜 *Multipurpose Fleet* (बहुउद्देशीय वाहन - ट्रैक्टर, ट्रॉली, ट्रेलर, वाटर टैंकर, लोडर)
 
-                👉 *Reply with 1, 2, or 3:*
-                • *1* for Agriculture (कृषि उपकरण)
-                • *2* for Construction (निर्माण उपकरण)
-                • *3* for Dual-Use Fleet (डुअल यूज़ / बहुउद्देशीय वाहन)
-                """;
+                        👉 *Reply with 1, 2, or 3:*
+                        • *1* for Agriculture (कृषि उपकरण)
+                        • *2* for Construction (निर्माण उपकरण)
+                        • *3* for Dual-Use Fleet (डुअल यूज़ / बहुउद्देशीय वाहन)
+                        """;
 
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
@@ -754,20 +755,20 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String msg =
         String.format(
             """
-            📅 *Select Rental Duration & Start Date for %s%s:*
-            _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
+                                📅 *Select Rental Duration & Start Date for %s%s:*
+                                _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
 
-            • *Starting Date Options (शुरू करने की तारीख):*
-              • *Tomorrow (कल से)* — %s (Standard)
-              • *Today (आज से)* — %s
-              • *Day After (परसों से)* — %s
-              • *Any Future Date (अपनी पसंद की तारीख)* — जैसे: *25 Oct*, *28/10*, *28 तारीख*
+                                • *Starting Date Options (शुरू करने की तारीख):*
+                                  • *Tomorrow (कल से)* — %s (Standard)
+                                  • *Today (आज से)* — %s
+                                  • *Day After (परसों से)* — %s
+                                  • *Any Future Date (अपनी पसंद की तारीख)* — जैसे: *25 Oct*, *28/10*, *28 तारीख*
 
-            👉 *Quick Ways to Reply (जवाब कैसे दें):*
-            • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5, 7*) to start from tomorrow.
-            • *Specific Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*).
-            • *Choose Date First:* Type date (जैसे: *25 Oct*, *Today*, *कल*), then enter days.
-            """,
+                                👉 *Quick Ways to Reply (जवाब कैसे दें):*
+                                • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5, 7*) to start from tomorrow.
+                                • *Specific Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*).
+                                • *Choose Date First:* Type date (जैसे: *25 Oct*, *Today*, *कल*), then enter days.
+                                """,
             catStr, hubStr, tomorrow.format(fmt), today.format(fmt), dayAfter.format(fmt));
 
     return WhatsAppMessageResponse.builder()
@@ -876,12 +877,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
           .message(
               String.format(
                   """
-                  ⚠️ All machinery in this yard is currently booked %s.
-                  _(इस तारीख पर इस यार्ड की सभी मशीनें पहले से बुक हैं)_
+                                            ⚠️ All machinery in this yard is currently booked %s.
+                                            _(इस तारीख पर इस यार्ड की सभी मशीनें पहले से बुक हैं)_
 
-                  👉 *Reply with another Start Date or Duration* (e.g. *25 Oct*, *25 Oct se 3 din*, *28/10*, or *कल से 2 दिन*),
-                  or reply *STATION* to select another yard, or call our Kisan & Contractor Helpline (+91 94674 79922).
-                  """,
+                                            👉 *Reply with another Start Date or Duration* (e.g. *25 Oct*, *25 Oct se 3 din*, *28/10*, or *कल से 2 दिन*),
+                                            or reply *STATION* to select another yard, or call our Kisan & Contractor Helpline (+91 94674 79922).
+                                            """,
                   datesStr))
           .state(WhatsAppState.ENTERING_DATES)
           .suggestedOptions(
@@ -1385,7 +1386,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     // If dates are already known from the previous step:
     if (context.getRentalDays() != null && context.getStartDate() != null) {
       WhatsAppMessageResponse prompt = promptDeliveryDestinationOrLocation(conv, customer, context);
-      String fullMessage = sb.toString() + "\n" + prompt.getMessage();
+      String fullMessage = sb + "\n" + prompt.getMessage();
 
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
@@ -1512,7 +1513,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       WhatsAppMessageResponse prompt = promptDeliveryDestinationOrLocation(conv, customer, context);
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
-          .message(sb.toString() + prompt.getMessage())
+          .message(sb + prompt.getMessage())
           .state(prompt.getState())
           .suggestedOptions(prompt.getSuggestedOptions())
           .previewImageUrl(context.getPreviewImageUrl())
@@ -1574,24 +1575,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       msg =
           String.format(
               """
-              🗓️ *Selected Start Date: %s*
-              _(आरंभ तिथि दर्ज है)_
+                                    🗓️ *Selected Start Date: %s*
+                                    _(आरंभ तिथि दर्ज है)_
 
-              📅 *For how many days do you need this equipment?*
-              _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
-              """,
+                                    📅 *For how many days do you need this equipment?*
+                                    _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
+                                    """,
               context.getStartDate().format(fmt));
     } else {
       msg =
           String.format(
               """
-              📅 *Select Rental Duration & Start Date:*
-              _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
+                                    📅 *Select Rental Duration & Start Date:*
+                                    _(उपकरण कब से और कितने दिनों के लिए चाहिए?)_
 
-              • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5*) to start tomorrow (*%s*)
-              • *Any Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*)
-              • *Or choose a date first* (जैसे: *25 Oct*, *Today*)
-              """,
+                                    • *Standard:* Reply with number of days (e.g. *1, 2, 3, 5*) to start tomorrow (*%s*)
+                                    • *Any Date + Days:* Type both together (जैसे: *25 Oct se 3 din*, *कल से 2 दिन*, *28/10 se 4 days*)
+                                    • *Or choose a date first* (जैसे: *25 Oct*, *Today*)
+                                    """,
               tomorrow.format(fmt));
     }
 
@@ -1663,16 +1664,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
           .to(conv.getPhoneNumber())
           .message(
               """
-              📅 *अपनी पसंद की कोई भी तारीख लिखें (Choose Any Specific Date):*
-              _(उपकरण किस तारीख से चाहिए?)_
+                                    📅 *अपनी पसंद की कोई भी तारीख लिखें (Choose Any Specific Date):*
+                                    _(उपकरण किस तारीख से चाहिए?)_
 
-              उदाहरण (Examples):
-              • *25 Oct* या *25 October*
-              • *28/10* या *28-10*
-              • *28 तारीख*
-              • *Today (आज से)* या *Tomorrow (कल से)*
-              • या तारीख व दिन एक साथ लिखें (जैसे: *25 Oct se 3 din* / *कल से 2 दिन*)
-              """)
+                                    उदाहरण (Examples):
+                                    • *25 Oct* या *25 October*
+                                    • *28/10* या *28-10*
+                                    • *28 तारीख*
+                                    • *Today (आज से)* या *Tomorrow (कल से)*
+                                    • या तारीख व दिन एक साथ लिखें (जैसे: *25 Oct se 3 din* / *कल से 2 दिन*)
+                                    """)
           .state(WhatsAppState.ENTERING_DATES)
           .suggestedOptions(
               List.of(
@@ -1705,15 +1706,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
           .to(conv.getPhoneNumber())
           .message(
               """
-              ⚠️ Please specify a valid date or duration in days.
-              _(कृपया मान्य तारीख या दिन संख्या दर्ज करें)_
+                                    ⚠️ Please specify a valid date or duration in days.
+                                    _(कृपया मान्य तारीख या दिन संख्या दर्ज करें)_
 
-              उदाहरण (Examples):
-              • *3* (कल से 3 दिन के लिए)
-              • *25 Oct se 3 din* (25 Oct से 3 दिन)
-              • *कल से 2 दिन*
-              • *25 Oct* (तारीख दर्ज कर आगे बढ़ें)
-              """)
+                                    उदाहरण (Examples):
+                                    • *3* (कल से 3 दिन के लिए)
+                                    • *25 Oct se 3 din* (25 Oct से 3 दिन)
+                                    • *कल से 2 दिन*
+                                    • *25 Oct* (तारीख दर्ज कर आगे बढ़ें)
+                                    """)
           .state(WhatsAppState.ENTERING_DATES)
           .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "📅 Custom Date"))
           .build();
@@ -1728,12 +1729,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
           .message(
               String.format(
                   """
-                  🗓️ *Selected Start Date: %s*
-                  _(आरंभ तिथि दर्ज कर ली गई है)_
+                                            🗓️ *Selected Start Date: %s*
+                                            _(आरंभ तिथि दर्ज कर ली गई है)_
 
-                  📅 *For how many days do you need this equipment?*
-                  _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
-                  """,
+                                            📅 *For how many days do you need this equipment?*
+                                            _(उपकरण कितने दिनों के लिए चाहिए? उदाहरण: *2* दिन या *5* दिन के लिए *2* या *5* लिखकर भेजें)_
+                                            """,
                   parsed.startDate().format(fmt)))
           .state(WhatsAppState.ENTERING_DATES)
           .suggestedOptions(List.of("1 Day", "2 Days", "3 Days", "5 Days", "7 Days (1 Week)"))
@@ -1775,15 +1776,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       sb.append(
           String.format(
               """
-                    🗓️ Rental Duration: *%d Days*
-                    • Start: *%s*
-                    • End: *%s*%s
+                                    🗓️ Rental Duration: *%d Days*
+                                    • Start: *%s*
+                                    • End: *%s*%s
 
-                    🌾 *Where do you need this equipment delivered?*
-                    _(उपकरण कहाँ डिलीवर करवाना चाहते हैं? अपने सुरक्षित पते चुनें या नया लोकेशन दें:)_
+                                    🌾 *Where do you need this equipment delivered?*
+                                    _(उपकरण कहाँ डिलीवर करवाना चाहते हैं? अपने सुरक्षित पते चुनें या नया लोकेशन दें:)_
 
-                    📍 *Your Previously Saved Locations:*
-                    """,
+                                    📍 *Your Previously Saved Locations:*
+                                    """,
               context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote));
 
       List<String> options = new ArrayList<>();
@@ -1837,23 +1838,23 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       String message =
           String.format(
               """
-                    🗓️ Rental Duration: *%d Days*
-                    • Start: *%s*
-                    • End: *%s*%s
+                                    🗓️ Rental Duration: *%d Days*
+                                    • Start: *%s*
+                                    • End: *%s*%s
 
-                    🌾 *Where do you need this equipment delivered?*
-                    _(उपकरण कहाँ डिलीवर करवाना चाहते हैं?)_
+                                    🌾 *Where do you need this equipment delivered?*
+                                    _(उपकरण कहाँ डिलीवर करवाना चाहते हैं?)_
 
-                    *1.* 🏠 *Home / Village Address* (घर या गाँव का पता)
-                    *2.* 🚜 *Direct Farm / Field (Khet) Geo-Tag* (खेत पर डिलीवरी - सटीक लोकेशन पिन)
+                                    *1.* 🏠 *Home / Village Address* (घर या गाँव का पता)
+                                    *2.* 🚜 *Direct Farm / Field (Khet) Geo-Tag* (खेत पर डिलीवरी - सटीक लोकेशन पिन)
 
-                    💡 *Kisan Tip:*
-                    _Selecting *Farm (2)* ensures our delivery trailer reaches right to your field gate without getting stuck in narrow village lanes._
+                                    💡 *Kisan Tip:*
+                                    _Selecting *Farm (2)* ensures our delivery trailer reaches right to your field gate without getting stuck in narrow village lanes._
 
-                    👉 *Reply with 1 or 2:*
-                    • Reply *1* for Home / Village
-                    • Reply *2* for Farm Field Geo-Tag
-                    """,
+                                    👉 *Reply with 1 or 2:*
+                                    • Reply *1* for Home / Village
+                                    • Reply *2* for Farm Field Geo-Tag
+                                    """,
               context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote);
 
       return WhatsAppMessageResponse.builder()
@@ -1869,19 +1870,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       String message =
           String.format(
               """
-                    🗓️ Rental Duration: *%d Days*
-                    • Start: *%s*
-                    • End: *%s*%s
+                                    🗓️ Rental Duration: *%d Days*
+                                    • Start: *%s*
+                                    • End: *%s*%s
 
-                    🏗️ *Construction Site Delivery Location:*
-                    _(निर्माण स्थल का पता या लोकेशन)_
+                                    🏗️ *Construction Site Delivery Location:*
+                                    _(निर्माण स्थल का पता या लोकेशन)_
 
-                    You can provide the site location in either of 2 ways:
-                    📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
-                    ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
+                                    You can provide the site location in either of 2 ways:
+                                    📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
+                                    ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
 
-                    👉 Please send your location pin or type the address below:
-                    """,
+                                    👉 Please send your location pin or type the address below:
+                                    """,
               context.getRentalDays(), context.getStartDate(), context.getEndDate(), hubNote);
 
       return WhatsAppMessageResponse.builder()
@@ -1943,15 +1944,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
       String message =
           """
-                    🏠 *Home / Village Delivery Selected*
-                    _(घर / गाँव पर डिलीवरी)_
+                            🏠 *Home / Village Delivery Selected*
+                            _(घर / गाँव पर डिलीवरी)_
 
-                    You can provide your delivery address in either way:
-                    ✍️ *Option A:* Type village name, house/landmark & tehsil (e.g. *Gram Rampur, Near Primary School, Tehsil Sandila*)
-                    📍 *Option B:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन से लोकेशन पिन भेजें)
+                            You can provide your delivery address in either way:
+                            ✍️ *Option A:* Type village name, house/landmark & tehsil (e.g. *Gram Rampur, Near Primary School, Tehsil Sandila*)
+                            📍 *Option B:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन से लोकेशन पिन भेजें)
 
-                    👉 Please type your address or share your location pin:
-                    """;
+                            👉 Please type your address or share your location pin:
+                            """;
 
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
@@ -1970,19 +1971,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
 
       String message =
           """
-                    🚜 *Direct Farm / Field (Khet) Geo-Tag Delivery Selected*
-                    _(सीधे खेत पर डिलीवरी - सटीक जियो-टैग)_
+                            🚜 *Direct Farm / Field (Khet) Geo-Tag Delivery Selected*
+                            _(सीधे खेत पर डिलीवरी - सटीक जियो-टैग)_
 
-                    📍 *Please share your Farm's WhatsApp Location Pin:*
-                    _(अपने खेत पर पहुँचकर व्हाट्सएप 📎 ➡️ 📍 Location बटन से पिन भेजें)_
+                            📍 *Please share your Farm's WhatsApp Location Pin:*
+                            _(अपने खेत पर पहुँचकर व्हाट्सएप 📎 ➡️ 📍 Location बटन से पिन भेजें)_
 
-                    💡 *Ordering from Home right now?*
-                    • You can share a Google Maps link to your field road, or
-                    • Type the field landmark & approach road (e.g. *Khet near Sharda Canal, Chak Road No. 3, Gram Rampur*), or
-                    • Share your current location pin when you reach the field!
+                            💡 *Ordering from Home right now?*
+                            • You can share a Google Maps link to your field road, or
+                            • Type the field landmark & approach road (e.g. *Khet near Sharda Canal, Chak Road No. 3, Gram Rampur*), or
+                            • Share your current location pin when you reach the field!
 
-                    👉 Send your WhatsApp Location Pin or type field landmark:
-                    """;
+                            👉 Send your WhatsApp Location Pin or type field landmark:
+                            """;
 
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
@@ -2015,19 +2016,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       context.setDeliveryDestinationType("FARM");
       String message =
           """
-                    🚜 *Direct Farm / Field (Khet) Geo-Tag Delivery Selected*
-                    _(सीधे खेत पर डिलीवरी - सटीक जियो-टैग)_
+                            🚜 *Direct Farm / Field (Khet) Geo-Tag Delivery Selected*
+                            _(सीधे खेत पर डिलीवरी - सटीक जियो-टैग)_
 
-                    📍 *Please share your Farm's WhatsApp Location Pin:*
-                    _(अपने खेत पर पहुँचकर व्हाट्सएप 📎 ➡️ 📍 Location बटन से पिन भेजें)_
+                            📍 *Please share your Farm's WhatsApp Location Pin:*
+                            _(अपने खेत पर पहुँचकर व्हाट्सएप 📎 ➡️ 📍 Location बटन से पिन भेजें)_
 
-                    💡 *Ordering from Home right now?*
-                    • You can share a Google Maps link to your field road, or
-                    • Type the field landmark & approach road (e.g. *Khet near Sharda Canal, Chak Road No. 3, Gram Rampur*), or
-                    • Share your current location pin when you reach the field!
+                            💡 *Ordering from Home right now?*
+                            • You can share a Google Maps link to your field road, or
+                            • Type the field landmark & approach road (e.g. *Khet near Sharda Canal, Chak Road No. 3, Gram Rampur*), or
+                            • Share your current location pin when you reach the field!
 
-                    👉 Send your WhatsApp Location Pin or type field landmark:
-                    """;
+                            👉 Send your WhatsApp Location Pin or type field landmark:
+                            """;
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(message)
@@ -2038,14 +2039,14 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       context.setDeliveryDestinationType("SITE");
       String message =
           """
-                    🏗️ *Construction Site Delivery Location:*
-                    _(निर्माण स्थल का पता या लोकेशन)_
+                            🏗️ *Construction Site Delivery Location:*
+                            _(निर्माण स्थल का पता या लोकेशन)_
 
-                    📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
-                    ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
+                            📍 *Option A:* Share WhatsApp Location Pin (व्हाट्सएप 📎 बटन दबाकर लोकेशन पिन भेजें)
+                            ✍️ *Option B:* Type Site Address & Landmark (साइट का पता या लैंडमार्क लिखकर भेजें)
 
-                    👉 Please send your location pin or type the address below:
-                    """;
+                            👉 Please send your location pin or type the address below:
+                            """;
       return WhatsAppMessageResponse.builder()
           .to(conv.getPhoneNumber())
           .message(message)
@@ -2248,26 +2249,26 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String summary =
         String.format(
             """
-                        📋 *EquipGrid Booking Quotation Summary*
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        🚜 Machine: *%s* (`%s`)
-                           👉 *%s*
-                        %s%s📅 Duration: *%d Days* (%s to %s)
-                        📍 Delivery Type: %s
-                        📍 Destination: *%s*
-                        %s━━━━━━━━━━━━━━━━━━━━━━
-                        • Base Rent (%d Days / %s): ₹%,.2f
-                        • Logistics & Transport: ₹%,.2f
-                        %s━━━━━━━━━━━━━━━━━━━━━━
-                        💰 *Total Advance Due*: *₹%,.2f*
-                        %s
+                                📋 *EquipGrid Booking Quotation Summary*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                🚜 Machine: *%s* (`%s`)
+                                   👉 *%s*
+                                %s%s📅 Duration: *%d Days* (%s to %s)
+                                📍 Delivery Type: %s
+                                📍 Destination: *%s*
+                                %s━━━━━━━━━━━━━━━━━━━━━━
+                                • Base Rent (%d Days / %s): ₹%,.2f
+                                • Logistics & Transport: ₹%,.2f
+                                %s━━━━━━━━━━━━━━━━━━━━━━
+                                💰 *Total Advance Due*: *₹%,.2f*
+                                %s
 
-                        🛡️ *Zero-Credit Guarantee*:
-                        Full deposit is credited back to your UPI within 2 hours of machine return inspection.
+                                🛡️ *Zero-Credit Guarantee*:
+                                Full deposit is credited back to your UPI within 2 hours of machine return inspection.
 
-                        👉 Reply *CONFIRM* (या *HAAN*) to finalize and generate UPI QR!
-                        Or reply *CANCEL* to restart.
-                        """,
+                                👉 Reply *CONFIRM* (या *HAAN*) to finalize and generate UPI QR!
+                                Or reply *CANCEL* to restart.
+                                """,
             context.getSelectedAssetName(),
             context.getSelectedAssetTag() != null ? context.getSelectedAssetTag() : "",
             hindiName,
@@ -2335,8 +2336,8 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         }
       }
 
-      java.math.BigDecimal latitude = java.math.BigDecimal.valueOf(lat);
-      java.math.BigDecimal longitude = java.math.BigDecimal.valueOf(lng);
+      BigDecimal latitude = BigDecimal.valueOf(lat);
+      BigDecimal longitude = BigDecimal.valueOf(lng);
       String name =
           context.getDeliveryAddress() != null
               ? context.getDeliveryAddress().replaceFirst("^[^:]+: ", "")
@@ -2433,7 +2434,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
               .rentalConfigId(context.getSelectedRentalConfigId())
               .billingUnit(context.getSelectedBillingUnit())
               .shiftTerms(context.getSelectedShiftTerms())
-              .bookingSource(com.equipgrid.booking.enums.BookingSource.WHATSAPP)
+              .bookingSource(BookingSource.WHATSAPP)
               .notes(
                   "Booked via WhatsApp by "
                       + customer.getFullName()
@@ -2482,29 +2483,29 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       String confirmationText =
           String.format(
               """
-                            ✅ *Booking Reserved Successfully!*
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            🔖 Booking ID: *%s*
-                            🚜 Machine: *%s*
-                               👉 *%s*
-                            %s📅 Dates: *%s to %s*
-                            📍 Location: *%s*
-                            %s━━━━━━━━━━━━━━━━━━━━━━
-                            💰 Total Amount: *₹%,.2f*
-                            _(Deposit: ₹%,.2f + Rent & Logistics: ₹%,.2f)_
+                                    ✅ *Booking Reserved Successfully!*
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    🔖 Booking ID: *%s*
+                                    🚜 Machine: *%s*
+                                       👉 *%s*
+                                    %s📅 Dates: *%s to %s*
+                                    📍 Location: *%s*
+                                    %s━━━━━━━━━━━━━━━━━━━━━━
+                                    💰 Total Amount: *₹%,.2f*
+                                    _(Deposit: ₹%,.2f + Rent & Logistics: ₹%,.2f)_
 
-                            📲 *Scan Dynamic UPI QR Code to Pay:*
-                            Compatible with PhonePe, Google Pay, Paytm, or BHIM.
+                                    📲 *Scan Dynamic UPI QR Code to Pay:*
+                                    Compatible with PhonePe, Google Pay, Paytm, or BHIM.
 
-                            🔗 *Click to Open UPI App directly:*
-                            %s
+                                    🔗 *Click to Open UPI App directly:*
+                                    %s
 
-                            🖼️ *View / Download UPI QR Code:*
-                            /equipgrid/whatsapp/qr/%s
+                                    🖼️ *View / Download UPI QR Code:*
+                                    /equipgrid/whatsapp/qr/%s
 
-                            💡 After completing UPI payment, please reply:
-                            *PAID* (or enter your 12-digit UPI UTR Number)
-                            """,
+                                    💡 After completing UPI payment, please reply:
+                                    *PAID* (or enter your 12-digit UPI UTR Number)
+                                    """,
               booking.getBookingNumber(),
               context.getSelectedAssetName(),
               hindiName,
@@ -2606,17 +2607,17 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       String responseMessage =
           String.format(
               """
-                            ✅ *Payment Details Received*
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            🔖 Booking: *%s*
-                            📝 Reference received: *%s*
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            Status: *Payment verification in progress* ⏳
+                                    ✅ *Payment Details Received*
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    🔖 Booking: *%s*
+                                    📝 Reference received: *%s*
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    Status: *Payment verification in progress* ⏳
 
-                            We will confirm the payment after bank/UPI reconciliation. The machine will be scheduled only after that confirmation.
+                                    We will confirm the payment after bank/UPI reconciliation. The machine will be scheduled only after that confirmation.
 
-                            👉 Type *4* or *TRACK* anytime to check your booking.
-                            """,
+                                    👉 Type *4* or *TRACK* anytime to check your booking.
+                                    """,
               booking.getBookingNumber(), txnRef);
 
       return WhatsAppMessageResponse.builder()
@@ -2637,16 +2638,16 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       String payText =
           String.format(
               """
-                    📲 *UPI Payment for Booking %s*
+                                    📲 *UPI Payment for Booking %s*
 
-                    Amount: *₹%,.2f*
-                    (Includes 100%% Refundable Security Deposit)
+                                    Amount: *₹%,.2f*
+                                    (Includes 100%% Refundable Security Deposit)
 
-                    🔗 *Click to Open UPI App:*
-                    %s
+                                    🔗 *Click to Open UPI App:*
+                                    %s
 
-                    👉 Reply *PAID* once completed or enter your 12-digit UPI UTR number.
-                    """,
+                                    👉 Reply *PAID* once completed or enter your 12-digit UPI UTR number.
+                                    """,
               booking.getBookingNumber(), booking.getTotalAmount(), upiDetails.getUpiUri());
 
       return WhatsAppMessageResponse.builder()
@@ -2696,19 +2697,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String text =
         String.format(
             """
-                        💳 *UPI Payment QR Code for Booking %s*
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        🚜 Machine: *%s*
-                        💰 Amount Due: *₹%,.2f*
+                                💳 *UPI Payment QR Code for Booking %s*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                🚜 Machine: *%s*
+                                💰 Amount Due: *₹%,.2f*
 
-                        📲 *Scan Dynamic UPI QR Code*
-                        Supports PhonePe, Google Pay, Paytm, or BHIM.
+                                📲 *Scan Dynamic UPI QR Code*
+                                Supports PhonePe, Google Pay, Paytm, or BHIM.
 
-                        🔗 *Direct Payment Link:*
-                        %s
+                                🔗 *Direct Payment Link:*
+                                %s
 
-                        Reply *PAID* after making the payment.
-                        """,
+                                Reply *PAID* after making the payment.
+                                """,
             pendingBooking.getBookingNumber(),
             pendingBooking.getAsset().getName(),
             pendingBooking.getTotalAmount(),
@@ -2821,24 +2822,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String message =
         String.format(
             """
-                        🔄 *Request Equipment Return & Security Deposit Refund*
-                        *(मशीन वापसी व जमानत राशि वापस पाएं)*
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        🔖 Booking: *%s*
-                        🚜 Equipment: *%s* (`%s`)
-                        💰 Security Deposit Held: *₹%,.2f*
+                                🔄 *Request Equipment Return & Security Deposit Refund*
+                                *(मशीन वापसी व जमानत राशि वापस पाएं)*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                🔖 Booking: *%s*
+                                🚜 Equipment: *%s* (`%s`)
+                                💰 Security Deposit Held: *₹%,.2f*
 
-                        📋 *WhatsApp Return Inspection Process:*
-                        └ 1. Confirm return pickup below
-                        └ 2. Our bot will guide you through a *quick 8-point damage checklist* 📋
-                        └ 3. Photo uploads supported for any damage evidence 📷
-                        └ 4. Instant deposit refund via UPI within 2 hours 💳
+                                📋 *WhatsApp Return Inspection Process:*
+                                └ 1. Confirm return pickup below
+                                └ 2. Our bot will guide you through a *quick 8-point damage checklist* 📋
+                                └ 3. Photo uploads supported for any damage evidence 📷
+                                └ 4. Instant deposit refund via UPI within 2 hours 💳
 
-                        🚚 Our recovery vehicle will be dispatched to your site.
+                                🚚 Our recovery vehicle will be dispatched to your site.
 
-                        👉 Reply *YES* (या *HAAN*) to begin the return & damage inspection process.
-                        Or reply *MENU* to cancel.
-                        """,
+                                👉 Reply *YES* (या *HAAN*) to begin the return & damage inspection process.
+                                Or reply *MENU* to cancel.
+                                """,
             activeOnRent.getBookingNumber(),
             activeOnRent.getAsset().getName(),
             activeOnRent.getAsset().getAssetTag(),
@@ -2901,19 +2902,19 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String helpline =
         String.format(
             """
-                📞 *EquipGrid Kisan & Civil Sahayata Helpline*
-                ━━━━━━━━━━━━━━━━━━━━━━
-                • 24x7 Support & Booking: *+91 94674 79922*
-                • WhatsApp Support: *+91 94674 79922*
-                • Active Stations: %s
+                                📞 *EquipGrid Kisan & Civil Sahayata Helpline*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                • 24x7 Support & Booking: *+91 94674 79922*
+                                • WhatsApp Support: *+91 94674 79922*
+                                • Active Stations: %s
 
-                Services Provided:
-                1. On-field breakdown mechanic dispatch
-                2. Certified operator booking
-                3. Return audit & instant UPI refund queries
+                                Services Provided:
+                                1. On-field breakdown mechanic dispatch
+                                2. Certified operator booking
+                                3. Return audit & instant UPI refund queries
 
-                👉 Reply *MENU* to return to main options.
-                """,
+                                👉 Reply *MENU* to return to main options.
+                                """,
             getActiveHubCitiesSummary());
 
     return WhatsAppMessageResponse.builder()
@@ -3053,15 +3054,15 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String ack =
             String.format(
                 """
-                        %s🎤 *आवाज़ सन्देश प्राप्त हुआ!* (Voice Note Received)
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        📝 आपने कहा: _%s_
+                                        %s🎤 *आवाज़ सन्देश प्राप्त हुआ!* (Voice Note Received)
+                                        ━━━━━━━━━━━━━━━━━━━━━━
+                                        📝 आपने कहा: _%s_
 
-                        %s
+                                        %s
 
-                        ✅ समझ गए! अभी मशीन बुकिंग शुरू कर रहे हैं...
-                        _(Understood! Starting equipment booking...)_
-                        """,
+                                        ✅ समझ गए! अभी मशीन बुकिंग शुरू कर रहे हैं...
+                                        _(Understood! Starting equipment booking...)_
+                                        """,
                 salutation, transcriptDisplay, understood);
 
         // Emit acknowledgment first, then route to appropriate state
@@ -3108,12 +3109,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String ack =
             String.format(
                 """
-                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
-                        📝 _%s_
+                                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                                        📝 _%s_
 
-                        📍 आपकी बुकिंग की स्थिति देख रहे हैं...
-                        _(Checking your order status...)_
-                        """,
+                                        📍 आपकी बुकिंग की स्थिति देख रहे हैं...
+                                        _(Checking your order status...)_
+                                        """,
                 transcriptDisplay);
         return ackResponseThenState(conv, customer, context, ack, handleTracking(conv, customer));
       }
@@ -3121,12 +3122,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String ack =
             String.format(
                 """
-                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
-                        📝 _%s_
+                                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                                        📝 _%s_
 
-                        💳 UPI QR कोड तैयार कर रहे हैं...
-                        _(Generating UPI QR code...)_
-                        """,
+                                        💳 UPI QR कोड तैयार कर रहे हैं...
+                                        _(Generating UPI QR code...)_
+                                        """,
                 transcriptDisplay);
         return ackResponseThenState(
             conv, customer, context, ack, initiatePaymentOption(conv, customer, context));
@@ -3135,12 +3136,12 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String ack =
             String.format(
                 """
-                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
-                        📝 _%s_
+                                        🎤 *आवाज़ सन्देश प्राप्त हुआ!*
+                                        📝 _%s_
 
-                        🔄 मशीन वापसी प्रक्रिया शुरू कर रहे हैं...
-                        _(Initiating machine return...)_
-                        """,
+                                        🔄 मशीन वापसी प्रक्रिया शुरू कर रहे हैं...
+                                        _(Initiating machine return...)_
+                                        """,
                 transcriptDisplay);
         return ackResponseThenState(
             conv, customer, context, ack, initiateReturnOption(conv, customer, context));
@@ -3158,22 +3159,22 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         String msg =
             String.format(
                 """
-                        🎤 *आवाज़ सन्देश सुना गया!* (Voice Note Heard)
+                                        🎤 *आवाज़ सन्देश सुना गया!* (Voice Note Heard)
 
-                        📝 आपने कहा:
-                        _%s_
+                                        📝 आपने कहा:
+                                        _%s_
 
-                        मैं पूरी तरह समझ नहीं पाया। कृपया नीचे से विकल्प चुनें:
-                        _(Could not fully understand. Please pick an option:)_
+                                        मैं पूरी तरह समझ नहीं पाया। कृपया नीचे से विकल्प चुनें:
+                                        _(Could not fully understand. Please pick an option:)_
 
-                        *1* 🚜 मशीन बुक करें (Book Equipment)
-                        *2* 💳 UPI से पेमेंट करें (Pay via UPI)
-                        *3* 📍 ऑर्डर ट्रैक करें (Track Order)
-                        *4* 🔄 मशीन वापस करें (Return Machine)
-                        *5* 📞 सहायता (Help)
+                                        *1* 🚜 मशीन बुक करें (Book Equipment)
+                                        *2* 💳 UPI से पेमेंट करें (Pay via UPI)
+                                        *3* 📍 ऑर्डर ट्रैक करें (Track Order)
+                                        *4* 🔄 मशीन वापस करें (Return Machine)
+                                        *5* 📞 सहायता (Help)
 
-                        _या सीधे टाइप करके बताएं_ / _Or type your message_
-                        """,
+                                        _या सीधे टाइप करके बताएं_ / _Or type your message_
+                                        """,
                 transcriptDisplay);
         conv.setState(WhatsAppState.MAIN_MENU);
         return WhatsAppMessageResponse.builder()
@@ -3192,24 +3193,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     conv.setState(WhatsAppState.MAIN_MENU);
     String msg =
         """
-                🎤 *आवाज़ सन्देश नहीं समझ आया* (Could not process voice note)
-                ━━━━━━━━━━━━━━━━━━━━━━
+                        🎤 *आवाज़ सन्देश नहीं समझ आया* (Could not process voice note)
+                        ━━━━━━━━━━━━━━━━━━━━━━
 
-                🙏 कृपया निम्नलिखित में से कोई एक करें:
-                _(Please try one of the following:)_
+                        🙏 कृपया निम्नलिखित में से कोई एक करें:
+                        _(Please try one of the following:)_
 
-                🎤 *दोबारा आवाज़ भेजें* — थोड़ा धीरे और साफ बोलें
-                   _(Send voice note again — speak clearly and slowly)_
+                        🎤 *दोबारा आवाज़ भेजें* — थोड़ा धीरे और साफ बोलें
+                           _(Send voice note again — speak clearly and slowly)_
 
-                ✍️ *टाइप करके बताएं* — जैसे: "concrete mixer 3 din ke liye chahiye"
-                   _(Type your request — e.g: "mujhe 2 din ka reaper chahiye")_
+                        ✍️ *टाइप करके बताएं* — जैसे: "concrete mixer 3 din ke liye chahiye"
+                           _(Type your request — e.g: "mujhe 2 din ka reaper chahiye")_
 
-                📋 *MENU* — मुख्य मेनू देखें
+                        📋 *MENU* — मुख्य मेनू देखें
 
-                *1* 🚜 मशीन देखें व बुक करें
-                *4* 📍 ऑर्डर ट्रैक करें
-                *6* 📞 हेल्पलाइन
-                """;
+                        *1* 🚜 मशीन देखें व बुक करें
+                        *4* 📍 ऑर्डर ट्रैक करें
+                        *6* 📞 हेल्पलाइन
+                        """;
     return WhatsAppMessageResponse.builder()
         .to(conv.getPhoneNumber())
         .message(msg)
@@ -3486,24 +3487,24 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
     String intro =
         String.format(
             """
-                        🔄 *Equipment Return — Damage Checklist*
-                        *(मशीन वापसी — क्षति जाँच सूची)*
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        🚜 Machine: *%s* (`%s`)
-                        📋 Booking: *%s*
-                        💰 Security Deposit: *₹%,.0f*
+                                🔄 *Equipment Return — Damage Checklist*
+                                *(मशीन वापसी — क्षति जाँच सूची)*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                🚜 Machine: *%s* (`%s`)
+                                📋 Booking: *%s*
+                                💰 Security Deposit: *₹%,.0f*
 
-                        अब मैं आपसे मशीन के %d बिंदुओं की जाँच करूँगा।
-                        _(I will now check %d inspection points with you.)_
+                                अब मैं आपसे मशीन के %d बिंदुओं की जाँच करूँगा।
+                                _(I will now check %d inspection points with you.)_
 
-                        👉 प्रत्येक प्रश्न के लिए उत्तर दें:
-                        ✅ *OK* — ठीक है
-                        ❌ *DAMAGED* — क्षतिग्रस्त है
-                        ⚠️ *MISSING* — गायब है
-                        📷 क्षति की *फोटो भेजें*
+                                👉 प्रत्येक प्रश्न के लिए उत्तर दें:
+                                ✅ *OK* — ठीक है
+                                ❌ *DAMAGED* — क्षतिग्रस्त है
+                                ⚠️ *MISSING* — गायब है
+                                📷 क्षति की *फोटो भेजें*
 
-                        चलिए शुरू करते हैं! 👇
-                        """,
+                                चलिए शुरू करते हैं! 👇
+                                """,
             booking.getAsset().getName(),
             booking.getAsset().getAssetTag(),
             booking.getBookingNumber(),
@@ -3547,12 +3548,9 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
             && request.getMediaType().toLowerCase().contains("audio"))) {
       return true;
     }
-    if (request.getTranscribedText() != null
+    return request.getTranscribedText() != null
         && !request.getTranscribedText().isBlank()
-        && (request.getMessage() == null || request.getMessage().isBlank())) {
-      return true;
-    }
-    return false;
+        && (request.getMessage() == null || request.getMessage().isBlank());
   }
 
   private boolean isImageMessage(WhatsAppInboundRequest request) {
@@ -3712,9 +3710,6 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
         || upper.equals("PHOTO")
         || upper.equals("MEDIA");
   }
-
-  public record ParsedDateRange(
-      LocalDate startDate, LocalDate endDate, Integer rentalDays, String errorMsg) {}
 
   private boolean isCustomDatePromptKeyword(String text) {
     if (text == null) return false;
@@ -4060,4 +4055,7 @@ public class WhatsAppBotServiceImpl implements IWhatsAppBotService {
       return null;
     }
   }
+
+  public record ParsedDateRange(
+      LocalDate startDate, LocalDate endDate, Integer rentalDays, String errorMsg) {}
 }

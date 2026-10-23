@@ -16,7 +16,12 @@ public class DealerSummaryResponse {
   private String tradeName;
   private String phone;
   private String location;
+  private Long cityId;
+  private String cityName;
+  private Long stateId;
+  private String stateName;
   private BigDecimal commissionRate;
   private BigDecimal totalCommissionEarned;
   private long totalReferrals;
+  private Boolean active;
 }

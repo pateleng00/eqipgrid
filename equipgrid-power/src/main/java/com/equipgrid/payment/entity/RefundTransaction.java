@@ -37,4 +37,9 @@ public class RefundTransaction {
 
   @Builder.Default private LocalDateTime initiatedAt = LocalDateTime.now();
   private LocalDateTime completedAt;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
 }

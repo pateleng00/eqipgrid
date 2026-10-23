@@ -37,9 +37,35 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
   const hubs = api.getHubs();
   const types = api.getEquipmentTypes();
   const manufacturers = api.getManufacturers();
+  const dealers = api.getDealers();
 
   // Step state: 1 = Details & Territory, 2 = Media & Operations
   const [step, setStep] = useState<1 | 2>(1);
+
+  // Machine Ownership / Dealer Partner selection (empty = EquipGrid Own Fleet)
+  const [selectedDealerId, setSelectedDealerId] = useState<number | ''>('');
+
+  const dealerOptions = useMemo(() => {
+    const list = [
+      {
+        value: '',
+        label: 'EquipGrid Fleet (Own / Central Company Fleet)',
+        badge: 'COMPANY FLEET',
+        subLabel: 'Directly owned & operated by EquipGrid Yard',
+      },
+    ];
+    dealers
+      .filter((d) => d.active !== false)
+      .forEach((d) => {
+        list.push({
+          value: d.id,
+          label: `${d.tradeName || d.name} — ${d.name}`,
+          badge: 'ACTIVE DEALER',
+          subLabel: `Phone: ${d.phone} • District: ${d.cityName || d.location || 'N/A'}`,
+        });
+      });
+    return list;
+  }, [dealers]);
 
   // 1. Territory selection: State -> City -> Hub
   const [selectedStateId, setSelectedStateId] = useState<number | ''>('');
@@ -353,6 +379,7 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
         manufacturerId: Number(selectedMfgId),
         modelId: Number(selectedModelId),
         hubId: Number(selectedHubId),
+        dealerPartnerId: selectedDealerId ? Number(selectedDealerId) : undefined,
         imageUrl: validImages[0].url,
         galleryImageUrls: validImages.map((img) => img.url),
         videoUrl: effectiveVideoUrl,
@@ -484,6 +511,40 @@ export const AddMachineModal: React.FC<AddMachineModalProps> = ({ isOpen, onClos
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Machine Ownership / Dealer Partner Row */}
+            <div
+              className={`rounded-xl border p-3.5 space-y-2 ${
+                isDaylight ? 'bg-amber-50/60 border-amber-200' : 'bg-amber-950/20 border-amber-800/60'
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-amber-900 dark:text-amber-400">
+                  Machine Ownership / Dealer Partner (मशीन स्वामित्व / डीलर पार्टनर)
+                </label>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    selectedDealerId
+                      ? 'bg-purple-100 text-purple-900 dark:bg-purple-900/60 dark:text-purple-300'
+                      : 'bg-amber-200 text-amber-900 dark:bg-amber-900/60 dark:text-amber-300'
+                  }`}
+                >
+                  {selectedDealerId ? '🤝 Dealer Partner Machine' : '🏢 EquipGrid Own Fleet'}
+                </span>
+              </div>
+              <SearchSelect
+                options={dealerOptions}
+                value={selectedDealerId}
+                onChange={(val) => setSelectedDealerId(val ? Number(val) : '')}
+                placeholder="Select Fleet Ownership / Active Dealer Partner..."
+                isClearable={false}
+              />
+              <p className={`text-[11px] ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
+                {selectedDealerId
+                  ? 'This machine belongs to an authorized dealer partner. Rentals and commissions will automatically attribute to this dealer partner.'
+                  : 'This machine belongs directly to EquipGrid central company fleet (no external dealer partner attribution).'}
+              </p>
             </div>
 
             {/* 2. Category & Equipment Type */}

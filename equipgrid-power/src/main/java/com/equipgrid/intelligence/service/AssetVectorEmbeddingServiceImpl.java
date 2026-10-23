@@ -286,15 +286,15 @@ public class AssetVectorEmbeddingServiceImpl implements IAssetVectorEmbeddingSer
 
     String sql =
         """
-        SELECT id, 1 - (embedding <=> CAST(? AS vector)) AS similarity
-        FROM assets
-        WHERE embedding IS NOT NULL
-          AND status = 1
-          AND (? IS NULL OR category = ?)
-          AND (? IS NULL OR hub_id = ?)
-        ORDER BY embedding <=> CAST(? AS vector)
-        LIMIT ?
-        """;
+                        SELECT id, 1 - (embedding <=> CAST(? AS vector)) AS similarity
+                        FROM assets
+                        WHERE embedding IS NOT NULL
+                          AND status = 1
+                          AND (? IS NULL OR category = ?)
+                          AND (? IS NULL OR hub_id = ?)
+                        ORDER BY embedding <=> CAST(? AS vector)
+                        LIMIT ?
+                        """;
 
     try {
       List<Long> matchedIds =

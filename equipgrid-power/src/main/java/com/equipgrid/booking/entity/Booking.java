@@ -7,6 +7,7 @@ import com.equipgrid.booking.enums.BookingStatus;
 import com.equipgrid.common.BaseEntity;
 import com.equipgrid.customer.entity.Customer;
 import com.equipgrid.farmlocation.entity.FarmLocation;
+import com.equipgrid.rentalconfig.entity.RentalConfiguration;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -113,7 +114,7 @@ public class Booking extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "rental_config_id")
-  private com.equipgrid.rentalconfig.entity.RentalConfiguration rentalConfig;
+  private RentalConfiguration rentalConfig;
 
   @Column(name = "billing_unit", length = 32)
   private String billingUnit;
@@ -126,4 +127,14 @@ public class Booking extends BaseEntity {
 
   @Column(columnDefinition = "TEXT")
   private String notes;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
+
+  @Transient
+  public String getBookingSourceDescription() {
+    return bookingSource != null ? bookingSource.getDescription() : null;
+  }
 }

@@ -25,7 +25,14 @@ public class DealerQueryRepository {
   private final QDealerCommission qCommission = QDealerCommission.dealerCommission;
 
   public List<Dealer> fetchAllDealers() {
-    return queryFactory.selectFrom(qDealer).orderBy(qDealer.id.desc()).fetch();
+    return queryFactory
+        .selectFrom(qDealer)
+        .leftJoin(qDealer.city)
+        .fetchJoin()
+        .leftJoin(qDealer.city.state)
+        .fetchJoin()
+        .orderBy(qDealer.id.desc())
+        .fetch();
   }
 
   public Optional<Dealer> fetchDealerById(Long id) {
@@ -33,7 +40,14 @@ public class DealerQueryRepository {
       return Optional.empty();
     }
     return Optional.ofNullable(
-        queryFactory.selectFrom(qDealer).where(qDealer.id.eq(id)).fetchOne());
+        queryFactory
+            .selectFrom(qDealer)
+            .leftJoin(qDealer.city)
+            .fetchJoin()
+            .leftJoin(qDealer.city.state)
+            .fetchJoin()
+            .where(qDealer.id.eq(id))
+            .fetchOne());
   }
 
   public Optional<Dealer> fetchDealerByPhone(String phone) {

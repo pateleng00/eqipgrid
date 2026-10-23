@@ -3,6 +3,7 @@ package com.equipgrid.payment.controller;
 import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.core.ratelimiter.RateLimited;
 import com.equipgrid.payment.dto.request.CompleteRefundRequest;
+import com.equipgrid.payment.dto.request.SubmitProofRequest;
 import com.equipgrid.payment.dto.request.VerifyProofRequest;
 import com.equipgrid.payment.entity.PaymentProof;
 import com.equipgrid.payment.entity.RefundTransaction;
@@ -24,6 +25,15 @@ import org.springframework.web.bind.annotation.*;
 public class PaymentOperationsController {
 
   private final IPaymentOperationsService paymentOperationsService;
+
+  @PostMapping("/proofs")
+  @RateLimited(limit = 20, name = "proof_submit")
+  @Operation(summary = "Submit payment proof reference and/or screenshot for booking")
+  public ResponseEntity<ApiResponse<PaymentProof>> submitProof(
+      @Valid @RequestBody SubmitProofRequest request) {
+    PaymentProof saved = paymentOperationsService.submitPaymentProof(request);
+    return ResponseEntity.ok(ApiResponse.buildSuccess("Payment proof registered", saved));
+  }
 
   @GetMapping("/proofs")
   @Operation(summary = "Get all pending payment proofs awaiting manual verification")

@@ -11,7 +11,11 @@ import com.equipgrid.dealer.enums.CommissionStatus;
 import com.equipgrid.dealer.repository.DealerCommissionRepository;
 import com.equipgrid.dealer.repository.DealerQueryRepository;
 import com.equipgrid.dealer.repository.DealerRepository;
+import com.equipgrid.location.entity.City;
+import com.equipgrid.location.entity.State;
+import com.equipgrid.location.repository.CityRepository;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,6 +32,7 @@ public class DealerServiceImpl implements IDealerService {
   private final DealerRepository dealerRepository;
   private final DealerCommissionRepository commissionRepository;
   private final DealerQueryRepository dealerQueryRepository;
+  private final CityRepository cityRepository;
   private final IAuditService auditService;
 
   @Override
@@ -41,15 +46,22 @@ public class DealerServiceImpl implements IDealerService {
                   list.stream()
                       .map(DealerCommission::getCommissionAmount)
                       .reduce(BigDecimal.ZERO, BigDecimal::add);
+              City city = dealer.getCity();
+              State state = city != null ? city.getState() : null;
               return DealerSummaryResponse.builder()
                   .id(dealer.getId())
                   .name(dealer.getName())
                   .tradeName(dealer.getTradeName())
                   .phone(dealer.getPhone())
                   .location(dealer.getLocation())
+                  .cityId(city != null ? city.getId() : null)
+                  .cityName(city != null ? city.getName() : null)
+                  .stateId(state != null ? state.getId() : null)
+                  .stateName(state != null ? state.getName() : null)
                   .commissionRate(dealer.getCommissionRate())
                   .totalCommissionEarned(sum)
                   .totalReferrals(list.size())
+                  .active(dealer.getActive())
                   .build();
             })
         .collect(Collectors.toList());
@@ -65,12 +77,18 @@ public class DealerServiceImpl implements IDealerService {
   @Override
   @Transactional
   public Dealer createDealer(CreateDealerRequest request, String performedBy) {
+    City city = null;
+    if (request.getCityId() != null) {
+      city = cityRepository.findById(request.getCityId()).orElse(null);
+    }
+
     Dealer dealer =
         Dealer.builder()
             .name(request.getName())
             .tradeName(request.getTradeName())
             .phone(request.getPhone())
             .location(request.getLocation())
+            .city(city)
             .commissionRate(
                 request.getCommissionRate() != null
                     ? request.getCommissionRate()
@@ -97,7 +115,7 @@ public class DealerServiceImpl implements IDealerService {
     BigDecimal rate =
         dealer.getCommissionRate() != null ? dealer.getCommissionRate() : new BigDecimal("0.0600");
     BigDecimal commissionAmt =
-        booking.getBaseRent().multiply(rate).setScale(2, java.math.RoundingMode.HALF_UP);
+        booking.getBaseRent().multiply(rate).setScale(2, RoundingMode.HALF_UP);
 
     DealerCommission commission =
         DealerCommission.builder()

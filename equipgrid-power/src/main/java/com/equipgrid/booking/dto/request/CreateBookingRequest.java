@@ -1,5 +1,6 @@
 package com.equipgrid.booking.dto.request;
 
+import com.equipgrid.booking.enums.BookingSource;
 import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -40,9 +41,7 @@ public class CreateBookingRequest {
 
   private Long dealerId;
 
-  @Builder.Default
-  private com.equipgrid.booking.enums.BookingSource bookingSource =
-      com.equipgrid.booking.enums.BookingSource.STATION;
+  @Builder.Default private BookingSource bookingSource = BookingSource.STATION;
 
   @Builder.Default private Boolean callbackRequested = false;
   private String notes;

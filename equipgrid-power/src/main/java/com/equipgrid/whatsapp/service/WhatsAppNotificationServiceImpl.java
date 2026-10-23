@@ -119,29 +119,29 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
       message =
           String.format(
               """
-                            🌾 *EquipGrid Booking & Payment Confirmed* 🚜
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            नमस्ते %s जी (Dear %s),
-                            Your machinery reservation *%s* is confirmed and payment is verified!
+                                    🌾 *EquipGrid Booking & Payment Confirmed* 🚜
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    नमस्ते %s जी (Dear %s),
+                                    Your machinery reservation *%s* is confirmed and payment is verified!
 
-                            🚜 Machine: *%s* (`%s`)
-                            ⏱ Tariff Plan: *₹%,.2f / %s*
-                            %s📅 Rental Dates: *%s to %s*
-                            📍 Delivery Site: *%s*
+                                    🚜 Machine: *%s* (`%s`)
+                                    ⏱ Tariff Plan: *₹%,.2f / %s*
+                                    %s📅 Rental Dates: *%s to %s*
+                                    📍 Delivery Site: *%s*
 
-                            💳 *Payment Confirmation Breakdown:*
-                            • Advance Rent: *₹%,.2f* (Paid)
-                            • Security Deposit: %s
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            💰 Total Amount Paid: *₹%,.2f*
-                            ✅ Status: *DISPATCH READY*
+                                    💳 *Payment Confirmation Breakdown:*
+                                    • Advance Rent: *₹%,.2f* (Paid)
+                                    • Security Deposit: %s
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    💰 Total Amount Paid: *₹%,.2f*
+                                    ✅ Status: *DISPATCH READY*
 
-                            📄 *Attached Documents:*
-                            • Booking Confirmation Receipt: *VCR-%s*
-                            • Printable Digital Voucher & Yard Handover Pass attached.
+                                    📄 *Attached Documents:*
+                                    • Booking Confirmation Receipt: *VCR-%s*
+                                    • Printable Digital Voucher & Yard Handover Pass attached.
 
-                            Our yard operations team is inspecting and staging the machine. You will receive a dispatch alert with driver and vehicle details as soon as it leaves the yard.
-                            """,
+                                    Our yard operations team is inspecting and staging the machine. You will receive a dispatch alert with driver and vehicle details as soon as it leaves the yard.
+                                    """,
               booking.getCustomer().getFullName(),
               booking.getCustomer().getFullName(),
               booking.getBookingNumber(),
@@ -173,24 +173,24 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
       message =
           String.format(
               """
-                            🌾 *EquipGrid Booking Reservation* 🚜
-                            ━━━━━━━━━━━━━━━━━━━━━━
-                            नमस्ते %s जी (Dear %s),
-                            Your machinery reservation *%s* has been received!
+                                    🌾 *EquipGrid Booking Reservation* 🚜
+                                    ━━━━━━━━━━━━━━━━━━━━━━
+                                    नमस्ते %s जी (Dear %s),
+                                    Your machinery reservation *%s* has been received!
 
-                            🚜 Machine: *%s* (`%s`)
-                            ⏱ Tariff Plan: *₹%,.2f / %s*
-                            %s📅 Dates: *%s to %s*
-                            📍 Delivery Site: *%s*
+                                    🚜 Machine: *%s* (`%s`)
+                                    ⏱ Tariff Plan: *₹%,.2f / %s*
+                                    %s📅 Dates: *%s to %s*
+                                    📍 Delivery Site: *%s*
 
-                            💰 Initial Collection Due: *₹%,.2f*
-                            _(Advance Rent: ₹%,.2f + %s)_
+                                    💰 Initial Collection Due: *₹%,.2f*
+                                    _(Advance Rent: ₹%,.2f + %s)_
 
-                            📲 *Pay via UPI QR Code:*
-                            %s
+                                    📲 *Pay via UPI QR Code:*
+                                    %s
 
-                            Scan with PhonePe / Google Pay / Paytm to confirm dispatch.
-                            """,
+                                    Scan with PhonePe / Google Pay / Paytm to confirm dispatch.
+                                    """,
               booking.getCustomer().getFullName(),
               booking.getCustomer().getFullName(),
               booking.getBookingNumber(),
@@ -246,15 +246,15 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
     String alertHeader =
         String.format(
             """
-                        🚚 *मशीन भेजी गई है!* (Machine Dispatched) 🚜
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        नमस्ते *%s* जी (Dear *%s*),
-                        Your machine has left our yard and is en route!
+                                🚚 *मशीन भेजी गई है!* (Machine Dispatched) 🚜
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                नमस्ते *%s* जी (Dear *%s*),
+                                Your machine has left our yard and is en route!
 
-                        📍 Track delivery: Reply *4* or *TRACK*
+                                📍 Track delivery: Reply *4* or *TRACK*
 
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        """,
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                """,
             booking.getCustomer().getFullName(), booking.getCustomer().getFullName());
 
     // Combine alert + full digital challan document
@@ -287,26 +287,26 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
     String message =
         String.format(
             """
-                        📋 *Return Damage Checklist Ready!*
-                        *(वापसी क्षति जाँच सूची तैयार है)*
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        नमस्ते *%s* जी (Dear *%s*),
-                        Our recovery vehicle is on its way to your site to pick up:
+                                📋 *Return Damage Checklist Ready!*
+                                *(वापसी क्षति जाँच सूची तैयार है)*
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                नमस्ते *%s* जी (Dear *%s*),
+                                Our recovery vehicle is on its way to your site to pick up:
 
-                        🚜 Machine: *%s* (`%s`)
-                        📋 Booking: *%s*
-                        💰 Deposit: *₹%,.0f*
+                                🚜 Machine: *%s* (`%s`)
+                                📋 Booking: *%s*
+                                💰 Deposit: *₹%,.0f*
 
-                        ✅ *Before our team arrives, please:*
-                        1. Reply *5* or *RETURN* to start your WhatsApp damage checklist
-                        2. Walk around the machine and answer 8 quick questions
-                        3. Send photos of any damage if needed
+                                ✅ *Before our team arrives, please:*
+                                1. Reply *5* or *RETURN* to start your WhatsApp damage checklist
+                                2. Walk around the machine and answer 8 quick questions
+                                3. Send photos of any damage if needed
 
-                        This ensures your *instant UPI deposit refund* is processed
-                        within *2 hours* of our yard team completing the inspection!
+                                This ensures your *instant UPI deposit refund* is processed
+                                within *2 hours* of our yard team completing the inspection!
 
-                        👉 Reply *5* or *RETURN* to start checklist now.
-                        """,
+                                👉 Reply *5* or *RETURN* to start checklist now.
+                                """,
             booking.getCustomer().getFullName(),
             booking.getCustomer().getFullName(),
             booking.getAsset().getName(),
@@ -358,27 +358,27 @@ public class WhatsAppNotificationServiceImpl implements IWhatsAppNotificationSer
     String message =
         String.format(
             """
-                        ✅ *Return Inspection & Deposit Settlement Completed!* 🌾
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        नमस्ते %s जी (Dear %s),
-                        Your rented machinery *%s* (`%s`) has completed return yard inspection.
+                                ✅ *Return Inspection & Deposit Settlement Completed!* 🌾
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                नमस्ते %s जी (Dear %s),
+                                Your rented machinery *%s* (`%s`) has completed return yard inspection.
 
-                        📋 Booking Ref: *%s*
-                        🔍 Inspection Audit: %s
+                                📋 Booking Ref: *%s*
+                                🔍 Inspection Audit: %s
 
-                        📊 *Security Deposit Settlement Statement:*
-                        • Original Deposit Held: *₹%,.2f*
-                        • Fuel Surcharge: -₹%,.2f
-                        • Damage / Repair Deductions: -₹%,.2f
-                        ━━━━━━━━━━━━━━━━━━━━━━
-                        💰 *Net Refund to Customer: ₹%,.2f*
+                                📊 *Security Deposit Settlement Statement:*
+                                • Original Deposit Held: *₹%,.2f*
+                                • Fuel Surcharge: -₹%,.2f
+                                • Damage / Repair Deductions: -₹%,.2f
+                                ━━━━━━━━━━━━━━━━━━━━━━
+                                💰 *Net Refund to Customer: ₹%,.2f*
 
-                        🏦 Refund Status: *INITIATED / CREDITED*
-                        Destination: Registered UPI number (%s)
-                        Voucher Reference: *F-004-SET-%s*
+                                🏦 Refund Status: *INITIATED / CREDITED*
+                                Destination: Registered UPI number (%s)
+                                Voucher Reference: *F-004-SET-%s*
 
-                        Thank you for choosing EquipGrid! We look forward to serving your next project.
-                        """,
+                                Thank you for choosing EquipGrid! We look forward to serving your next project.
+                                """,
             booking.getCustomer().getFullName(),
             booking.getCustomer().getFullName(),
             booking.getAsset().getName(),

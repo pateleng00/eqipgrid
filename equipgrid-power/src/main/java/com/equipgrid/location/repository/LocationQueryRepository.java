@@ -3,12 +3,7 @@ package com.equipgrid.location.repository;
 import com.equipgrid.asset.entity.Asset;
 import com.equipgrid.asset.entity.QAsset;
 import com.equipgrid.asset.enums.AssetStatus;
-import com.equipgrid.location.entity.City;
-import com.equipgrid.location.entity.Hub;
-import com.equipgrid.location.entity.QCity;
-import com.equipgrid.location.entity.QHub;
-import com.equipgrid.location.entity.QState;
-import com.equipgrid.location.entity.State;
+import com.equipgrid.location.entity.*;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.List;
 import java.util.Optional;
@@ -38,10 +33,7 @@ public class LocationQueryRepository {
   }
 
   public List<State> findAllStates() {
-    return queryFactory
-        .selectFrom(qState)
-        .orderBy(qState.name.asc())
-        .fetch();
+    return queryFactory.selectFrom(qState).orderBy(qState.name.asc()).fetch();
   }
 
   public Optional<State> findStateByCode(String code) {

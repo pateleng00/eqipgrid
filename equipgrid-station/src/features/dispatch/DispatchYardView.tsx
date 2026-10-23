@@ -26,13 +26,26 @@ import { ConfirmationModal } from '../../components/ConfirmationModal';
 import { CollectPaymentModal } from '../../components/CollectPaymentModal';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { WhatsAppCirculationModal } from '../../components/WhatsAppCirculationModal';
-import { formatINR, formatDate } from '../../lib/utils';
+import { formatINR, formatDate, cn } from '../../lib/utils';
 import { useTheme } from '../../lib/ThemeContext';
 import { api } from '../../services/api';
 import { Booking, DispatchRecord, DeliveryJob, ReturnPickupJob, FulfillmentJobStatus } from '../../types';
-import { cn } from '../../lib/utils';
 import { printDispatchChallanPdf } from '../../services/voucherPdfService';
 import { getDispatchWhatsAppMessage, openWhatsAppCirculation } from '../../services/whatsappCirculation';
+
+const DELIVERY_JOB_STATUS_OPTIONS = [
+  { value: 'SCHEDULED', label: 'Scheduled', subLabel: 'Planned / ड्राइवर तय' },
+  { value: 'OUT_FOR_DELIVERY', label: 'Out for Delivery', subLabel: 'On Road / रास्ते में' },
+  { value: 'COMPLETED', label: 'Completed', subLabel: 'Delivered to Farm / आपूर्ति पूर्ण' },
+  { value: 'CANCELLED', label: 'Cancelled', subLabel: 'रद्द' },
+];
+
+const PICKUP_JOB_STATUS_OPTIONS = [
+  { value: 'REQUESTED', label: 'Requested', subLabel: 'Farmer Waiting / वापसी अनुरोध' },
+  { value: 'SCHEDULED', label: 'Scheduled', subLabel: 'Driver Assigned / ड्राइवर तय' },
+  { value: 'IN_TRANSIT', label: 'In Transit', subLabel: 'Driver En Route / रास्ते में' },
+  { value: 'COMPLETED', label: 'Completed', subLabel: 'Collected & In Yard / यार्ड में प्राप्त' },
+];
 
 interface DispatchYardViewProps {
   onNavigateToPayment: () => void;
@@ -1328,16 +1341,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1">Delivery Status</label>
-                  <select
+                  <SearchSelect
+                    options={DELIVERY_JOB_STATUS_OPTIONS}
                     value={jobStatus}
-                    onChange={(e) => setJobStatus(e.target.value as FulfillmentJobStatus)}
-                    className="w-full rounded-xl border p-2 text-xs font-bold focus:border-amber-500 focus:outline-none dark:bg-slate-950"
-                  >
-                    <option value="SCHEDULED">SCHEDULED (Planned)</option>
-                    <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY (On Road)</option>
-                    <option value="COMPLETED">COMPLETED (Delivered to Farm)</option>
-                    <option value="CANCELLED">CANCELLED</option>
-                  </select>
+                    onChange={(val) => setJobStatus((val as FulfillmentJobStatus) || 'SCHEDULED')}
+                    isClearable={false}
+                    isSearchable={false}
+                    placeholder="Delivery status..."
+                  />
                 </div>
               </div>
 
@@ -1508,16 +1519,14 @@ export const DispatchYardView: React.FC<DispatchYardViewProps> = ({ onNavigateTo
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1">Pickup Status</label>
-                  <select
+                  <SearchSelect
+                    options={PICKUP_JOB_STATUS_OPTIONS}
                     value={pickupStatus}
-                    onChange={(e) => setPickupStatus(e.target.value as FulfillmentJobStatus)}
-                    className="w-full rounded-xl border p-2 text-xs font-bold focus:border-amber-500 focus:outline-none dark:bg-slate-950"
-                  >
-                    <option value="REQUESTED">REQUESTED (Farmer Waiting)</option>
-                    <option value="SCHEDULED">SCHEDULED (Driver Assigned)</option>
-                    <option value="IN_TRANSIT">IN_TRANSIT (Driver En Route)</option>
-                    <option value="COMPLETED">COMPLETED (Collected & In Yard)</option>
-                  </select>
+                    onChange={(val) => setPickupStatus((val as FulfillmentJobStatus) || 'REQUESTED')}
+                    isClearable={false}
+                    isSearchable={false}
+                    placeholder="Pickup status..."
+                  />
                 </div>
               </div>
 

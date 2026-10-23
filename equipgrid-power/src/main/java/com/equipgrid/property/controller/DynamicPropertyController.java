@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -68,8 +70,8 @@ public class DynamicPropertyController {
       return ResponseEntity.notFound().build();
     }
 
-    return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
-        .header(org.springframework.http.HttpHeaders.LOCATION, redirectUrl)
+    return ResponseEntity.status(HttpStatus.FOUND)
+        .header(HttpHeaders.LOCATION, redirectUrl)
         .build();
   }
 

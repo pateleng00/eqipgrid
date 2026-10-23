@@ -16,6 +16,7 @@ import com.equipgrid.dispatch.repository.DispatchRepository;
 import com.equipgrid.fulfillment.enums.JobStatus;
 import com.equipgrid.fulfillment.repository.DeliveryJobRepository;
 import com.equipgrid.fulfillment.repository.FulfillmentQueryRepository;
+import com.equipgrid.whatsapp.service.IWhatsAppNotificationService;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,8 +40,7 @@ public class DispatchServiceImpl implements IDispatchService {
   private final IAuditService auditService;
   private final DeliveryJobRepository deliveryJobRepository;
   private final FulfillmentQueryRepository fulfillmentQueryRepository;
-  private final com.equipgrid.whatsapp.service.IWhatsAppNotificationService
-      whatsAppNotificationService;
+  private final IWhatsAppNotificationService whatsAppNotificationService;
 
   @Override
   public DispatchRecord getByBookingId(Long bookingId) {

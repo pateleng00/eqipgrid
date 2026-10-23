@@ -518,6 +518,33 @@ const MachineCard: React.FC<{
               >
                 {asset.category === 'AGRICULTURE' ? 'Agro' : 'Civil'}
               </span>
+              {asset.dealerPartnerId ? (
+                <span
+                  title={`Authorized Dealer: ${asset.dealerPartnerTradeName || asset.dealerPartnerName || 'Dealer Partner'}`}
+                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                    isDaylight
+                      ? 'bg-purple-50 text-purple-800 border-purple-200'
+                      : 'bg-purple-950/40 text-purple-300 border-purple-800/50'
+                  }`}
+                >
+                  <span>🤝</span>
+                  <span className="truncate max-w-[110px]">
+                    {asset.dealerPartnerTradeName || asset.dealerPartnerName || 'Dealer'}
+                  </span>
+                </span>
+              ) : (
+                <span
+                  title="EquipGrid Own Fleet"
+                  className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                    isDaylight
+                      ? 'bg-slate-100 text-slate-700 border-slate-200'
+                      : 'bg-slate-800/60 text-slate-300 border-slate-700/60'
+                  }`}
+                >
+                  <span>🏢</span>
+                  <span>Own Fleet</span>
+                </span>
+              )}
             </div>
             <h3 className={`font-black text-sm mt-1 leading-tight ${isDaylight ? 'text-slate-900' : 'text-white'}`}>
               {asset.name}
@@ -724,12 +751,14 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
   const states = api.getStates();
   const cities = api.getCities();
   const hubs = api.getHubs();
+  const dealers = api.getDealers();
 
   const [selectedStateId, setSelectedStateId] = useState<string>('ALL');
   const [selectedCityId, setSelectedCityId] = useState<string>('ALL');
   const [selectedHubId, setSelectedHubId] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [selectedOwnership, setSelectedOwnership] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   const [visibleCount, setVisibleCount] = useState<number>(7);
@@ -763,6 +792,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
     setSelectedHubId('ALL');
     setSelectedCategory('ALL');
     setStatusFilter('ALL');
+    setSelectedOwnership('ALL');
     setSearchQuery('');
   };
 
@@ -777,12 +807,24 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
       if (selectedHubId !== 'ALL' && asset.hubId !== Number(selectedHubId)) return false;
       if (selectedCategory !== 'ALL' && asset.category !== selectedCategory) return false;
       if (statusFilter !== 'ALL' && asset.status !== statusFilter) return false;
+      if (selectedOwnership === 'OWN' && asset.dealerPartnerId) return false;
+      if (selectedOwnership === 'DEALER' && !asset.dealerPartnerId) return false;
+      if (selectedOwnership.startsWith('DEALER_')) {
+        const dId = Number(selectedOwnership.replace('DEALER_', ''));
+        if (asset.dealerPartnerId !== dId) return false;
+      }
       if (searchQuery.trim() !== '') {
         const q = searchQuery.toLowerCase();
         if (
-          ![asset.name, asset.assetTag, asset.modelName, asset.manufacturerName, asset.hubName].some((s) =>
-            s?.toLowerCase().includes(q),
-          )
+          ![
+            asset.name,
+            asset.assetTag,
+            asset.modelName,
+            asset.manufacturerName,
+            asset.hubName,
+            asset.dealerPartnerName,
+            asset.dealerPartnerTradeName,
+          ].some((s) => s?.toLowerCase().includes(q))
         )
           return false;
       }
@@ -797,13 +839,14 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
     selectedHubId,
     selectedCategory,
     statusFilter,
+    selectedOwnership,
     searchQuery,
   ]);
 
   // Reset to initial 7 items when filters change
   React.useEffect(() => {
     setVisibleCount(7);
-  }, [selectedStateId, selectedCityId, selectedHubId, selectedCategory, statusFilter, searchQuery]);
+  }, [selectedStateId, selectedCityId, selectedHubId, selectedCategory, statusFilter, selectedOwnership, searchQuery]);
 
   // Infinite scroll slice (default 7, loads +7 on scroll)
   const visibleAssets = useMemo(() => {
@@ -927,7 +970,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               </h2>
               <p className={`text-[11px] mt-0.5 ${isDaylight ? 'text-slate-500' : 'text-slate-400'}`}>
                 {filteredAssets.length} machines · {statsAvailable} ready to rent (तैयार) · {statsOnRent} on rent (किराए
-                पर)
+                पर) · {filteredAssets.filter((a) => !a.dealerPartnerId).length} EquipGrid Own · {filteredAssets.filter((a) => Boolean(a.dealerPartnerId)).length} Dealer Partner
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -982,7 +1025,7 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                 <RotateCcw className="h-3 w-3" /> Reset
               </button>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2">
               <SearchSelect
                 options={[
                   { value: 'ALL', label: 'All States' },
@@ -1037,9 +1080,9 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               />
               <SearchSelect
                 options={[
-                  { value: 'ALL', label: 'All Categories' },
-                  { value: 'CONSTRUCTION', label: 'Civil Construction' },
-                  { value: 'AGRICULTURE', label: 'Agro-Mechanization' },
+                  { value: 'ALL', label: 'All Categories (सभी श्रेणियां)' },
+                  { value: 'CONSTRUCTION', label: 'Civil Construction (सिविल निर्माण)' },
+                  { value: 'AGRICULTURE', label: 'Agro-Mechanization (कृषि यंत्रीकरण)' },
                 ]}
                 value={selectedCategory}
                 onChange={(v) => setSelectedCategory(String(v || 'ALL'))}
@@ -1048,14 +1091,30 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
               />
               <SearchSelect
                 options={[
-                  { value: 'ALL', label: 'All Statuses' },
-                  { value: 'AVAILABLE', label: 'Available' },
-                  { value: 'ON_RENT', label: 'On Rent' },
-                  { value: 'MAINTENANCE', label: 'Maintenance' },
+                  { value: 'ALL', label: 'All Statuses (सभी स्थितियां)' },
+                  { value: 'AVAILABLE', label: 'Available (उपलब्ध)' },
+                  { value: 'ON_RENT', label: 'On Rent (खेत पर कार्यरत)' },
+                  { value: 'MAINTENANCE', label: 'Under Maintenance (मरम्मत जारी)' },
                 ]}
                 value={statusFilter}
                 onChange={(v) => setStatusFilter(String(v || 'ALL'))}
                 placeholder="Status"
+                isClearable={false}
+              />
+              <SearchSelect
+                options={[
+                  { value: 'ALL', label: 'All Fleets (सभी बेड़ा)' },
+                  { value: 'OWN', label: '🏢 EquipGrid Fleet (Own)', badge: 'OWN' },
+                  { value: 'DEALER', label: '🤝 All Dealer Machines', badge: 'DEALER' },
+                  ...dealers.map((d) => ({
+                    value: `DEALER_${d.id}`,
+                    label: `Dealer: ${d.tradeName || d.name}`,
+                    badge: 'PARTNER',
+                  })),
+                ]}
+                value={selectedOwnership}
+                onChange={(v) => setSelectedOwnership(String(v || 'ALL'))}
+                placeholder="Ownership / Dealer"
                 isClearable={false}
               />
               <div className="relative">
@@ -1179,11 +1238,39 @@ export const EquipmentCatalogView: React.FC<EquipmentCatalogViewProps> = ({ onSe
                                 )}
                               </div>
                               <div>
-                                <span
-                                  className={`font-mono text-[9px] px-1.5 py-0.5 rounded border font-bold ${isDaylight ? 'text-amber-900 bg-amber-50 border-amber-200' : 'text-amber-400 bg-amber-900/20 border-amber-700/40'}`}
-                                >
-                                  {asset.assetTag}
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    className={`font-mono text-[9px] px-1.5 py-0.5 rounded border font-bold ${isDaylight ? 'text-amber-900 bg-amber-50 border-amber-200' : 'text-amber-400 bg-amber-900/20 border-amber-700/40'}`}
+                                  >
+                                    {asset.assetTag}
+                                  </span>
+                                  {asset.dealerPartnerId ? (
+                                    <span
+                                      title={`Authorized Dealer: ${asset.dealerPartnerTradeName || asset.dealerPartnerName || 'Dealer Partner'}`}
+                                      className={`font-extrabold text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                                        isDaylight
+                                          ? 'bg-purple-50 text-purple-800 border-purple-200'
+                                          : 'bg-purple-950/40 text-purple-300 border-purple-800/50'
+                                      }`}
+                                    >
+                                      <span>🤝</span>
+                                      <span className="truncate max-w-[130px]">
+                                        {asset.dealerPartnerTradeName || asset.dealerPartnerName || 'Dealer Partner'}
+                                      </span>
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`font-extrabold text-[9px] px-1.5 py-0.5 rounded border flex items-center gap-1 ${
+                                        isDaylight
+                                          ? 'bg-slate-100 text-slate-700 border-slate-200'
+                                          : 'bg-slate-800/60 text-slate-300 border-slate-700/60'
+                                      }`}
+                                    >
+                                      <span>🏢</span>
+                                      <span>Own Fleet</span>
+                                    </span>
+                                  )}
+                                </div>
                                 <div
                                   className={`font-extrabold text-sm mt-0.5 ${isDaylight ? 'text-slate-900' : 'text-white'}`}
                                 >

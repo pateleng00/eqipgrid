@@ -1,6 +1,7 @@
 package com.equipgrid.asset.controller;
 
 import com.equipgrid.asset.dto.request.CreateAssetRequest;
+import com.equipgrid.asset.dto.request.UpdateAssetRequest;
 import com.equipgrid.asset.dto.request.UpdateStatusRequest;
 import com.equipgrid.asset.dto.response.WebsiteMachineModelResponse;
 import com.equipgrid.asset.entity.Asset;
@@ -74,9 +75,7 @@ public class AssetController {
   @PutMapping("/{id}")
   @Operation(summary = "Update machinery details, pricing, deposit, and billing unit")
   public ResponseEntity<ApiResponse<Asset>> updateAsset(
-      @PathVariable Long id,
-      @Valid @RequestBody com.equipgrid.asset.dto.request.UpdateAssetRequest request,
-      Principal principal) {
+      @PathVariable Long id, @Valid @RequestBody UpdateAssetRequest request, Principal principal) {
     String actor = principal != null ? principal.getName() : "ADMIN";
     Asset updated = assetService.updateAsset(id, request, actor);
     return ResponseEntity.ok(ApiResponse.buildSuccess("Asset updated successfully", updated));

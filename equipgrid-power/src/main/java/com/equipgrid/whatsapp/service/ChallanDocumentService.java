@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -280,8 +281,8 @@ public class ChallanDocumentService {
   public String buildChecklistCompletionSummary(
       Booking booking,
       List<ChecklistItem> items,
-      java.util.Map<String, String> statuses,
-      java.util.Map<String, String> photos) {
+      Map<String, String> statuses,
+      Map<String, String> photos) {
     StringBuilder sb = new StringBuilder();
     sb.append("✅ *Return Inspection Checklist — Complete*\n");
     sb.append("━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -318,21 +319,21 @@ public class ChallanDocumentService {
     if (damageCount == 0 && missingCount == 0) {
       sb.append(
           """
-                    🎉 *Machine returned in good condition!*
-                    Your security deposit refund will be initiated immediately.
+                            🎉 *Machine returned in good condition!*
+                            Your security deposit refund will be initiated immediately.
 
-                    💳 *Full Deposit Refund: 100%* ✅
-                    """);
+                            💳 *Full Deposit Refund: 100%* ✅
+                            """);
     } else {
       sb.append(
           String.format(
               """
-                    ⚠️ *Inspection noted %d issue(s)*
-                    Our yard team will review photos and calculate any deductions.
-                    You will receive a final settlement statement within *2 hours*.
+                                    ⚠️ *Inspection noted %d issue(s)*
+                                    Our yard team will review photos and calculate any deductions.
+                                    You will receive a final settlement statement within *2 hours*.
 
-                    💳 Deposit refund (after deductions) will be credited to your UPI.
-                    """,
+                                    💳 Deposit refund (after deductions) will be credited to your UPI.
+                                    """,
               damageCount + missingCount));
     }
 
@@ -345,7 +346,7 @@ public class ChallanDocumentService {
   // ═══════════════════════════════════════════════════════════════════════════
 
   public String buildInwardReturnChallanWhatsAppText(
-      Booking booking, List<ChecklistItem> items, java.util.Map<String, String> statuses) {
+      Booking booking, List<ChecklistItem> items, Map<String, String> statuses) {
     String bookingNo = booking.getBookingNumber();
     String machineName = booking.getAsset().getName();
     String machineTag = booking.getAsset().getAssetTag();

@@ -4,6 +4,7 @@ import com.equipgrid.common.Exceptions;
 import com.equipgrid.customer.service.ICustomerService;
 import com.equipgrid.farmlocation.dto.request.UpsertFarmLocationRequest;
 import com.equipgrid.farmlocation.entity.FarmLocation;
+import com.equipgrid.farmlocation.enums.FarmLocationType;
 import com.equipgrid.farmlocation.repository.FarmLocationQueryRepository;
 import com.equipgrid.farmlocation.repository.FarmLocationRepository;
 import java.util.List;
@@ -69,7 +70,7 @@ public class FarmLocationServiceImpl implements IFarmLocationService {
             ? request.getLocationType()
             : (location.getLocationType() != null
                 ? location.getLocationType()
-                : com.equipgrid.farmlocation.enums.FarmLocationType.FARM));
+                : FarmLocationType.FARM));
     location.setLatitude(request.getLatitude());
     location.setLongitude(request.getLongitude());
     location.setVillage(request.getVillage());

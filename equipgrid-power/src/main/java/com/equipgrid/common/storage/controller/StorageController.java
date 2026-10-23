@@ -4,6 +4,7 @@ import com.equipgrid.common.dto.rest.ApiResponse;
 import com.equipgrid.common.storage.dto.request.DownloadRequest;
 import com.equipgrid.common.storage.dto.request.PresignedUploadRequest;
 import com.equipgrid.common.storage.dto.response.PresignedUploadResponse;
+import com.equipgrid.common.storage.enums.DocumentType;
 import com.equipgrid.common.storage.service.StorageService;
 import com.equipgrid.core.ratelimiter.RateLimited;
 import io.swagger.v3.oas.annotations.Operation;
@@ -55,7 +56,7 @@ public class StorageController {
           storageService.promoteToPermanentCategoryFolder(
               category, subFolder != null ? subFolder : "images", tempUrl, identifier);
     } else {
-      com.equipgrid.common.storage.enums.DocumentType docType = resolveDocumentType(type);
+      DocumentType docType = resolveDocumentType(type);
       res = storageService.promoteToPermanentStorage(docType, tempUrl, identifier);
     }
 
@@ -66,37 +67,36 @@ public class StorageController {
                 "key", res.key() != null ? res.key() : "")));
   }
 
-  private com.equipgrid.common.storage.enums.DocumentType resolveDocumentType(String type) {
+  private DocumentType resolveDocumentType(String type) {
     if (type == null || type.isBlank()) {
-      return com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
+      return DocumentType.ASSET_IMAGE;
     }
-    for (com.equipgrid.common.storage.enums.DocumentType dt :
-        com.equipgrid.common.storage.enums.DocumentType.values()) {
+    for (DocumentType dt : DocumentType.values()) {
       if (dt.name().equalsIgnoreCase(type)) {
         return dt;
       }
     }
     String upper = type.toUpperCase();
     if (upper.contains("STATIC") && upper.contains("VID")) {
-      return com.equipgrid.common.storage.enums.DocumentType.STATIC_VIDEO;
+      return DocumentType.STATIC_VIDEO;
     }
     if (upper.contains("STATIC")) {
-      return com.equipgrid.common.storage.enums.DocumentType.STATIC_IMAGE;
+      return DocumentType.STATIC_IMAGE;
     }
     if (upper.contains("MAINT")
         && (upper.contains("INV") || upper.contains("BILL") || upper.contains("DOC"))) {
-      return com.equipgrid.common.storage.enums.DocumentType.MAINTENANCE_INVOICE;
+      return DocumentType.MAINTENANCE_INVOICE;
     }
     if (upper.contains("MAINT")) {
-      return com.equipgrid.common.storage.enums.DocumentType.MAINTENANCE_IMAGE;
+      return DocumentType.MAINTENANCE_IMAGE;
     }
     if (upper.contains("VID")) {
-      return com.equipgrid.common.storage.enums.DocumentType.ASSET_VIDEO;
+      return DocumentType.ASSET_VIDEO;
     }
     if (upper.contains("DOC") || upper.contains("PDF")) {
-      return com.equipgrid.common.storage.enums.DocumentType.ASSET_DOCUMENT;
+      return DocumentType.ASSET_DOCUMENT;
     }
-    return com.equipgrid.common.storage.enums.DocumentType.ASSET_IMAGE;
+    return DocumentType.ASSET_IMAGE;
   }
 
   @PostMapping("/signed-url")

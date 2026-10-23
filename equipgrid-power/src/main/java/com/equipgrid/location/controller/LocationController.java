@@ -51,7 +51,8 @@ public class LocationController {
   @Operation(summary = "Get all cities (optionally include inactive)")
   public ResponseEntity<ApiResponse<List<City>>> getAllCities(
       @RequestParam(required = false, defaultValue = "false") boolean includeInactive) {
-    return ResponseEntity.ok(ApiResponse.buildSuccess(locationService.getAllCities(includeInactive)));
+    return ResponseEntity.ok(
+        ApiResponse.buildSuccess(locationService.getAllCities(includeInactive)));
   }
 
   @PostMapping("/cities")

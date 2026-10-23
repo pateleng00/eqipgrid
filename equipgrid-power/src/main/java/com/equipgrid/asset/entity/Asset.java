@@ -4,12 +4,15 @@ import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.enums.AssetStatus;
 import com.equipgrid.asset.enums.BillingUnit;
 import com.equipgrid.common.BaseEntity;
+import com.equipgrid.dealer.entity.Dealer;
 import com.equipgrid.location.entity.Hub;
+import com.equipgrid.master.entity.BillingUnitMaster;
 import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.entity.MachineModel;
 import com.equipgrid.master.entity.Manufacturer;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.*;
 
 @Entity
@@ -43,6 +46,10 @@ public class Asset extends BaseEntity {
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "hub_id")
   private Hub hub;
+
+  @ManyToOne(fetch = FetchType.EAGER)
+  @JoinColumn(name = "dealer_partner_id", updatable = false)
+  private Dealer dealerPartner;
 
   @Column(name = "category", nullable = false)
   private AssetCategory category;
@@ -92,7 +99,7 @@ public class Asset extends BaseEntity {
 
   @ManyToOne(fetch = FetchType.EAGER)
   @JoinColumn(name = "billing_unit_id")
-  private com.equipgrid.master.entity.BillingUnitMaster billingUnitMaster;
+  private BillingUnitMaster billingUnitMaster;
 
   @Column(name = "working_hours_limit", precision = 6, scale = 2)
   private BigDecimal workingHoursLimit;
@@ -101,7 +108,7 @@ public class Asset extends BaseEntity {
   private String shiftTerms;
 
   /** Associated media items (images and video) populated dynamically. */
-  @Transient private java.util.List<AssetMedia> mediaItems;
+  @Transient private List<AssetMedia> mediaItems;
 
   public String getName() {
     if (this.name != null && !this.name.isBlank()) {
@@ -138,6 +145,14 @@ public class Asset extends BaseEntity {
 
   public String getDescription() {
     return this.type != null ? this.type.getDescription() : null;
+  }
+
+  public String getStatusDescription() {
+    return this.status != null ? this.status.getDescription() : null;
+  }
+
+  public String getCategoryDescription() {
+    return getCategory() != null ? getCategory().getDescription() : null;
   }
 
   @PrePersist

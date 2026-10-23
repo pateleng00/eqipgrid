@@ -22,6 +22,8 @@ import {
   Sparkles,
   ChevronRight,
   Compass,
+  Headphones,
+  TrendingUp,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useTheme } from '../lib/ThemeContext';
@@ -238,6 +240,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         },
       },
       {
+        id: 'nav-support',
+        type: 'navigation',
+        title: 'Customer Inquiries & Waitlist (पूछताछ व सहायता)',
+        subtitle: 'Website contact inquiries and machinery availability waitlist tickets',
+        icon: <Headphones className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
+        badge: 'SUPPORT',
+        action: () => {
+          onNavigate('support');
+          onClose();
+        },
+      },
+      {
         id: 'nav-locations',
         type: 'navigation',
         title: 'Hub Locations (स्टेशन व केंद्र)',
@@ -258,6 +272,30 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         badge: 'PRICING',
         action: () => {
           onNavigate('rental-configs');
+          onClose();
+        },
+      },
+      {
+        id: 'nav-leads',
+        type: 'navigation',
+        title: 'Machinery Host Leads (मशीन मालिक व पार्टनर लीड्स)',
+        subtitle: 'Website partner onboarding registrations and fleet monetization leads',
+        icon: <TrendingUp className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />,
+        badge: 'LEADS',
+        action: () => {
+          onNavigate('leads');
+          onClose();
+        },
+      },
+      {
+        id: 'nav-reporting',
+        type: 'navigation',
+        title: 'Reports & Analytics (रिपोर्ट्स व विश्लेषण)',
+        subtitle: 'Fleet utilization, category turnover, station efficiency, and operational metrics',
+        icon: <BarChart3 className="h-4 w-4 text-[#0D5C46]" />,
+        badge: 'REPORTS',
+        action: () => {
+          onNavigate('reporting');
           onClose();
         },
       },

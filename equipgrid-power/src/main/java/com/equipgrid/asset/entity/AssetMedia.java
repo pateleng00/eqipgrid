@@ -1,6 +1,7 @@
 package com.equipgrid.asset.entity;
 
 import com.equipgrid.common.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,7 +24,7 @@ public class AssetMedia extends BaseEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @com.fasterxml.jackson.annotation.JsonIgnore
+  @JsonIgnore
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "asset_id", nullable = false)
   private Asset asset;

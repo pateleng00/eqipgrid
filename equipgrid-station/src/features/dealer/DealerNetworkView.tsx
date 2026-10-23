@@ -1,7 +1,26 @@
-import React, { useState } from 'react';
-import { Users, Percent, Plus, MapPin, Phone, CheckCircle, Building, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  Users,
+  Percent,
+  Plus,
+  MapPin,
+  Phone,
+  CheckCircle,
+  Building,
+  TrendingUp,
+  Search,
+  RefreshCw,
+  X,
+  AlertCircle,
+  CheckCircle2,
+  Calendar,
+  Wrench,
+  ShieldAlert,
+  ArrowRight,
+} from 'lucide-react';
 import { useTheme } from '../../lib/ThemeContext';
-import { formatINR, cn } from '../../lib/utils';
+import { useAuth } from '../../lib/AuthContext';
+import { formatINR, cn, formatDate } from '../../lib/utils';
 import { SearchSelect } from '../../components/SearchSelect';
 import { InfiniteScrollFooter } from '../../components/InfiniteScrollFooter';
 import { api } from '../../services/api';
@@ -10,6 +29,7 @@ import { getUrlParam, setUrlParam } from '../../lib/navigationState';
 
 export const DealerNetworkView: React.FC = () => {
   const { isDaylight } = useTheme();
+  const { currentUser } = useAuth();
   const [dealers, setDealers] = useState<Dealer[]>(api.dealers);
   const [showAddModal, setShowAddModal] = useState(() => getUrlParam('modal') === 'dealer');
 
@@ -20,7 +40,6 @@ export const DealerNetworkView: React.FC = () => {
   // Master location data
   const states = api.getStates();
   const cities = api.getCities();
-  const hubs = api.getHubs();
 
   React.useEffect(() => {
     setDealers(api.dealers);
@@ -29,15 +48,13 @@ export const DealerNetworkView: React.FC = () => {
     });
   }, []);
 
-  // Page-level filters: State, City, Hub
+  // Page-level filters: State, City
   const [filterStateId, setFilterStateId] = useState<string>('ALL');
   const [filterCityId, setFilterCityId] = useState<string>('ALL');
-  const [filterHubId, setFilterHubId] = useState<string>('ALL');
 
-  // Modal form states: Territory First (State -> City -> Hub), then Details
+  // Modal form states: Territory First (State -> City), then Details
   const [modalStateId, setModalStateId] = useState<number | ''>(states[0]?.id || 1);
   const [modalCityId, setModalCityId] = useState<number | ''>(cities[0]?.id || 1);
-  const [modalHubId, setModalHubId] = useState<number | ''>(hubs[0]?.id || 1);
   const [tradeName, setTradeName] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -52,30 +69,12 @@ export const DealerNetworkView: React.FC = () => {
     return cities.filter((c) => c.stateId === Number(modalStateId));
   }, [cities, modalStateId]);
 
-  const modalAvailableHubs = React.useMemo(() => {
-    if (!modalCityId) return [];
-    return hubs.filter((h) => h.cityId === Number(modalCityId));
-  }, [hubs, modalCityId]);
-
   // Page filter cascading lists
   const pageAvailableCities = cities.filter((c) =>
     filterStateId === 'ALL' ? true : c.stateId === Number(filterStateId),
   );
-  const pageAvailableHubs = hubs.filter((h) => {
-    if (filterCityId !== 'ALL') return h.cityId === Number(filterCityId);
-    if (filterStateId !== 'ALL') {
-      const cityIds = new Set(pageAvailableCities.map((c) => c.id));
-      return cityIds.has(h.cityId);
-    }
-    return true;
-  });
 
   const filteredDealers = dealers.filter((d) => {
-    if (filterHubId !== 'ALL') {
-      if (d.hubId && d.hubId !== Number(filterHubId)) return false;
-      const hub = hubs.find((h) => h.id === Number(filterHubId));
-      if (!d.hubId && hub && !d.location.toLowerCase().includes(hub.name.toLowerCase())) return false;
-    }
     if (filterCityId !== 'ALL') {
       if (d.cityId && d.cityId !== Number(filterCityId)) return false;
       const city = cities.find((c) => c.id === Number(filterCityId));
@@ -91,7 +90,7 @@ export const DealerNetworkView: React.FC = () => {
 
   React.useEffect(() => {
     setVisibleCount(7);
-  }, [filterStateId, filterCityId, filterHubId]);
+  }, [filterStateId, filterCityId]);
 
   const visibleDealers = React.useMemo(() => {
     return filteredDealers.slice(0, visibleCount);
@@ -113,11 +112,9 @@ export const DealerNetworkView: React.FC = () => {
   const totalCommissions = filteredDealers.reduce((acc, d) => acc + d.totalCommissionEarned, 0);
 
   const handleOpenAdd = () => {
-    const defaultHub = hubs[0];
-    const defaultCity = cities.find((c) => c.id === defaultHub?.cityId);
+    const defaultCity = cities[0];
     setModalStateId(defaultCity?.stateId || states[0]?.id || 1);
-    setModalCityId(defaultCity?.id || cities[0]?.id || 1);
-    setModalHubId(defaultHub?.id || 1);
+    setModalCityId(defaultCity?.id || 1);
     setTradeName('');
     setName('');
     setPhone('');
@@ -131,13 +128,12 @@ export const DealerNetworkView: React.FC = () => {
   const handleAddDealer = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const selectedHub = hubs.find((h) => h.id === Number(modalHubId));
-      const selectedCity = cities.find((c) => c.id === Number(modalCityId) || c.id === selectedHub?.cityId);
+      const selectedCity = cities.find((c) => c.id === Number(modalCityId));
       const selectedState = states.find((s) => s.id === Number(modalStateId) || s.id === selectedCity?.stateId);
 
-      const locationText = selectedHub
-        ? `${selectedHub.name} (${selectedCity?.name || ''}, ${selectedState?.code || ''})`
-        : address || 'Hub Yard Area';
+      const locationText = address
+        ? `${address}, ${selectedCity?.name || ''}`
+        : `${selectedCity?.name || ''}, ${selectedState?.name || ''}`;
 
       await api.addDealer({
         name,
@@ -145,9 +141,9 @@ export const DealerNetworkView: React.FC = () => {
         phone,
         location: locationText,
         stateId: modalStateId ? Number(modalStateId) : undefined,
+        stateName: selectedState?.name,
         cityId: modalCityId ? Number(modalCityId) : undefined,
-        hubId: modalHubId ? Number(modalHubId) : undefined,
-        hubName: selectedHub?.name,
+        cityName: selectedCity?.name,
         address: address || undefined,
         notes: notes || undefined,
         commissionRate: Number(commissionRate) || 0.06,
@@ -162,8 +158,12 @@ export const DealerNetworkView: React.FC = () => {
       setNotes('');
     } catch (err) {
       console.error('Failed to create dealer:', err);
+      alert(err instanceof Error ? err.message : 'Failed to create dealer partner');
     }
   };
+
+
+
 
   return (
     <div className="flex-1 flex flex-col min-h-0 gap-2">
@@ -286,7 +286,6 @@ export const DealerNetworkView: React.FC = () => {
             onChange={(val) => {
               setFilterStateId(String(val || 'ALL'));
               setFilterCityId('ALL');
-              setFilterHubId('ALL');
             }}
             isClearable={false}
           />
@@ -310,7 +309,6 @@ export const DealerNetworkView: React.FC = () => {
             value={filterCityId === 'ALL' ? 'ALL' : Number(filterCityId)}
             onChange={(val) => {
               setFilterCityId(String(val || 'ALL'));
-              setFilterHubId('ALL');
             }}
             placeholder={
               filterStateId !== 'ALL' && pageAvailableCities.length === 0 ? 'No cities in this State' : 'All Cities'
@@ -320,41 +318,11 @@ export const DealerNetworkView: React.FC = () => {
           />
         </div>
 
-        {/* Hub */}
-        <div className="w-44 sm:w-56">
-          <SearchSelect
-            options={
-              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) ||
-              (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
-                ? []
-                : [
-                    { value: 'ALL', label: 'All Hubs / Yards' },
-                    ...pageAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code })),
-                  ]
-            }
-            value={filterHubId === 'ALL' ? 'ALL' : Number(filterHubId)}
-            onChange={(val) => setFilterHubId(String(val || 'ALL'))}
-            placeholder={
-              filterStateId !== 'ALL' && pageAvailableCities.length === 0
-                ? 'No cities in this State'
-                : filterCityId !== 'ALL' && pageAvailableHubs.length === 0
-                  ? 'No hubs in this City'
-                  : 'All Hubs / Yards'
-            }
-            isDisabled={
-              (filterCityId !== 'ALL' && pageAvailableHubs.length === 0) ||
-              (filterStateId !== 'ALL' && pageAvailableCities.length === 0)
-            }
-            isClearable={false}
-          />
-        </div>
-
-        {(filterStateId !== 'ALL' || filterCityId !== 'ALL' || filterHubId !== 'ALL') && (
+        {(filterStateId !== 'ALL' || filterCityId !== 'ALL') && (
           <button
             onClick={() => {
               setFilterStateId('ALL');
               setFilterCityId('ALL');
-              setFilterHubId('ALL');
             }}
             className="text-xs text-amber-600 hover:text-amber-500 font-bold ml-auto cursor-pointer"
           >
@@ -466,8 +434,8 @@ export const DealerNetworkView: React.FC = () => {
         />
       </div>
 
-      {/* --- ENLARGED ONBOARD CHANNEL PARTNER MODAL (3X SIZE WITH STATE->CITY->HUB CASCADE) --- */}
-      {showAddModal && (
+  {/* --- ENLARGED ONBOARD CHANNEL PARTNER MODAL (3X SIZE WITH STATE->CITY->HUB CASCADE) --- */}
+  {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-md p-2 sm:p-3 overflow-y-auto">
           <div
             className={`w-full max-w-5xl max-h-[calc(100vh-2rem)] overflow-y-auto rounded-2xl border p-4 sm:p-5 space-y-4 shadow-2xl transition-all ${
@@ -492,7 +460,7 @@ export const DealerNetworkView: React.FC = () => {
                     </span>
                   </div>
                   <p className={`mt-1 text-xs ${isDaylight ? 'text-slate-600' : 'text-slate-400'}`}>
-                    Select territory (State → City → Hub) first, then provide partner business credentials and
+                    Select territory (State → City) first, then provide partner business credentials and
                     commercial referral terms.
                   </p>
                 </div>
@@ -512,7 +480,7 @@ export const DealerNetworkView: React.FC = () => {
             </div>
 
             <form onSubmit={handleAddDealer} className="space-y-6 text-left">
-              {/* 1. Territory First Cascade: State -> City -> Hub */}
+              {/* 1. Territory First Cascade: State -> City */}
               <div
                 className={`p-5 rounded-2xl border ${
                   isDaylight ? 'bg-amber-50/50 border-amber-200' : 'bg-slate-900/60 border-slate-800'
@@ -523,12 +491,12 @@ export const DealerNetworkView: React.FC = () => {
                     <span className="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-mono text-[10px] flex items-center justify-center font-bold">
                       1
                     </span>
-                    <span>Territory Assignment (State → City → Stationed Hub) *</span>
+                    <span>Territory Assignment (State → City Territory) *</span>
                   </div>
                   <span className="text-[11px] text-slate-500">Required before partner details</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label
                       className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
@@ -542,7 +510,6 @@ export const DealerNetworkView: React.FC = () => {
                         const sid = val ? Number(val) : '';
                         setModalStateId(sid);
                         setModalCityId('');
-                        setModalHubId('');
                       }}
                       placeholder="Select State..."
                       isClearable={false}
@@ -565,7 +532,6 @@ export const DealerNetworkView: React.FC = () => {
                       onChange={(val) => {
                         const cid = val ? Number(val) : '';
                         setModalCityId(cid);
-                        setModalHubId('');
                       }}
                       placeholder={
                         !modalStateId
@@ -579,43 +545,17 @@ export const DealerNetworkView: React.FC = () => {
                       isClearable={false}
                     />
                   </div>
-
-                  <div>
-                    <label
-                      className={`block text-xs font-bold mb-1.5 ${isDaylight ? 'text-slate-800' : 'text-slate-200'}`}
-                    >
-                      Stationed Hub / Yard *
-                    </label>
-                    <SearchSelect
-                      options={modalAvailableHubs.map((h) => ({ value: h.id, label: h.name, subLabel: h.code }))}
-                      value={modalHubId}
-                      onChange={(val) => val && setModalHubId(Number(val))}
-                      placeholder={
-                        !modalStateId
-                          ? 'Select State First'
-                          : !modalCityId
-                            ? 'Select City First'
-                            : modalAvailableHubs.length === 0
-                              ? 'No hubs in this City'
-                              : 'Select Hub *'
-                      }
-                      isDisabled={!modalCityId || modalAvailableHubs.length === 0}
-                      noOptionsMessage="No hubs found in this City"
-                      isClearable={false}
-                    />
-                  </div>
                 </div>
 
-                {modalHubId && (
+                {modalCityId && (
                   <div className="mt-2 pt-2 border-t border-amber-200/60 dark:border-slate-800 flex items-center gap-2 text-xs text-amber-900 dark:text-amber-300 font-medium">
                     <MapPin className="h-3.5 w-3.5 text-amber-500 flex-shrink-0" />
                     <span>
-                      Operating under yard:{' '}
+                      Partner Territory:{' '}
                       <strong className="font-bold underline">
-                        {hubs.find((h) => h.id === Number(modalHubId))?.name}
+                        {cities.find((c) => c.id === Number(modalCityId))?.name}
                       </strong>{' '}
-                      ({cities.find((c) => c.id === Number(modalCityId))?.name},{' '}
-                      {states.find((s) => s.id === Number(modalStateId))?.name})
+                      ({states.find((s) => s.id === Number(modalStateId))?.name})
                     </span>
                   </div>
                 )}

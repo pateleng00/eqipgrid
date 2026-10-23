@@ -1,28 +1,11 @@
 package com.equipgrid.master.util;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class FuzzyMatchUtil {
-
-  public record MatchCandidate(Long id, String name) {}
-
-  public record FuzzyResult(
-      boolean duplicate, String matchedName, double similarityPercentage, String message) {
-    public static FuzzyResult notDuplicate() {
-      return new FuzzyResult(false, null, 0.0, "Name is available");
-    }
-
-    public static FuzzyResult duplicate(String matchedName, double score) {
-      int pct = (int) Math.round(score * 100);
-      return new FuzzyResult(
-          true,
-          matchedName,
-          pct,
-          String.format(
-              "Similar record '%s' already exists (%d%% match). Please verify to avoid duplicates.",
-              matchedName, pct));
-    }
-  }
 
   /**
    * Checks if a candidate string matches any existing name above a threshold (default 0.80 / 80%).
@@ -166,5 +149,25 @@ public class FuzzyMatchUtil {
     union.addAll(tokens2);
 
     return (double) intersection.size() / union.size();
+  }
+
+  public record MatchCandidate(Long id, String name) {}
+
+  public record FuzzyResult(
+      boolean duplicate, String matchedName, double similarityPercentage, String message) {
+    public static FuzzyResult notDuplicate() {
+      return new FuzzyResult(false, null, 0.0, "Name is available");
+    }
+
+    public static FuzzyResult duplicate(String matchedName, double score) {
+      int pct = (int) Math.round(score * 100);
+      return new FuzzyResult(
+          true,
+          matchedName,
+          pct,
+          String.format(
+              "Similar record '%s' already exists (%d%% match). Please verify to avoid duplicates.",
+              matchedName, pct));
+    }
   }
 }

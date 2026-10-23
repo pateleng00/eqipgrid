@@ -38,4 +38,9 @@ public class DeliveryJob {
 
   @Column(columnDefinition = "TEXT")
   private String deliveryNotes;
+
+  @Transient
+  public String getStatusDescription() {
+    return status != null ? status.getDescription() : null;
+  }
 }

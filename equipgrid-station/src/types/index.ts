@@ -331,6 +331,7 @@ export interface Asset {
   localLanguageName?: string;
   hindiDescription?: string;
   category: AssetCategory;
+  categoryDescription?: string;
   modelName?: string;
   serialNumber: string;
   dailyRate?: number;
@@ -338,6 +339,7 @@ export interface Asset {
   purchaseCost?: number;
   operatorRequired: boolean;
   status: AssetStatus;
+  statusDescription?: string;
   conditionNotes?: string;
   engineHours: number;
   accessoriesIncluded?: string;
@@ -359,6 +361,17 @@ export interface Asset {
   hindiUnitLabel?: string;
   workingHoursLimit?: number;
   shiftTerms?: string;
+  dealerPartnerId?: number | null;
+  dealerPartnerName?: string;
+  dealerPartnerTradeName?: string;
+  dealerPartner?: {
+    id: number;
+    name: string;
+    tradeName: string;
+    phone?: string;
+    location?: string;
+    active?: boolean;
+  } | null;
 }
 
 export interface AssetMedia {
@@ -460,6 +473,8 @@ export interface Booking {
   rentalConfigId?: number;
   dailyRate?: number;
   status: BookingStatus;
+  statusDescription?: string;
+  bookingSourceDescription?: string;
   dealerId?: number;
   notes?: string;
   createdAt: string;
@@ -524,7 +539,9 @@ export interface Payment {
   customerName?: string;
   amount: number;
   paymentType: PaymentType;
+  paymentTypeDescription?: string;
   paymentMode: PaymentMode;
+  paymentModeDescription?: string;
   transactionRef?: string;
   notes?: string;
   createdAt: string;
@@ -537,9 +554,9 @@ export interface Dealer {
   phone: string;
   location: string;
   stateId?: number;
+  stateName?: string;
   cityId?: number;
-  hubId?: number;
-  hubName?: string;
+  cityName?: string;
   address?: string;
   notes?: string;
   commissionRate: number;
@@ -558,6 +575,68 @@ export interface DealerCommission {
   commissionAmount: number;
   status: 'PENDING' | 'SETTLED';
   createdAt: string;
+}
+
+export type DealerLeadStatus =
+  | 'ENQUIRY'
+  | 'IN_DISCUSSION'
+  | 'IN_DOCUMENTATION'
+  | 'ONBOARDED'
+  | 'DENIED'
+  | 'CLOSED';
+
+export interface DealerLead {
+  id: number;
+  fullName: string;
+  phoneNumber: string;
+  alternatePhone?: string;
+  district: string;
+  tehsilOrBlock?: string;
+  villageOrArea?: string;
+  machineryOwned: string;
+  machineryCount: number;
+  makeModelYear?: string;
+  operatorAvailable: boolean;
+  expectedMonthlyIncome?: string;
+  status: DealerLeadStatus;
+  statusDescription?: string;
+  statusRemarks?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type SupportTicketStatus =
+  | 'OPEN'
+  | 'IN_DISCUSSION'
+  | 'IN_PROGRESS'
+  | 'RESOLVED'
+  | 'CLOSED';
+
+export type SupportTicketPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export interface SupportTicket {
+  id: number;
+  ticketNumber: string;
+  customerName: string;
+  phoneNumber: string;
+  villageOrCity?: string;
+  district?: string;
+  category?: string;
+  subject: string;
+  message?: string;
+  priority: SupportTicketPriority;
+  priorityDescription?: string;
+  status: SupportTicketStatus;
+  statusDescription?: string;
+  source?: string;
+  equipmentId?: number;
+  statusRemarks?: string;
+  resolvedBy?: string;
+  resolvedAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DailyCashReconciliation {
@@ -594,6 +673,7 @@ export interface UserAccount {
   fullName: string;
   role: StaffRole;
   roleTitle?: string;
+  roleDescription?: string;
   phone?: string;
   hubId?: number | null;
   hubName?: string | null;
@@ -650,6 +730,7 @@ export interface PaymentProof {
   booking: Booking;
   submittedReference: string;
   status: VerificationStatus;
+  statusDescription?: string;
   submittedAt: string;
   verifiedAt?: string;
   verifiedBy?: string;
@@ -663,6 +744,7 @@ export interface RefundTransaction {
   booking: Booking;
   amount: number;
   status: RefundStatus;
+  statusDescription?: string;
   paymentReference?: string;
   reason?: string;
   initiatedAt: string;
@@ -678,6 +760,7 @@ export interface DeliveryJob {
   id: number;
   booking: Booking;
   status: FulfillmentJobStatus;
+  statusDescription?: string;
   driverName?: string;
   driverPhone?: string;
   vehicleNumber?: string;
@@ -694,6 +777,7 @@ export interface ReturnPickupJob {
   id: number;
   booking: Booking;
   status: FulfillmentJobStatus;
+  statusDescription?: string;
   driverName?: string;
   driverPhone?: string;
   vehicleNumber?: string;
@@ -937,7 +1021,10 @@ export interface MaintenanceTicket {
   serviceCenterContact?: string;
   serviceCenterAddress?: string;
   priority: MaintenancePriority;
+  priorityDescription?: string;
   status: MaintenanceStatus;
+  statusDescription?: string;
+  serviceTypeDescription?: string;
   issueDescription: string;
   workScope?: string;
   serviceNumber?: string;
@@ -1009,5 +1096,132 @@ export interface CompleteMaintenancePayload {
   completionNotes?: string;
   meterHoursAfterService?: number;
   nextServiceDueHours?: number;
+}
+
+export interface ReportingKpiSummaryResponse {
+  machinesOnRentCount: number;
+  totalCollections: number;
+  machinesInMaintenanceCount: number;
+  dealersRevenue: number;
+  futureBookingsCount: number;
+  futureBookingsRevenue: number;
+  dateRange: string;
+  stateId?: number | null;
+  cityId?: number | null;
+  hubId?: number | null;
+}
+
+export interface MachinesOnRentReportItem {
+  assetId: number;
+  assetTag: string;
+  machineName: string;
+  modelName: string;
+  category: string;
+  hubId?: number | null;
+  hubName: string;
+  cityId?: number | null;
+  cityName: string;
+  stateId?: number | null;
+  stateName: string;
+  bookingId?: number | null;
+  bookingNumber: string;
+  customerName: string;
+  customerPhone: string;
+  startDate: string;
+  expectedReturnDate: string;
+  dispatchTime?: string;
+  dailyRate: number;
+  deliveryAddress: string;
+  operatorAssigned?: boolean;
+  status: string;
+}
+
+export interface CollectionsReportItem {
+  paymentId: number;
+  receiptNumber: string;
+  bookingId?: number | null;
+  bookingNumber: string;
+  customerName: string;
+  customerPhone: string;
+  hubId?: number | null;
+  hubName: string;
+  cityName: string;
+  stateName: string;
+  paymentMode: string;
+  transactionRef: string;
+  amount: number;
+  paymentType: string;
+  paymentDate: string;
+  collectedBy: string;
+  status: string;
+}
+
+export interface MaintenanceReportItem {
+  assetId: number;
+  assetTag: string;
+  machineName: string;
+  modelName: string;
+  category: string;
+  hubId?: number | null;
+  hubName: string;
+  cityName: string;
+  stateName: string;
+  ticketNumber: string;
+  issueDescription: string;
+  maintenanceType: string;
+  technicianName: string;
+  enteredMaintenanceAt?: string;
+  estimatedCompletionDate?: string;
+  estimatedCost?: number;
+  priority: string;
+  status: string;
+}
+
+export interface DealerRevenueReportItem {
+  dealerId: number;
+  businessName: string;
+  dealerName: string;
+  phone: string;
+  location: string;
+  cityId?: number | null;
+  cityName: string;
+  stateId?: number | null;
+  stateName: string;
+  hubId?: number | null;
+  hubName?: string;
+  bookingNumber: string;
+  machineName: string;
+  grossRentalRevenue: number;
+  commissionRate: number;
+  commissionAmount: number;
+  status: string;
+  settledAt?: string;
+  createdAt: string;
+}
+
+export interface FutureBookingReportItem {
+  bookingId: number;
+  bookingNumber: string;
+  assetId?: number | null;
+  assetTag: string;
+  machineName: string;
+  category: string;
+  hubId?: number | null;
+  hubName: string;
+  cityName: string;
+  stateName: string;
+  dailyRate: number;
+  rentalDays: number;
+  startDate: string;
+  endDate: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryAddress: string;
+  deliveryType?: string;
+  landmark?: string;
+  totalAmount: number;
+  depositAmount: number;
+  advancePaid: number;
+  bookingStatus: string;
 }
 

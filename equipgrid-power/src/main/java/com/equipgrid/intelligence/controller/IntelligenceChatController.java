@@ -10,6 +10,7 @@ import com.equipgrid.intelligence.service.IIntelligenceChatService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -50,12 +51,12 @@ public class IntelligenceChatController {
       description =
           "Batch generates 768-dimensional embeddings for all assets and stores them in PostgreSQL pgvector")
   @PostMapping("/embeddings/sync")
-  public ResponseEntity<ApiResponse<java.util.Map<String, Object>>> syncEmbeddings() {
+  public ResponseEntity<ApiResponse<Map<String, Object>>> syncEmbeddings() {
     log.info("Received request to sync all asset vector embeddings");
     int count = assetVectorEmbeddingService.syncAllAssetEmbeddings();
     return ResponseEntity.ok(
         ApiResponse.buildSuccess(
-            java.util.Map.of(
+            Map.of(
                 "syncedCount",
                 count,
                 "message",

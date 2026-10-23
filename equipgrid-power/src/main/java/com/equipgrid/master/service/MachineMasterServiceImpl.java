@@ -1,5 +1,6 @@
 package com.equipgrid.master.service;
 
+import com.equipgrid.asset.enums.AssetCategory;
 import com.equipgrid.asset.repository.AssetRepository;
 import com.equipgrid.auth.entity.User;
 import com.equipgrid.auth.enums.Role;
@@ -13,11 +14,7 @@ import com.equipgrid.master.entity.BillingUnitMaster;
 import com.equipgrid.master.entity.EquipmentType;
 import com.equipgrid.master.entity.MachineModel;
 import com.equipgrid.master.entity.Manufacturer;
-import com.equipgrid.master.repository.BillingUnitMasterRepository;
-import com.equipgrid.master.repository.EquipmentTypeRepository;
-import com.equipgrid.master.repository.MachineModelRepository;
-import com.equipgrid.master.repository.ManufacturerRepository;
-import com.equipgrid.master.repository.MasterQueryRepository;
+import com.equipgrid.master.repository.*;
 import com.equipgrid.master.util.FuzzyMatchUtil;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -56,8 +53,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
       value = CacheConfig.CACHE_EQUIPMENT_TYPES,
       key =
           "(#includeInactive != null ? #includeInactive : false) + '-' + (#category != null ? #category.name() : 'ALL')")
-  public List<EquipmentType> getAllEquipmentTypes(
-      Boolean includeInactive, com.equipgrid.asset.enums.AssetCategory category) {
+  public List<EquipmentType> getAllEquipmentTypes(Boolean includeInactive, AssetCategory category) {
     List<EquipmentType> list = masterQueryRepository.fetchEquipmentTypes(includeInactive);
     list.forEach(
         t -> {
@@ -137,7 +133,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
             .localLanguageName(request.getLocalLanguageName())
             .hindiDescription(request.getHindiDescription())
             .imageUrl(request.getImageUrl())
-            .active(request.getActive() != null ? request.getActive() : true)
+            .active(request.getActive() == null || request.getActive())
             .build();
 
     EquipmentType saved = equipmentTypeRepository.save(type);
@@ -295,7 +291,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
                 request.getLogoUrl() != null && !request.getLogoUrl().isBlank()
                     ? request.getLogoUrl().trim()
                     : null)
-            .active(request.getActive() != null ? request.getActive() : true)
+            .active(request.getActive() == null || request.getActive())
             .build();
 
     Manufacturer saved = manufacturerRepository.save(mfg);
@@ -443,7 +439,7 @@ public class MachineMasterServiceImpl implements IMachineMasterService {
             .name(request.getName().trim())
             .modelNumber(modelNum)
             .specs(request.getSpecs())
-            .active(request.getActive() != null ? request.getActive() : true)
+            .active(request.getActive() == null || request.getActive())
             .build();
 
     MachineModel saved = machineModelRepository.save(model);

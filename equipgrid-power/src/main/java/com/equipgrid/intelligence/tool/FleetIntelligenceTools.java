@@ -426,9 +426,7 @@ public class FleetIntelligenceTools {
         && (name.contains("generator") || tag.contains("gen"))) return true;
 
     if (query.contains("agri") && category == AssetCategory.AGRICULTURE) return true;
-    if (query.contains("construct") && category == AssetCategory.CONSTRUCTION) return true;
-
-    return false;
+    return query.contains("construct") && category == AssetCategory.CONSTRUCTION;
   }
 
   public EquipmentCardDto mapToCardDto(Asset asset) {
